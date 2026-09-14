@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Person;
 use App\Models\User;
+use App\Services\PageEditorService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -34,6 +36,20 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ];
+    }
+
+    /**
+     * Every real user is linked to a person on the tree — keep that invariant in tests too.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $person = Person::factory()->create(['created_by' => $user->id]);
+
+            $user->update(['person_id' => $person->id]);
+
+            app(PageEditorService::class)->grantOwner($person, $user);
+        });
     }
 
     /**

@@ -10,10 +10,19 @@ test('a user without 2FA or a passkey is redirected from content routes to the o
         ->assertRedirect(route('onboarding.security'));
 });
 
-test('the onboarding page itself is reachable without 2FA', function () {
+test('the onboarding page requires a recent password confirmation, like security settings does', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
+        ->get(route('onboarding.security'))
+        ->assertRedirect(route('password.confirm'));
+});
+
+test('the onboarding page is reachable once the password is confirmed', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
         ->get(route('onboarding.security'))
         ->assertOk()
         ->assertSee('Secure your account');
@@ -23,6 +32,7 @@ test('a user with 2FA already enabled is bounced straight through onboarding to 
     $user = User::factory()->withTwoFactor()->create();
 
     $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
         ->get(route('onboarding.security'))
         ->assertRedirect(route('dashboard'));
 });

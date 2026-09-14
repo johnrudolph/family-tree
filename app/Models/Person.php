@@ -18,6 +18,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 /**
  * @property int $id
  * @property string $first_name
+ * @property string|null $middle_name
  * @property string|null $last_name
  * @property string|null $preferred_name
  * @property Carbon|null $dob
@@ -35,7 +36,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read User $creator
  */
 #[Fillable([
-    'first_name', 'last_name', 'preferred_name', 'dob', 'dob_precision', 'dod', 'is_living', 'bio', 'created_by',
+    'first_name', 'middle_name', 'last_name', 'preferred_name', 'dob', 'dob_precision', 'dod', 'is_living', 'bio', 'created_by',
     'consented_at', 'address', 'phone', 'contact_email', 'social_links',
 ])]
 class Person extends Model implements HasMedia
@@ -74,6 +75,16 @@ class Person extends Model implements HasMedia
     public function hasConsented(): bool
     {
         return $this->consented_at !== null;
+    }
+
+    /**
+     * Whether enrichment fields (photo, contact info) may be shown/added at all.
+     * Living people must explicitly consent; the deceased have no one to withhold
+     * consent, so editors may add memorial photos/details without it.
+     */
+    public function canShowEnrichment(): bool
+    {
+        return $this->hasConsented() || ! $this->is_living;
     }
 
     /**
@@ -121,7 +132,9 @@ class Person extends Model implements HasMedia
 
     public function fullName(): string
     {
-        return trim("{$this->first_name} {$this->last_name}");
+        return collect([$this->first_name, $this->middle_name, $this->last_name])
+            ->filter()
+            ->implode(' ');
     }
 
     public function wikiTitle(): string

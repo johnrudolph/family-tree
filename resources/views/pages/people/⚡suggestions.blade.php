@@ -48,6 +48,7 @@ new #[Title('Review suggestions')] class extends Component {
     {
         return match ($field) {
             'first_name' => 'First name',
+            'middle_name' => 'Middle name',
             'last_name' => 'Last name',
             'preferred_name' => 'Preferred name',
             'dob' => 'Date of birth',

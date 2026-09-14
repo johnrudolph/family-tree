@@ -14,6 +14,8 @@ new #[Title('Suggest an edit')] class extends Component {
 
     public string $first_name = '';
 
+    public string $middle_name = '';
+
     public string $last_name = '';
 
     public string $preferred_name = '';
@@ -32,6 +34,7 @@ new #[Title('Suggest an edit')] class extends Component {
 
         $this->person = $person;
         $this->first_name = $person->first_name;
+        $this->middle_name = $person->middle_name ?? '';
         $this->last_name = $person->last_name ?? '';
         $this->preferred_name = $person->preferred_name ?? '';
         $this->dob = $person->dob?->toDateString();
@@ -46,6 +49,7 @@ new #[Title('Suggest an edit')] class extends Component {
 
         $validated = $this->validate([
             'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'preferred_name' => ['nullable', 'string', 'max:255'],
             'dob' => ['nullable', 'date'],
@@ -56,6 +60,7 @@ new #[Title('Suggest an edit')] class extends Component {
 
         $payload = [
             ...$validated,
+            'middle_name' => $validated['middle_name'] ?: null,
             'last_name' => $validated['last_name'] ?: null,
             'preferred_name' => $validated['preferred_name'] ?: null,
         ];
@@ -74,6 +79,7 @@ new #[Title('Suggest an edit')] class extends Component {
 
     <form wire:submit="submit" class="mt-6 flex flex-col gap-6">
         <flux:input wire:model="first_name" :label="__('First name')" required />
+        <flux:input wire:model="middle_name" :label="__('Middle name')" />
         <flux:input wire:model="last_name" :label="__('Last name')" />
         <flux:input wire:model="preferred_name" :label="__('Preferred name')" />
         <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />

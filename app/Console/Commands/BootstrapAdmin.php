@@ -29,6 +29,7 @@ class BootstrapAdmin extends Command
         }
 
         $firstName = $this->ask('First name');
+        $middleName = $this->ask('Middle name (optional)');
         $lastName = $this->ask('Last name');
         $email = $this->ask('Email address');
         $password = $this->secret('Password');
@@ -38,7 +39,7 @@ class BootstrapAdmin extends Command
                 'email' => $email,
                 'password' => $password,
             ], [
-                'email' => ['required', 'email'],
+                'email' => ['required', 'email', 'unique:users,email'],
                 'password' => ['required', Password::defaults()],
             ])->validate();
         } catch (ValidationException $e) {
@@ -51,7 +52,7 @@ class BootstrapAdmin extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($firstName, $lastName, $email, $password) {
+        DB::transaction(function () use ($firstName, $middleName, $lastName, $email, $password) {
             $user = User::create([
                 'name' => trim("{$firstName} {$lastName}"),
                 'email' => $email,
@@ -62,6 +63,7 @@ class BootstrapAdmin extends Command
 
             $person = Person::create([
                 'first_name' => $firstName,
+                'middle_name' => $middleName ?: null,
                 'last_name' => $lastName,
                 'is_living' => true,
                 'created_by' => $user->id,

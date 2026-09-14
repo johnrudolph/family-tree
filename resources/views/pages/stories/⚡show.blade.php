@@ -41,6 +41,7 @@ new class extends Component {
         <div class="flex gap-2">
             @if ($this->canEdit)
                 <flux:button :href="route('stories.edit', $story)" wire:navigate size="sm">{{ __('Edit') }}</flux:button>
+                <flux:button :href="route('stories.editors', $story)" wire:navigate size="sm">{{ __('Editors') }}</flux:button>
                 <flux:button :href="route('stories.suggestions', $story)" wire:navigate size="sm">
                     {{ __('Suggestions') }}
                     @if ($this->pendingSuggestionCount > 0)

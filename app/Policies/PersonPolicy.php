@@ -50,10 +50,16 @@ class PersonPolicy
 
     /**
      * Self-enrichment fields (address, phone, contact email, social links, photo).
-     * Nobody may set these for another person — not admins, not the page's editors.
+     * For the living, only the person themself may set these — nobody may add this
+     * data on someone else's behalf. For the deceased, there's no one to withhold
+     * consent, so this page's editors may add memorial photos/details instead.
      */
     public function manageEnrichment(User $user, Person $person): bool
     {
-        return $user->person_id !== null && $user->person_id === $person->id;
+        if ($user->person_id !== null && $user->person_id === $person->id) {
+            return true;
+        }
+
+        return ! $person->is_living && $person->isEditor($user);
     }
 }

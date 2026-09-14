@@ -36,6 +36,12 @@ new class extends Component {
     }
 
     #[Computed]
+    public function canManageEnrichment(): bool
+    {
+        return Gate::allows('manageEnrichment', $this->person);
+    }
+
+    #[Computed]
     public function pendingSuggestionCount(): int
     {
         return $this->canEdit ? $this->person->pendingSuggestions()->count() : 0;
@@ -68,11 +74,21 @@ new class extends Component {
                 <flux:button :href="route('people.enrich', $person)" wire:navigate size="sm">
                     {{ __('Edit my details') }}
                 </flux:button>
+            @elseif ($this->canManageEnrichment)
+                <flux:button :href="route('people.enrich', $person)" wire:navigate size="sm">
+                    {{ __('Memorial photo & details') }}
+                </flux:button>
             @endif
 
             @if ($this->canEdit)
                 <flux:button :href="route('people.edit', $person)" wire:navigate size="sm">
                     {{ __('Edit') }}
+                </flux:button>
+                <flux:button :href="route('people.relationships', $person)" wire:navigate size="sm">
+                    {{ __('Relationships') }}
+                </flux:button>
+                <flux:button :href="route('people.editors', $person)" wire:navigate size="sm">
+                    {{ __('Editors') }}
                 </flux:button>
                 <flux:button :href="route('people.suggestions', $person)" wire:navigate size="sm">
                     {{ __('Suggestions') }}
@@ -110,7 +126,7 @@ new class extends Component {
                 @endif
             </div>
 
-            @if ($person->hasConsented() && ($person->address || $person->phone || $person->contact_email || $person->social_links))
+            @if ($person->canShowEnrichment() && ($person->address || $person->phone || $person->contact_email || $person->social_links))
                 <flux:heading level="2" class="mt-8">{{ __('Contact') }}</flux:heading>
                 <dl class="mt-2 space-y-1">
                     @if ($person->contact_email)

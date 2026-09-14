@@ -2,13 +2,15 @@
 
 use App\Models\Person;
 use Flux\Flux;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-new #[Title('My details')] class extends Component {
+new #[Title('Photo & details')] class extends Component {
     use WithFileUploads;
 
     #[Locked]
@@ -36,6 +38,12 @@ new #[Title('My details')] class extends Component {
         $this->phone = $person->phone ?? '';
         $this->contact_email = $person->contact_email ?? '';
         $this->social_links = $person->social_links ?? [];
+    }
+
+    #[Computed]
+    public function isSelf(): bool
+    {
+        return Auth::user()->person_id === $this->person->id;
     }
 
     public function addSocialLink(): void
@@ -68,7 +76,7 @@ new #[Title('My details')] class extends Component {
             'phone' => $validated['phone'] ?: null,
             'contact_email' => $validated['contact_email'] ?: null,
             'social_links' => $this->social_links ?: null,
-            'consented_at' => $this->person->consented_at ?? now(),
+            'consented_at' => $this->isSelf ? ($this->person->consented_at ?? now()) : $this->person->consented_at,
         ]);
 
         if ($this->photo) {
@@ -77,17 +85,29 @@ new #[Title('My details')] class extends Component {
                 ->toMediaCollection('photo');
         }
 
-        Flux::toast(variant: 'success', text: __('Saved. This information is only ever editable by you.'));
+        Flux::toast(
+            variant: 'success',
+            text: $this->isSelf
+                ? __('Saved. This information is only ever editable by you.')
+                : __('Saved.'),
+        );
 
         $this->redirect(route('people.show', $this->person), navigate: true);
     }
 }; ?>
 
 <section class="w-full max-w-lg">
-    <flux:heading level="1">{{ __('My details') }}</flux:heading>
-    <flux:subheading>
-        {{ __('This information is optional, self-managed, and only ever writable by you — no one else can add or suggest it for you.') }}
-    </flux:subheading>
+    @if ($this->isSelf)
+        <flux:heading level="1">{{ __('My details') }}</flux:heading>
+        <flux:subheading>
+            {{ __('This information is optional, self-managed, and only ever writable by you — no one else can add or suggest it for you.') }}
+        </flux:subheading>
+    @else
+        <flux:heading level="1">{{ __('Memorial photo & details for') }} {{ $person->fullName() }}</flux:heading>
+        <flux:subheading>
+            {{ __('Since this person has passed, any editor of their page can add a photo and memorial details on their behalf.') }}
+        </flux:subheading>
+    @endif
 
     <form wire:submit="save" class="mt-6 flex flex-col gap-6">
         <div class="flex items-center gap-4">

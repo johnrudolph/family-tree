@@ -32,7 +32,10 @@ new #[Title('People')] class extends Component {
     <div class="flex items-center justify-between">
         <flux:heading level="1">{{ __('People') }}</flux:heading>
         @if (auth()->user()->is_admin)
-            <flux:button :href="route('invites.create')" wire:navigate size="sm">{{ __('Invite a member') }}</flux:button>
+            <div class="flex gap-2">
+                <flux:button :href="route('people.create')" wire:navigate size="sm" variant="primary">{{ __('Add person') }}</flux:button>
+                <flux:button :href="route('invites.create')" wire:navigate size="sm">{{ __('Invite a member') }}</flux:button>
+            </div>
         @endif
     </div>
 
