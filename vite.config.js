@@ -10,7 +10,6 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/passkeys.js',
-                'resources/js/family-tree.js',
             ],
             refresh: true,
             fonts: [

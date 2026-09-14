@@ -28,6 +28,4 @@ new #[Title('Family Tree')] class extends Component {
     <flux:subheading>{{ __('Click a card to open that person\'s page.') }}</flux:subheading>
 
     <div x-ref="chart" class="mt-4 h-[75vh] w-full rounded-lg border border-zinc-200 dark:border-zinc-700" id="family-tree-chart"></div>
-
-    @vite('resources/js/family-tree.js')
 </section>
