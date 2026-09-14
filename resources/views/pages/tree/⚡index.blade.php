@@ -30,6 +30,8 @@ new #[Title('Family Tree')] class extends Component {
 
     public string $relNewLastName = '';
 
+    public ?string $relNewDob = null;
+
     public string $relSpouseStatus = 'married';
 
     /** @var array<int, int> child ids to also link to the new spouse as parent */
@@ -151,6 +153,7 @@ new #[Title('Family Tree')] class extends Component {
             'relNewFirstName' => ['required_if:relMode,new', 'nullable', 'string', 'max:255'],
             'relNewMiddleName' => ['nullable', 'string', 'max:255'],
             'relNewLastName' => ['nullable', 'string', 'max:255'],
+            'relNewDob' => ['nullable', 'date'],
             'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced,separated'],
         ]);
 
@@ -161,6 +164,8 @@ new #[Title('Family Tree')] class extends Component {
                 'first_name' => $validated['relNewFirstName'],
                 'middle_name' => $validated['relNewMiddleName'] ?: null,
                 'last_name' => $validated['relNewLastName'] ?: null,
+                'dob' => $validated['relNewDob'] ?: null,
+                'dob_precision' => $validated['relNewDob'] ? 'exact' : 'unknown',
                 'is_living' => true,
                 'created_by' => Auth::id(),
             ]);
@@ -212,7 +217,7 @@ new #[Title('Family Tree')] class extends Component {
             }
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds']);
         unset($this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
@@ -351,6 +356,7 @@ new #[Title('Family Tree')] class extends Component {
                         <flux:input wire:model="relNewFirstName" :placeholder="__('First name')" />
                         <flux:input wire:model="relNewMiddleName" :placeholder="__('Middle name')" />
                         <flux:input wire:model="relNewLastName" :placeholder="__('Last name')" />
+                        <flux:input wire:model="relNewDob" type="date" :placeholder="__('Date of birth')" />
                     @endif
 
                     <flux:button type="submit" variant="primary" size="sm">{{ __('Add relationship') }}</flux:button>

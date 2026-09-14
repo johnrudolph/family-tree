@@ -29,6 +29,8 @@ new #[Title('Manage relationships')] class extends Component {
 
     public string $new_last_name = '';
 
+    public ?string $new_dob = null;
+
     public string $spouseStatus = 'married';
 
     /** @var array<int, int> child ids to also link to the new spouse as parent */
@@ -132,6 +134,7 @@ new #[Title('Manage relationships')] class extends Component {
             'new_first_name' => ['required_if:mode,new', 'nullable', 'string', 'max:255'],
             'new_middle_name' => ['nullable', 'string', 'max:255'],
             'new_last_name' => ['nullable', 'string', 'max:255'],
+            'new_dob' => ['nullable', 'date'],
             'spouseStatus' => ['required_if:type,spouse', 'in:married,divorced,separated'],
         ]);
 
@@ -140,6 +143,8 @@ new #[Title('Manage relationships')] class extends Component {
                 'first_name' => $validated['new_first_name'],
                 'middle_name' => $validated['new_middle_name'] ?: null,
                 'last_name' => $validated['new_last_name'] ?: null,
+                'dob' => $validated['new_dob'] ?: null,
+                'dob_precision' => $validated['new_dob'] ? 'exact' : 'unknown',
                 'is_living' => true,
                 'created_by' => Auth::id(),
             ]);
@@ -191,7 +196,7 @@ new #[Title('Manage relationships')] class extends Component {
             }
         }
 
-        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'alsoParentOfChildIds', 'alsoCoParentIds']);
+        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'new_dob', 'alsoParentOfChildIds', 'alsoCoParentIds']);
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
@@ -329,6 +334,7 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:input wire:model="new_first_name" :label="__('First name')" />
             <flux:input wire:model="new_middle_name" :label="__('Middle name')" />
             <flux:input wire:model="new_last_name" :label="__('Last name')" />
+            <flux:input wire:model="new_dob" type="date" :label="__('Date of birth')" />
         @endif
 
         <div>

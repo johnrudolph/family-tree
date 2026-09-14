@@ -47,6 +47,25 @@ test('an editor of the selected person can add a relationship from the panel', f
     expect($person->fresh()->parents()->pluck('id'))->toContain($parent->id);
 });
 
+test('a new person created inline from the tree panel can have a date of birth set immediately', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $person->id)
+        ->set('relType', 'child')
+        ->set('relMode', 'new')
+        ->set('relNewFirstName', 'Kid')
+        ->set('relNewDob', '2010-05-01')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $kid = Person::query()->where('first_name', 'Kid')->firstOrFail();
+    expect($kid->dob?->toDateString())->toBe('2010-05-01');
+});
+
 test('a non-editor does not see the add relationship form for the selected person', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();
