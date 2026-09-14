@@ -40,6 +40,9 @@ new #[Title('Family Tree')] class extends Component {
     /** @var array<int, int> spouse ids to also link to the new child as parent */
     public array $relAlsoCoParentIds = [];
 
+    /** @var array<int, int> parent ids to also link to the new sibling as parent */
+    public array $relAlsoSiblingParentIds = [];
+
     #[Computed]
     public function treeData(): array
     {
@@ -139,6 +142,22 @@ new #[Title('Family Tree')] class extends Component {
         $this->relAlsoCoParentIds = $value === 'child'
             ? $this->candidateCoParents->pluck('id')->all()
             : [];
+
+        $this->relAlsoSiblingParentIds = $value === 'sibling'
+            ? $this->existingParents->pluck('id')->all()
+            : [];
+    }
+
+    /**
+     * Remove a suggested "also link" pill before creating the relationship.
+     * $property is restricted to the known suggestion arrays since it's
+     * client-controlled via the pill component's wire:click call.
+     */
+    public function removeSuggestion(string $property, int $id): void
+    {
+        abort_unless(in_array($property, ['relAlsoParentOfChildIds', 'relAlsoCoParentIds', 'relAlsoSiblingParentIds'], true), 403);
+
+        $this->{$property} = array_values(array_diff($this->{$property}, [$id]));
     }
 
     public function addRelationship(): void
@@ -212,12 +231,12 @@ new #[Title('Family Tree')] class extends Component {
                 $relationships->linkParentChildIfMissing($spouse, $other);
             }
         } elseif ($this->relType === 'sibling') {
-            foreach ($relationships->existingParents($person) as $parent) {
+            foreach (Person::query()->whereIn('id', $this->relAlsoSiblingParentIds)->get() as $parent) {
                 $relationships->linkParentChildIfMissing($parent, $other);
             }
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds', 'relAlsoSiblingParentIds']);
         unset($this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
@@ -307,38 +326,45 @@ new #[Title('Family Tree')] class extends Component {
                             <flux:select.option value="separated">{{ __('Separated') }}</flux:select.option>
                         </flux:select>
 
-                        @if ($this->candidateStepchildren->isNotEmpty())
-                            <div class="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-900 dark:bg-blue-950">
-                                <flux:text class="text-sm font-medium text-blue-900 dark:text-blue-200">💡 {{ __('Suggested: also mark as parent of') }}</flux:text>
-                                <flux:text class="text-xs text-blue-700 dark:text-blue-400">{{ __('Uncheck anyone who doesn\'t apply.') }}</flux:text>
-                                <div class="mt-2 flex flex-col gap-1">
-                                    @foreach ($this->candidateStepchildren as $child)
-                                        <flux:checkbox wire:model="relAlsoParentOfChildIds" value="{{ $child->id }}" :label="$child->fullName()" />
-                                    @endforeach
-                                </div>
+                        <x-relationship-pills
+                            :label="__('Also mark as parent of')"
+                            :hint="__('Click × to remove anyone who doesn\'t apply.')"
+                            property="relAlsoParentOfChildIds"
+                            :candidates="$this->candidateStepchildren"
+                            :selected-ids="$relAlsoParentOfChildIds"
+                        />
+                    @endif
+
+                    @if ($relType === 'child')
+                        <x-relationship-pills
+                            :label="__('Also mark as parent')"
+                            :hint="__('Click × to remove anyone who doesn\'t apply.')"
+                            property="relAlsoCoParentIds"
+                            :candidates="$this->candidateCoParents"
+                            :selected-ids="$relAlsoCoParentIds"
+                        />
+                    @endif
+
+                    @if ($relType === 'sibling')
+                        <x-relationship-pills
+                            :label="__('Also link as parent')"
+                            :hint="__('Click × to remove anyone who doesn\'t apply.')"
+                            property="relAlsoSiblingParentIds"
+                            :candidates="$this->existingParents"
+                            :selected-ids="$relAlsoSiblingParentIds"
+                        />
+
+                        @if ($this->selectedPersonSiblings->isNotEmpty())
+                            <div class="rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-600">
+                                <flux:text class="text-sm text-zinc-600 dark:text-zinc-400">
+                                    {{ __('They\'ll also become a sibling of:') }}
+                                    {{ $this->selectedPersonSiblings->map->fullName()->join(', ') }}
+                                </flux:text>
                             </div>
                         @endif
                     @endif
 
-                    @if ($relType === 'child' && $this->candidateCoParents->isNotEmpty())
-                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-900 dark:bg-blue-950">
-                            <flux:text class="text-sm font-medium text-blue-900 dark:text-blue-200">💡 {{ __('Suggested: also mark as parent') }}</flux:text>
-                            <flux:text class="text-xs text-blue-700 dark:text-blue-400">{{ __('Uncheck anyone who doesn\'t apply.') }}</flux:text>
-                            <div class="mt-2 flex flex-col gap-1">
-                                @foreach ($this->candidateCoParents as $spouse)
-                                    <flux:checkbox wire:model="relAlsoCoParentIds" value="{{ $spouse->id }}" :label="$spouse->fullName()" />
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    @if ($relType === 'sibling')
-                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-900 dark:bg-blue-950">
-                            <flux:text class="text-sm font-medium text-blue-900 dark:text-blue-200">
-                                💡 {{ __('This will also link them to :parents as parents.', ['parents' => $this->existingParents->map->fullName()->join(' and ')]) }}
-                            </flux:text>
-                        </div>
-                    @endif
+                    <flux:separator />
 
                     <flux:radio.group wire:model.live="relMode">
                         <flux:radio value="existing" label="{{ __('Existing person') }}" />

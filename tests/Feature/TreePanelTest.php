@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Relationship;
 use App\Models\User;
 use App\Services\PageEditorService;
 use Livewire\Livewire;
@@ -64,6 +65,32 @@ test('a new person created inline from the tree panel can have a date of birth s
 
     $kid = Person::query()->where('first_name', 'Kid')->firstOrFail();
     expect($kid->dob?->toDateString())->toBe('2010-05-01');
+});
+
+test('removing a sibling parent pill in the tree panel leaves that parent unlinked', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $me = Person::factory()->create();
+    $mom = Person::factory()->create();
+    $dad = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($me, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $me->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $dad->id, 'person_b_id' => $me->id]);
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $me->id)
+        ->set('relType', 'sibling')
+        ->assertSet('relAlsoSiblingParentIds', [$mom->id, $dad->id])
+        ->call('removeSuggestion', 'relAlsoSiblingParentIds', $dad->id)
+        ->assertSet('relAlsoSiblingParentIds', [$mom->id])
+        ->set('relMode', 'new')
+        ->set('relNewFirstName', 'Sibling')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $sibling = Person::query()->where('first_name', 'Sibling')->firstOrFail();
+    expect($sibling->parents()->pluck('id'))->toContain($mom->id)
+        ->and($sibling->parents()->pluck('id'))->not->toContain($dad->id);
 });
 
 test('a non-editor does not see the add relationship form for the selected person', function () {

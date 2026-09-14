@@ -86,6 +86,46 @@ test('adding a sibling links them to both existing parents', function () {
     expect($sibling->parents()->pluck('id'))->toContain($mom->id, $dad->id);
 });
 
+test('removing a sibling parent pill leaves that parent unlinked', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $me = Person::factory()->create();
+    $mom = Person::factory()->create();
+    $dad = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($me, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $me->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $dad->id, 'person_b_id' => $me->id]);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $me])
+        ->set('type', 'sibling')
+        ->assertSet('alsoSiblingParentIds', [$mom->id, $dad->id])
+        ->call('removeSuggestion', 'alsoSiblingParentIds', $dad->id)
+        ->assertSet('alsoSiblingParentIds', [$mom->id])
+        ->set('mode', 'new')
+        ->set('new_first_name', 'Sibling')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $sibling = Person::query()->where('first_name', 'Sibling')->firstOrFail();
+    expect($sibling->parents()->pluck('id'))->toContain($mom->id)
+        ->and($sibling->parents()->pluck('id'))->not->toContain($dad->id);
+});
+
+test('adding a sibling previews who the new person will also become a sibling of', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $me = Person::factory()->create();
+    $mom = Person::factory()->create();
+    $existingSibling = Person::factory()->create(['first_name' => 'Existing', 'last_name' => 'Sibling']);
+    app(PageEditorService::class)->grantOwner($me, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $me->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $existingSibling->id]);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $me])
+        ->set('type', 'sibling')
+        ->assertSee('Existing Sibling');
+});
+
 test('the sibling option is not offered for a person with no recorded parents', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();
