@@ -25,6 +25,11 @@ export function initFamilyTree(container, data, { mainId } = {}) {
     // parent — our data model doesn't assume every child has two parents on record.
     chart.setSingleParentEmptyCard(false);
 
+    // family-chart hides the selected person's siblings by default. We want
+    // the opposite: selecting anyone should show their parents, siblings,
+    // spouses, and children all at once, not make relatives disappear.
+    chart.setShowSiblingsOfMain(true);
+
     if (mainId) {
         chart.updateMainId(String(mainId));
     }

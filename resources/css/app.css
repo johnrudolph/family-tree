@@ -16,6 +16,21 @@
     outline-offset: 2px;
 }
 
+/* family-chart's default card background (light gray, for the "genderless"
+   case we always hit since we don't collect gender) and white connecting
+   lines assume a light page. In dark mode that leaves white card text on a
+   near-white card, and lines that vanish into nothing — darken both, the
+   library's own --text-color (white) stays as-is. */
+.dark .f3 {
+    --genderless-color: var(--color-zinc-700, #3f3f46);
+    --male-color: #274552;
+    --female-color: #4a2f34;
+}
+
+.dark .f3 .links_view .link {
+    stroke: var(--color-zinc-500, #71717a) !important;
+}
+
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
