@@ -25,6 +25,8 @@ new #[Title('Manage relationships')] class extends Component {
 
     public string $new_first_name = '';
 
+    public string $new_middle_name = '';
+
     public string $new_last_name = '';
 
     public string $spouseStatus = 'married';
@@ -45,10 +47,7 @@ new #[Title('Manage relationships')] class extends Component {
     #[Computed]
     public function candidatePeople()
     {
-        return Person::query()
-            ->where('id', '!=', $this->person->id)
-            ->orderBy('first_name')
-            ->get();
+        return app(RelationshipService::class)->candidatesFor($this->person);
     }
 
     #[Computed]
@@ -73,6 +72,12 @@ new #[Title('Manage relationships')] class extends Component {
     public function personHasParents(): bool
     {
         return $this->existingParents->isNotEmpty();
+    }
+
+    #[Computed]
+    public function siblings()
+    {
+        return $this->person->siblings();
     }
 
     #[Computed]
@@ -125,6 +130,7 @@ new #[Title('Manage relationships')] class extends Component {
             'mode' => ['required', 'in:existing,new'],
             'existingPersonId' => ['required_if:mode,existing', 'nullable', 'exists:people,id'],
             'new_first_name' => ['required_if:mode,new', 'nullable', 'string', 'max:255'],
+            'new_middle_name' => ['nullable', 'string', 'max:255'],
             'new_last_name' => ['nullable', 'string', 'max:255'],
             'spouseStatus' => ['required_if:type,spouse', 'in:married,divorced,separated'],
         ]);
@@ -132,6 +138,7 @@ new #[Title('Manage relationships')] class extends Component {
         if ($this->mode === 'new') {
             $other = Person::create([
                 'first_name' => $validated['new_first_name'],
+                'middle_name' => $validated['new_middle_name'] ?: null,
                 'last_name' => $validated['new_last_name'] ?: null,
                 'is_living' => true,
                 'created_by' => Auth::id(),
@@ -184,7 +191,7 @@ new #[Title('Manage relationships')] class extends Component {
             }
         }
 
-        $this->reset(['existingPersonId', 'new_first_name', 'new_last_name', 'alsoParentOfChildIds', 'alsoCoParentIds']);
+        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'alsoParentOfChildIds', 'alsoCoParentIds']);
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
@@ -224,6 +231,18 @@ new #[Title('Manage relationships')] class extends Component {
         @empty
             <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
         @endforelse
+
+        @foreach ($this->siblings as $sibling)
+            <div class="flex items-center justify-between rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-600" wire:key="sibling-{{ $sibling->id }}">
+                <div class="flex items-center gap-3">
+                    <flux:badge size="sm">{{ __('Sibling') }}</flux:badge>
+                    <a href="{{ route('people.show', $sibling) }}" wire:navigate class="hover:underline">
+                        {{ $sibling->fullName() }}
+                    </a>
+                </div>
+                <flux:text class="text-xs text-zinc-500">{{ __('via shared parent') }}</flux:text>
+            </div>
+        @endforeach
     </div>
 
     <flux:separator class="my-8" />
@@ -248,14 +267,14 @@ new #[Title('Manage relationships')] class extends Component {
             </flux:select>
 
             @if ($this->candidateStepchildren->isNotEmpty())
-                <div>
-                    <flux:text class="font-medium">
-                        {{ __('Also mark as parent of') }}
+                <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
+                    <flux:text class="font-medium text-blue-900 dark:text-blue-200">
+                        💡 {{ __('Suggested: also mark as parent of') }}
                     </flux:text>
-                    <flux:text class="text-xs text-zinc-500">
-                        {{ __('Uncheck anyone this new spouse isn\'t a parent of.') }}
+                    <flux:text class="text-xs text-blue-700 dark:text-blue-400">
+                        {{ __('All checked by default — uncheck anyone this new spouse isn\'t a parent of.') }}
                     </flux:text>
-                    <div class="mt-2 flex flex-wrap gap-2">
+                    <div class="mt-2 flex flex-wrap gap-3">
                         @foreach ($this->candidateStepchildren as $child)
                             <flux:checkbox
                                 wire:model="alsoParentOfChildIds"
@@ -269,12 +288,12 @@ new #[Title('Manage relationships')] class extends Component {
         @endif
 
         @if ($type === 'child' && $this->candidateCoParents->isNotEmpty())
-            <div>
-                <flux:text class="font-medium">{{ __('Also mark as parent') }}</flux:text>
-                <flux:text class="text-xs text-zinc-500">
-                    {{ __('Uncheck anyone who isn\'t also a parent of this child.') }}
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
+                <flux:text class="font-medium text-blue-900 dark:text-blue-200">💡 {{ __('Suggested: also mark as parent') }}</flux:text>
+                <flux:text class="text-xs text-blue-700 dark:text-blue-400">
+                    {{ __('All checked by default — uncheck anyone who isn\'t also a parent of this child.') }}
                 </flux:text>
-                <div class="mt-2 flex flex-wrap gap-2">
+                <div class="mt-2 flex flex-wrap gap-3">
                     @foreach ($this->candidateCoParents as $spouse)
                         <flux:checkbox
                             wire:model="alsoCoParentIds"
@@ -287,9 +306,11 @@ new #[Title('Manage relationships')] class extends Component {
         @endif
 
         @if ($type === 'sibling')
-            <flux:text class="text-xs text-zinc-500">
-                {{ __('This will link them to :parents as parents too.', ['parents' => $this->existingParents->map->fullName()->join(' and ')]) }}
-            </flux:text>
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
+                <flux:text class="font-medium text-blue-900 dark:text-blue-200">
+                    💡 {{ __('This will also link them to :parents as parents.', ['parents' => $this->existingParents->map->fullName()->join(' and ')]) }}
+                </flux:text>
+            </div>
         @endif
 
         <flux:radio.group wire:model.live="mode" :label="__('Who?')">
@@ -306,6 +327,7 @@ new #[Title('Manage relationships')] class extends Component {
             </flux:select>
         @else
             <flux:input wire:model="new_first_name" :label="__('First name')" />
+            <flux:input wire:model="new_middle_name" :label="__('Middle name')" />
             <flux:input wire:model="new_last_name" :label="__('Last name')" />
         @endif
 

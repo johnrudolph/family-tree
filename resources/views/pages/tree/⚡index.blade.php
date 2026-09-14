@@ -26,6 +26,8 @@ new #[Title('Family Tree')] class extends Component {
 
     public string $relNewFirstName = '';
 
+    public string $relNewMiddleName = '';
+
     public string $relNewLastName = '';
 
     public string $relSpouseStatus = 'married';
@@ -79,11 +81,7 @@ new #[Title('Family Tree')] class extends Component {
     #[Computed]
     public function candidatePeople()
     {
-        if (! $this->selectedPersonId) {
-            return collect();
-        }
-
-        return Person::query()->where('id', '!=', $this->selectedPersonId)->orderBy('first_name')->get();
+        return $this->selectedPerson ? app(RelationshipService::class)->candidatesFor($this->selectedPerson) : collect();
     }
 
     #[Computed]
@@ -108,6 +106,12 @@ new #[Title('Family Tree')] class extends Component {
     public function selectedPersonHasParents(): bool
     {
         return $this->existingParents->isNotEmpty();
+    }
+
+    #[Computed]
+    public function selectedPersonSiblings()
+    {
+        return $this->selectedPerson ? $this->selectedPerson->siblings() : collect();
     }
 
     public function selectPerson(int $id): void
@@ -145,6 +149,7 @@ new #[Title('Family Tree')] class extends Component {
             'relMode' => ['required', 'in:existing,new'],
             'relExistingPersonId' => ['required_if:relMode,existing', 'nullable', 'exists:people,id'],
             'relNewFirstName' => ['required_if:relMode,new', 'nullable', 'string', 'max:255'],
+            'relNewMiddleName' => ['nullable', 'string', 'max:255'],
             'relNewLastName' => ['nullable', 'string', 'max:255'],
             'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced,separated'],
         ]);
@@ -154,6 +159,7 @@ new #[Title('Family Tree')] class extends Component {
         if ($this->relMode === 'new') {
             $other = Person::create([
                 'first_name' => $validated['relNewFirstName'],
+                'middle_name' => $validated['relNewMiddleName'] ?: null,
                 'last_name' => $validated['relNewLastName'] ?: null,
                 'is_living' => true,
                 'created_by' => Auth::id(),
@@ -206,7 +212,7 @@ new #[Title('Family Tree')] class extends Component {
             }
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewLastName', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds']);
         unset($this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
@@ -268,6 +274,13 @@ new #[Title('Family Tree')] class extends Component {
                 {{ __('View full page') }}
             </flux:button>
 
+            @if ($this->selectedPersonSiblings->isNotEmpty())
+                <flux:text class="mt-2 text-xs text-zinc-500">
+                    {{ __('Siblings (via shared parent):') }}
+                    {{ $this->selectedPersonSiblings->map->fullName()->join(', ') }}
+                </flux:text>
+            @endif
+
             @if ($this->canEditSelected)
                 <flux:separator class="my-4" />
                 <flux:heading level="2" size="sm">{{ __('Add a relationship') }}</flux:heading>
@@ -290,9 +303,9 @@ new #[Title('Family Tree')] class extends Component {
                         </flux:select>
 
                         @if ($this->candidateStepchildren->isNotEmpty())
-                            <div>
-                                <flux:text class="text-sm font-medium">{{ __('Also mark as parent of') }}</flux:text>
-                                <flux:text class="text-xs text-zinc-500">{{ __('Uncheck anyone who doesn\'t apply.') }}</flux:text>
+                            <div class="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-900 dark:bg-blue-950">
+                                <flux:text class="text-sm font-medium text-blue-900 dark:text-blue-200">💡 {{ __('Suggested: also mark as parent of') }}</flux:text>
+                                <flux:text class="text-xs text-blue-700 dark:text-blue-400">{{ __('Uncheck anyone who doesn\'t apply.') }}</flux:text>
                                 <div class="mt-2 flex flex-col gap-1">
                                     @foreach ($this->candidateStepchildren as $child)
                                         <flux:checkbox wire:model="relAlsoParentOfChildIds" value="{{ $child->id }}" :label="$child->fullName()" />
@@ -303,9 +316,9 @@ new #[Title('Family Tree')] class extends Component {
                     @endif
 
                     @if ($relType === 'child' && $this->candidateCoParents->isNotEmpty())
-                        <div>
-                            <flux:text class="text-sm font-medium">{{ __('Also mark as parent') }}</flux:text>
-                            <flux:text class="text-xs text-zinc-500">{{ __('Uncheck anyone who doesn\'t apply.') }}</flux:text>
+                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-900 dark:bg-blue-950">
+                            <flux:text class="text-sm font-medium text-blue-900 dark:text-blue-200">💡 {{ __('Suggested: also mark as parent') }}</flux:text>
+                            <flux:text class="text-xs text-blue-700 dark:text-blue-400">{{ __('Uncheck anyone who doesn\'t apply.') }}</flux:text>
                             <div class="mt-2 flex flex-col gap-1">
                                 @foreach ($this->candidateCoParents as $spouse)
                                     <flux:checkbox wire:model="relAlsoCoParentIds" value="{{ $spouse->id }}" :label="$spouse->fullName()" />
@@ -315,9 +328,11 @@ new #[Title('Family Tree')] class extends Component {
                     @endif
 
                     @if ($relType === 'sibling')
-                        <flux:text class="text-xs text-zinc-500">
-                            {{ __('This will link them to :parents as parents too.', ['parents' => $this->existingParents->map->fullName()->join(' and ')]) }}
-                        </flux:text>
+                        <div class="rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-900 dark:bg-blue-950">
+                            <flux:text class="text-sm font-medium text-blue-900 dark:text-blue-200">
+                                💡 {{ __('This will also link them to :parents as parents.', ['parents' => $this->existingParents->map->fullName()->join(' and ')]) }}
+                            </flux:text>
+                        </div>
                     @endif
 
                     <flux:radio.group wire:model.live="relMode">
@@ -334,6 +349,7 @@ new #[Title('Family Tree')] class extends Component {
                         </flux:select>
                     @else
                         <flux:input wire:model="relNewFirstName" :placeholder="__('First name')" />
+                        <flux:input wire:model="relNewMiddleName" :placeholder="__('Middle name')" />
                         <flux:input wire:model="relNewLastName" :placeholder="__('Last name')" />
                     @endif
 

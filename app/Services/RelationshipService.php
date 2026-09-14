@@ -77,4 +77,26 @@ class RelationshipService
     {
         return $person->parents();
     }
+
+    /**
+     * People already directly related to this person in any way (parent, child,
+     * or spouse) — excluded from "pick an existing person" pickers, since picking
+     * someone already related would either duplicate or contradict that relationship
+     * (e.g. a recorded parent can't also be picked as a new sibling).
+     *
+     * @return Collection<int, Person>
+     */
+    public function candidatesFor(Person $person): Collection
+    {
+        $relatedIds = Relationship::query()
+            ->where('person_a_id', $person->id)
+            ->orWhere('person_b_id', $person->id)
+            ->get()
+            ->map(fn (Relationship $r) => $r->person_a_id === $person->id ? $r->person_b_id : $r->person_a_id);
+
+        return Person::query()
+            ->whereNotIn('id', $relatedIds->push($person->id))
+            ->orderBy('first_name')
+            ->get();
+    }
 }

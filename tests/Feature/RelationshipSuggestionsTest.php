@@ -95,3 +95,40 @@ test('the sibling option is not offered for a person with no recorded parents', 
         ->test('pages::people.relationships', ['person' => $person])
         ->assertDontSee('Sibling of');
 });
+
+test('the existing-person picker excludes anyone already directly related', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $sister = Person::factory()->create(['first_name' => 'Sister']);
+    $mom = Person::factory()->create(['first_name' => 'Mom']);
+    $dad = Person::factory()->create(['first_name' => 'Dad']);
+    $stranger = Person::factory()->create(['first_name' => 'Stranger']);
+    app(PageEditorService::class)->grantOwner($sister, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $sister->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $dad->id, 'person_b_id' => $sister->id]);
+
+    $component = Livewire::actingAs($editor)->test('pages::people.relationships', ['person' => $sister]);
+
+    $candidateIds = $component->instance()->candidatePeople()->pluck('id');
+
+    expect($candidateIds)->not->toContain($mom->id, $dad->id);
+    expect($candidateIds)->toContain($stranger->id);
+});
+
+test('siblings are derived from shared parents and shown even though no direct relationship is stored', function () {
+    $mom = Person::factory()->create();
+    $me = Person::factory()->create(['first_name' => 'Me']);
+    $sister = Person::factory()->create(['first_name' => 'Sister']);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $me->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $sister->id]);
+
+    expect($me->siblings()->pluck('id'))->toContain($sister->id);
+    expect(Relationship::query()->where('person_a_id', $me->id)->orWhere('person_b_id', $me->id)->where(function ($q) use ($sister) {
+        $q->where('person_a_id', $sister->id)->orWhere('person_b_id', $sister->id);
+    })->exists())->toBeFalse();
+});
+
+test('a person with no recorded parents has no siblings', function () {
+    $person = Person::factory()->create();
+
+    expect($person->siblings())->toBeEmpty();
+});

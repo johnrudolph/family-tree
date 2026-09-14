@@ -130,6 +130,32 @@ class Person extends Model implements HasMedia
                 : $relationship->personA);
     }
 
+    /**
+     * Siblings aren't a stored relationship — they're derived from sharing at
+     * least one recorded parent, since the schema only models parent_child
+     * and spouse edges directly.
+     *
+     * @return Collection<int, Person>
+     */
+    public function siblings(): Collection
+    {
+        $parentIds = $this->parents()->pluck('id');
+
+        if ($parentIds->isEmpty()) {
+            return collect();
+        }
+
+        return Relationship::query()
+            ->whereIn('person_a_id', $parentIds)
+            ->where('type', 'parent_child')
+            ->where('person_b_id', '!=', $this->id)
+            ->with('personB')
+            ->get()
+            ->pluck('personB')
+            ->unique('id')
+            ->values();
+    }
+
     public function fullName(): string
     {
         return collect([$this->first_name, $this->middle_name, $this->last_name])

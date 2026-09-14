@@ -151,12 +151,22 @@ new class extends Component {
                 @php($parents = $person->parents())
                 @php($children = $person->children())
                 @php($spouses = $person->spouses())
+                @php($siblings = $person->siblings())
 
                 @if ($parents->isNotEmpty())
                     <div>
                         <flux:text class="text-xs font-medium tracking-wide text-zinc-500 uppercase">{{ __('Parents') }}</flux:text>
                         @foreach ($parents as $parent)
                             <a href="{{ route('people.show', $parent) }}" wire:navigate class="block text-sm hover:underline">{{ $parent->fullName() }}</a>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if ($siblings->isNotEmpty())
+                    <div>
+                        <flux:text class="text-xs font-medium tracking-wide text-zinc-500 uppercase">{{ __('Siblings') }}</flux:text>
+                        @foreach ($siblings as $sibling)
+                            <a href="{{ route('people.show', $sibling) }}" wire:navigate class="block text-sm hover:underline">{{ $sibling->fullName() }}</a>
                         @endforeach
                     </div>
                 @endif
@@ -179,7 +189,7 @@ new class extends Component {
                     </div>
                 @endif
 
-                @if ($parents->isEmpty() && $spouses->isEmpty() && $children->isEmpty())
+                @if ($parents->isEmpty() && $spouses->isEmpty() && $children->isEmpty() && $siblings->isEmpty())
                     <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
                 @endif
             </div>
