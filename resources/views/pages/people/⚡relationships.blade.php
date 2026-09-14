@@ -3,6 +3,7 @@
 use App\Models\Person;
 use App\Models\Relationship;
 use App\Services\PageEditorService;
+use App\Services\RelationshipService;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,12 @@ new #[Title('Manage relationships')] class extends Component {
 
     public string $spouseStatus = 'married';
 
+    /** @var array<int, int> child ids to also link to the new spouse as parent */
+    public array $alsoParentOfChildIds = [];
+
+    /** @var array<int, int> spouse ids to also link to the new child as parent */
+    public array $alsoCoParentIds = [];
+
     public function mount(Person $person): void
     {
         Gate::authorize('update', $person);
@@ -42,6 +49,30 @@ new #[Title('Manage relationships')] class extends Component {
             ->where('id', '!=', $this->person->id)
             ->orderBy('first_name')
             ->get();
+    }
+
+    #[Computed]
+    public function candidateStepchildren()
+    {
+        return app(RelationshipService::class)->candidateStepchildren($this->person);
+    }
+
+    #[Computed]
+    public function candidateCoParents()
+    {
+        return app(RelationshipService::class)->candidateCoParents($this->person);
+    }
+
+    #[Computed]
+    public function existingParents()
+    {
+        return app(RelationshipService::class)->existingParents($this->person);
+    }
+
+    #[Computed]
+    public function personHasParents(): bool
+    {
+        return $this->existingParents->isNotEmpty();
     }
 
     #[Computed]
@@ -70,12 +101,27 @@ new #[Title('Manage relationships')] class extends Component {
             });
     }
 
+    /**
+     * Reset the "also link" suggestions whenever the relationship type changes,
+     * defaulting to everyone selected — the user un-checks the ones that don't apply.
+     */
+    public function updatedType(string $value): void
+    {
+        $this->alsoParentOfChildIds = $value === 'spouse'
+            ? $this->candidateStepchildren->pluck('id')->all()
+            : [];
+
+        $this->alsoCoParentIds = $value === 'child'
+            ? $this->candidateCoParents->pluck('id')->all()
+            : [];
+    }
+
     public function addRelationship(): void
     {
         Gate::authorize('update', $this->person);
 
         $validated = $this->validate([
-            'type' => ['required', 'in:parent,child,spouse'],
+            'type' => ['required', 'in:parent,child,spouse,sibling'],
             'mode' => ['required', 'in:existing,new'],
             'existingPersonId' => ['required_if:mode,existing', 'nullable', 'exists:people,id'],
             'new_first_name' => ['required_if:mode,new', 'nullable', 'string', 'max:255'],
@@ -96,6 +142,8 @@ new #[Title('Manage relationships')] class extends Component {
             $other = Person::findOrFail($validated['existingPersonId']);
         }
 
+        $relationships = app(RelationshipService::class);
+
         try {
             match ($this->type) {
                 'parent' => Relationship::create([
@@ -114,6 +162,7 @@ new #[Title('Manage relationships')] class extends Component {
                     'type' => 'spouse',
                     'status' => $validated['spouseStatus'],
                 ]),
+                'sibling' => null,
             };
         } catch (QueryException) {
             Flux::toast(variant: 'danger', text: __('That relationship already exists.'));
@@ -121,8 +170,22 @@ new #[Title('Manage relationships')] class extends Component {
             return;
         }
 
-        $this->reset(['existingPersonId', 'new_first_name', 'new_last_name']);
-        unset($this->relationshipRows, $this->candidatePeople);
+        if ($this->type === 'spouse') {
+            foreach (Person::query()->whereIn('id', $this->alsoParentOfChildIds)->get() as $child) {
+                $relationships->linkParentChildIfMissing($other, $child);
+            }
+        } elseif ($this->type === 'child') {
+            foreach (Person::query()->whereIn('id', $this->alsoCoParentIds)->get() as $spouse) {
+                $relationships->linkParentChildIfMissing($spouse, $other);
+            }
+        } elseif ($this->type === 'sibling') {
+            foreach ($relationships->existingParents($this->person) as $parent) {
+                $relationships->linkParentChildIfMissing($parent, $other);
+            }
+        }
+
+        $this->reset(['existingPersonId', 'new_first_name', 'new_last_name', 'alsoParentOfChildIds', 'alsoCoParentIds']);
+        unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
     }
@@ -172,6 +235,9 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:radio value="parent" label="{{ __('Parent of').' '.$person->fullName() }}" />
             <flux:radio value="child" label="{{ __('Child of').' '.$person->fullName() }}" />
             <flux:radio value="spouse" label="{{ __('Spouse of').' '.$person->fullName() }}" />
+            @if ($this->personHasParents)
+                <flux:radio value="sibling" label="{{ __('Sibling of').' '.$person->fullName() }}" />
+            @endif
         </flux:radio.group>
 
         @if ($type === 'spouse')
@@ -180,6 +246,50 @@ new #[Title('Manage relationships')] class extends Component {
                 <flux:select.option value="divorced">{{ __('Divorced') }}</flux:select.option>
                 <flux:select.option value="separated">{{ __('Separated') }}</flux:select.option>
             </flux:select>
+
+            @if ($this->candidateStepchildren->isNotEmpty())
+                <div>
+                    <flux:text class="font-medium">
+                        {{ __('Also mark as parent of') }}
+                    </flux:text>
+                    <flux:text class="text-xs text-zinc-500">
+                        {{ __('Uncheck anyone this new spouse isn\'t a parent of.') }}
+                    </flux:text>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach ($this->candidateStepchildren as $child)
+                            <flux:checkbox
+                                wire:model="alsoParentOfChildIds"
+                                value="{{ $child->id }}"
+                                :label="$child->fullName()"
+                            />
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        @if ($type === 'child' && $this->candidateCoParents->isNotEmpty())
+            <div>
+                <flux:text class="font-medium">{{ __('Also mark as parent') }}</flux:text>
+                <flux:text class="text-xs text-zinc-500">
+                    {{ __('Uncheck anyone who isn\'t also a parent of this child.') }}
+                </flux:text>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    @foreach ($this->candidateCoParents as $spouse)
+                        <flux:checkbox
+                            wire:model="alsoCoParentIds"
+                            value="{{ $spouse->id }}"
+                            :label="$spouse->fullName()"
+                        />
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        @if ($type === 'sibling')
+            <flux:text class="text-xs text-zinc-500">
+                {{ __('This will link them to :parents as parents too.', ['parents' => $this->existingParents->map->fullName()->join(' and ')]) }}
+            </flux:text>
         @endif
 
         <flux:radio.group wire:model.live="mode" :label="__('Who?')">
