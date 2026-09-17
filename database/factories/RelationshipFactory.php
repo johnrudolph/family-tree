@@ -33,4 +33,12 @@ class RelationshipFactory extends Factory
             'status' => null,
         ]);
     }
+
+    public function sibling(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => 'sibling',
+            'status' => null,
+        ]);
+    }
 }

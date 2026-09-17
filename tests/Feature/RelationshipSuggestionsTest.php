@@ -84,6 +84,57 @@ test('adding a sibling links them to both existing parents', function () {
 
     $sibling = Person::query()->where('first_name', 'Sibling')->firstOrFail();
     expect($sibling->parents()->pluck('id'))->toContain($mom->id, $dad->id);
+
+    expect(Relationship::query()
+        ->where('type', 'sibling')
+        ->where(fn ($q) => $q->where('person_a_id', $me->id)->orWhere('person_b_id', $me->id))
+        ->where(fn ($q) => $q->where('person_a_id', $sibling->id)->orWhere('person_b_id', $sibling->id))
+        ->exists())->toBeTrue();
+});
+
+test('adding a sibling creates a real, removable relationship', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $me = Person::factory()->create();
+    $other = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($me, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $me])
+        ->set('type', 'sibling')
+        ->set('mode', 'existing')
+        ->set('existingPersonId', $other->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $relationship = Relationship::query()->where('type', 'sibling')->firstOrFail();
+
+    $component = Livewire::actingAs($editor)->test('pages::people.relationships', ['person' => $me]);
+    $row = $component->instance()->relationshipRows()->firstWhere('id', $relationship->id);
+
+    expect($row)->not->toBeNull();
+    expect($row['label'])->toBe('Sibling');
+
+    $component->call('removeRelationship', $relationship->id)->assertHasNoErrors();
+
+    expect(Relationship::query()->where('id', $relationship->id)->exists())->toBeFalse();
+    expect($me->fresh()->siblings()->pluck('id'))->not->toContain($other->id);
+});
+
+test('siblings merges explicit sibling relationships with shared-parent derivation, deduped', function () {
+    $me = Person::factory()->create();
+    $mom = Person::factory()->create();
+    $explicitSibling = Person::factory()->create();
+    $sharedParentSibling = Person::factory()->create();
+    Relationship::factory()->sibling()->create(['person_a_id' => $me->id, 'person_b_id' => $explicitSibling->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $me->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $sharedParentSibling->id]);
+    // Also give the explicit sibling the same shared parent, to prove no duplicate entry appears.
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $explicitSibling->id]);
+
+    $siblingIds = $me->siblings()->pluck('id');
+
+    expect($siblingIds)->toContain($explicitSibling->id, $sharedParentSibling->id);
+    expect($siblingIds->duplicates())->toBeEmpty();
 });
 
 test('removing a sibling parent pill leaves that parent unlinked', function () {

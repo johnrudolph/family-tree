@@ -85,6 +85,18 @@ new #[Title('Manage relationships')] class extends Component {
         return $this->person->siblings();
     }
 
+    /**
+     * Siblings not already shown as a removable row above — only the legacy
+     * case of sharing a parent without an explicit sibling relationship yet.
+     */
+    #[Computed]
+    public function derivedOnlySiblings()
+    {
+        $explicitIds = $this->relationshipRows->pluck('other.id');
+
+        return $this->siblings->reject(fn ($sibling) => $explicitIds->contains($sibling->id));
+    }
+
     #[Computed]
     public function relationshipRows()
     {
@@ -100,6 +112,7 @@ new #[Title('Manage relationships')] class extends Component {
                 $label = match (true) {
                     $relationship->type === 'parent_child' && $isA => __('Child'),
                     $relationship->type === 'parent_child' && ! $isA => __('Parent'),
+                    $relationship->type === 'sibling' => __('Sibling'),
                     default => __('Spouse'),
                 };
 
@@ -193,7 +206,7 @@ new #[Title('Manage relationships')] class extends Component {
                     'type' => 'spouse',
                     'status' => $validated['spouseStatus'],
                 ]),
-                'sibling' => null,
+                'sibling' => $relationships->addSibling($this->person, $other),
             };
         } catch (QueryException) {
             Flux::toast(variant: 'danger', text: __('That relationship already exists.'));
@@ -256,7 +269,7 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
         @endforelse
 
-        @foreach ($this->siblings as $sibling)
+        @foreach ($this->derivedOnlySiblings as $sibling)
             <div class="flex items-center justify-between rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-600" wire:key="sibling-{{ $sibling->id }}">
                 <div class="flex items-center gap-3">
                     <flux:badge size="sm">{{ __('Sibling') }}</flux:badge>

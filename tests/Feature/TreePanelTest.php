@@ -147,6 +147,32 @@ test('removing a sibling parent pill in the tree panel leaves that parent unlink
         ->and($sibling->parents()->pluck('id'))->not->toContain($dad->id);
 });
 
+test('adding a sibling from the tree panel creates a real, removable relationship shown in the panel', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $me = Person::factory()->create();
+    $other = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($me, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $me->id)
+        ->set('relType', 'sibling')
+        ->set('relMode', 'existing')
+        ->set('relExistingPersonId', $other->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $relationship = Relationship::query()->where('type', 'sibling')->firstOrFail();
+
+    $component = Livewire::actingAs($editor)->test('pages::tree.index')->call('selectPerson', $me->id);
+    $row = $component->instance()->selectedPersonRelationshipRows()->firstWhere('id', $relationship->id);
+    expect($row)->not->toBeNull();
+    expect($row['label'])->toBe('Sibling');
+
+    $component->call('removeRelationship', $relationship->id)->assertHasNoErrors();
+    expect(Relationship::query()->where('id', $relationship->id)->exists())->toBeFalse();
+});
+
 test('a non-editor does not see the add relationship form for the selected person', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();

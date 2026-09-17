@@ -145,6 +145,7 @@ new #[Title('Family Tree')] class extends Component {
                 $label = match (true) {
                     $relationship->type === 'parent_child' && $isA => __('Child'),
                     $relationship->type === 'parent_child' && ! $isA => __('Parent'),
+                    $relationship->type === 'sibling' => __('Sibling'),
                     default => __('Spouse'),
                 };
 
@@ -251,7 +252,7 @@ new #[Title('Family Tree')] class extends Component {
                     'type' => 'spouse',
                     'status' => $validated['relSpouseStatus'],
                 ]),
-                'sibling' => null,
+                'sibling' => $relationships->addSibling($person, $other),
             };
         } catch (QueryException) {
             Flux::toast(variant: 'danger', text: __('That relationship already exists.'));

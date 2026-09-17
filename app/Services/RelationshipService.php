@@ -28,6 +28,30 @@ class RelationshipService
     }
 
     /**
+     * Create (or reuse) an explicit, removable sibling relationship. Unlike
+     * parent/child or spouse, "sibling" has no inherent direction, so unlike
+     * Relationship::create() elsewhere this checks both (a,b) and (b,a)
+     * before inserting — the table's unique constraint alone wouldn't catch
+     * a reversed duplicate.
+     */
+    public function addSibling(Person $a, Person $b): Relationship
+    {
+        $existing = Relationship::query()
+            ->where('type', 'sibling')
+            ->where(function ($query) use ($a, $b) {
+                $query->where(['person_a_id' => $a->id, 'person_b_id' => $b->id])
+                    ->orWhere(['person_a_id' => $b->id, 'person_b_id' => $a->id]);
+            })
+            ->first();
+
+        return $existing ?? Relationship::create([
+            'person_a_id' => $a->id,
+            'person_b_id' => $b->id,
+            'type' => 'sibling',
+        ]);
+    }
+
+    /**
      * Link a parent to a child if that link doesn't already exist — used for the
      * "also mark as parent" suggestions, where re-selecting an already-linked
      * person should just be a no-op rather than a duplicate-key error.

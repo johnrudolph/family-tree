@@ -154,29 +154,38 @@ class Person extends Model implements HasMedia
     }
 
     /**
-     * Siblings aren't a stored relationship — they're derived from sharing at
-     * least one recorded parent, since the schema only models parent_child
-     * and spouse edges directly.
+     * A person's siblings: primarily explicit "sibling" relationships (stored
+     * so they're visible and removable like any other relationship), plus a
+     * fallback derivation from sharing a recorded parent — for anyone who
+     * shares a parent without (yet) having an explicit sibling row, e.g. data
+     * added outside the normal "Sibling" relationship flow.
      *
      * @return Collection<int, Person>
      */
     public function siblings(): Collection
     {
+        $explicit = Relationship::query()
+            ->where('type', 'sibling')
+            ->where(fn ($query) => $query
+                ->where('person_a_id', $this->id)
+                ->orWhere('person_b_id', $this->id))
+            ->with(['personA', 'personB'])
+            ->get()
+            ->map(fn (Relationship $relationship) => $relationship->person_a_id === $this->id
+                ? $relationship->personB
+                : $relationship->personA);
+
         $parentIds = $this->parents()->pluck('id');
 
-        if ($parentIds->isEmpty()) {
-            return collect();
-        }
-
-        return Relationship::query()
+        $derived = $parentIds->isEmpty() ? collect() : Relationship::query()
             ->whereIn('person_a_id', $parentIds)
             ->where('type', 'parent_child')
             ->where('person_b_id', '!=', $this->id)
             ->with('personB')
             ->get()
-            ->pluck('personB')
-            ->unique('id')
-            ->values();
+            ->pluck('personB');
+
+        return $explicit->merge($derived)->unique('id')->values();
     }
 
     /**
