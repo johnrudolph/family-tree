@@ -21,6 +21,11 @@ export function initFamilyTree(container, data, { mainId } = {}) {
 
     chart = f3.createChart(container, data);
 
+    // family-chart defaults to a 2000ms transition (plus a per-level stagger
+    // on top of that for the initial render) — reads as sluggish/choppy for
+    // something as frequent as clicking around a tree. Snap it up.
+    chart.setTransitionTime(300);
+
     // Don't show a ghost "add" placeholder card for an unrecorded second
     // parent — our data model doesn't assume every child has two parents on record.
     chart.setSingleParentEmptyCard(false);
@@ -39,10 +44,12 @@ export function initFamilyTree(container, data, { mainId } = {}) {
         .setCardDisplay([['first name', 'last name'], ['birthday']])
         .setCardImageField('avatar')
         .setOnCardClick((e, d) => {
-            const id = d.data.id;
-            chart.updateMainId(id);
-            chart.updateTree({ tree_position: 'main_to_middle' });
-            window.dispatchEvent(new CustomEvent('family-tree-card-click', { detail: { id } }));
+            // Don't animate here too — this dispatch round-trips through Livewire
+            // (see x-on:family-tree-card-click in tree/index.blade.php), which
+            // comes back and calls familyTreeCenterOn() below. Animating both on
+            // click and again once the round-trip lands was firing two competing
+            // transitions and made the tree feel choppy.
+            window.dispatchEvent(new CustomEvent('family-tree-card-click', { detail: { id: d.data.id } }));
         });
 
     chart.updateTree({ initial: true });
