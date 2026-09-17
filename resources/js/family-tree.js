@@ -56,6 +56,10 @@ export function initFamilyTree(container, data, { mainId } = {}) {
 
     chart
         .setCardHtml()
+        // "imageCircleRect" only shows the round photo card for people who
+        // actually have one — everyone else gets a plain name card instead
+        // of a generic silhouette placeholder.
+        .setStyle('imageCircleRect')
         .setCardDisplay([['first name', 'last name'], ['birthday']])
         .setCardImageField('avatar')
         .setOnCardClick((e, d) => {
