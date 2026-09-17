@@ -100,6 +100,8 @@
             </flux:dropdown>
         </flux:header>
 
+        <livewire:pages::birthday-banner />
+
         {{ $slot }}
 
         <livewire:pages::global-search />

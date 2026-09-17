@@ -20,7 +20,11 @@ new #[Title('Add a person')] class extends Component {
 
     public ?string $dob = null;
 
+    public ?string $birth_city = null;
+
     public ?string $dod = null;
+
+    public ?string $death_city = null;
 
     public bool $is_living = true;
 
@@ -40,7 +44,9 @@ new #[Title('Add a person')] class extends Component {
             'preferred_name' => ['nullable', 'string', 'max:255'],
             'use_preferred_name_everywhere' => ['boolean'],
             'dob' => ['nullable', 'date'],
+            'birth_city' => ['nullable', 'string', 'max:255'],
             'dod' => ['nullable', 'date'],
+            'death_city' => ['nullable', 'string', 'max:255'],
             'is_living' => ['boolean'],
         ]);
 
@@ -81,9 +87,11 @@ new #[Title('Add a person')] class extends Component {
         <flux:separator />
 
         <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />
+        <flux:input wire:model="birth_city" :label="__('Birth city')" />
         <flux:checkbox wire:model="is_living" :label="__('Living')" />
-        <div x-show="! $wire.is_living">
+        <div x-show="! $wire.is_living" class="flex flex-col gap-6">
             <flux:input wire:model="dod" type="date" :label="__('Date of death (optional)')" />
+            <flux:input wire:model="death_city" :label="__('Death city')" />
         </div>
 
         <div class="flex gap-2">

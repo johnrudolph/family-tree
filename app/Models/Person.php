@@ -24,7 +24,9 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property bool $use_preferred_name_everywhere
  * @property Carbon|null $dob
  * @property string $dob_precision
+ * @property string|null $birth_city
  * @property Carbon|null $dod
+ * @property string|null $death_city
  * @property bool $is_living
  * @property string|null $bio
  * @property Carbon|null $consented_at
@@ -37,7 +39,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read User $creator
  */
 #[Fillable([
-    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'dod', 'is_living', 'bio', 'created_by',
+    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'birth_city', 'dod', 'death_city', 'is_living', 'bio', 'created_by',
     'consented_at', 'address', 'phone', 'contact_email', 'social_links',
 ])]
 class Person extends Model implements HasMedia

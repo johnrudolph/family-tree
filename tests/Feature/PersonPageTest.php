@@ -80,6 +80,28 @@ test('an admin can edit a person\'s core facts', function () {
     expect($person->fresh()->first_name)->toBe('Updated');
 });
 
+test('an admin can set birth and death cities and they show on the person page', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $person = Person::factory()->create(['is_living' => false]);
+
+    Livewire::actingAs($admin)
+        ->test('pages::people.edit', ['person' => $person])
+        ->set('birth_city', 'Portland, OR')
+        ->set('death_city', 'Austin, TX')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $person->refresh();
+    expect($person->birth_city)->toBe('Portland, OR');
+    expect($person->death_city)->toBe('Austin, TX');
+
+    $this->actingAs($admin)
+        ->get(route('people.show', $person))
+        ->assertOk()
+        ->assertSee('Portland, OR')
+        ->assertSee('Austin, TX');
+});
+
 test('editing a person\'s bio sanitizes the rich text before saving', function () {
     $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $person = Person::factory()->create();

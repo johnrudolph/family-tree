@@ -31,6 +31,26 @@
     outline: none !important;
 }
 
+/* In light mode, family-chart's card text is white (--text-color) by
+   default — meant to sit on the library's own near-black default card
+   background. We don't use that default background for name-only cards:
+   the "genderless" case we always hit (no gender data) uses a light gray
+   background instead, so white-on-light-gray is nearly illegible.
+   Override to black there.
+
+   This must NOT touch cards with a photo (setStyle('imageCircleRect')):
+   their label is a separate, always-dark translucent pill overlaid on the
+   photo itself (family-chart's own CSS, not something we set) — white
+   text is correct there regardless of page theme, so only .card-rect
+   (the plain name-only card) is targeted, not .card-image-circle. */
+.f3 div.card-rect {
+    color: #000;
+}
+
+.dark .f3 div.card-rect {
+    color: var(--text-color);
+}
+
 /* family-chart's default card background (light gray, for the "genderless"
    case we always hit since we don't collect gender) and white connecting
    lines assume a light page. In dark mode that leaves white card text on a

@@ -398,6 +398,14 @@ new #[Title('Family Tree')] class extends Component {
                 {{ __('View full page') }}
             </flux:button>
 
+            @if ($this->canEditSelected)
+                <flux:modal.trigger name="add-relationship">
+                    <flux:button size="sm" variant="primary" class="mt-2 w-full">
+                        {{ __('Add a relationship') }}
+                    </flux:button>
+                </flux:modal.trigger>
+            @endif
+
             @if ($this->selectedPersonRelationshipRows->isNotEmpty())
                 <div class="mt-3 space-y-1">
                     @foreach ($this->selectedPersonRelationshipRows as $row)
@@ -417,12 +425,6 @@ new #[Title('Family Tree')] class extends Component {
             @endif
 
             @if ($this->canEditSelected)
-                <flux:modal.trigger name="add-relationship">
-                    <flux:button size="sm" variant="primary" class="mt-2 w-full">
-                        {{ __('Add a relationship') }}
-                    </flux:button>
-                </flux:modal.trigger>
-
                 <flux:modal name="add-relationship" class="w-96" x-on:tree-data-updated.window="$flux.modal('add-relationship').close()">
                     <flux:heading level="2" size="sm">{{ __('Add a relationship') }}</flux:heading>
 

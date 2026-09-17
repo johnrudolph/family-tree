@@ -26,7 +26,11 @@ new #[Title('Edit person')] class extends Component {
 
     public ?string $dob = null;
 
+    public ?string $birth_city = null;
+
     public ?string $dod = null;
+
+    public ?string $death_city = null;
 
     public bool $is_living = true;
 
@@ -43,7 +47,9 @@ new #[Title('Edit person')] class extends Component {
         $this->preferred_name = $person->preferred_name ?? '';
         $this->use_preferred_name_everywhere = $person->use_preferred_name_everywhere;
         $this->dob = $person->dob?->toDateString();
+        $this->birth_city = $person->birth_city;
         $this->dod = $person->dod?->toDateString();
+        $this->death_city = $person->death_city;
         $this->is_living = $person->is_living;
         $this->bio = $person->bio ?? '';
     }
@@ -59,7 +65,9 @@ new #[Title('Edit person')] class extends Component {
             'preferred_name' => ['nullable', 'string', 'max:255'],
             'use_preferred_name_everywhere' => ['boolean'],
             'dob' => ['nullable', 'date'],
+            'birth_city' => ['nullable', 'string', 'max:255'],
             'dod' => ['nullable', 'date'],
+            'death_city' => ['nullable', 'string', 'max:255'],
             'is_living' => ['boolean'],
             'bio' => ['nullable', 'string', 'max:20000'],
         ]);
@@ -102,9 +110,11 @@ new #[Title('Edit person')] class extends Component {
         <flux:separator />
 
         <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />
+        <flux:input wire:model="birth_city" :label="__('Birth city')" />
         <flux:checkbox wire:model="is_living" :label="__('Living')" />
-        <div x-show="! $wire.is_living">
+        <div x-show="! $wire.is_living" class="flex flex-col gap-6">
             <flux:input wire:model="dod" type="date" :label="__('Date of death')" />
+            <flux:input wire:model="death_city" :label="__('Death city')" />
         </div>
         <flux:editor wire:model="bio" :label="__('Bio')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-56" />
 

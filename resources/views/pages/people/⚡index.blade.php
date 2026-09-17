@@ -29,7 +29,11 @@ new #[Title('People')] class extends Component {
     }
 }; ?>
 
-<section class="w-full">
+<section
+    class="w-full"
+    x-data
+    x-on:keydown.window="if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); $refs.searchInput.focus(); $refs.searchInput.select(); }"
+>
     <div class="flex items-center justify-between">
         <flux:heading level="1">{{ __('People') }}</flux:heading>
         @if (auth()->user()->is_admin)
@@ -40,7 +44,7 @@ new #[Title('People')] class extends Component {
         @endif
     </div>
 
-    <flux:input wire:model.live.debounce.300ms="search" :placeholder="__('Search by name…')" class="mt-4 max-w-sm" />
+    <flux:input x-ref="searchInput" wire:model.live.debounce.300ms="search" :placeholder="__('Search by name… (⌘F)')" class="mt-4 max-w-sm" />
 
     <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ($this->people as $person)

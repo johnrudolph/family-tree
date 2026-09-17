@@ -391,9 +391,19 @@ new class extends Component {
                 {{ $person->is_living ? __('Living') : __('Deceased') }}
                 @if ($person->dob)
                     &middot; {{ __('Born') }} {{ $person->dob->format('F j, Y') }}
+                    @if ($person->birth_city)
+                        {{ __('in') }} {{ $person->birth_city }}
+                    @endif
+                @elseif ($person->birth_city)
+                    &middot; {{ __('Born in') }} {{ $person->birth_city }}
                 @endif
                 @if (! $person->is_living && $person->dod)
                     &middot; {{ __('Died') }} {{ $person->dod->format('F j, Y') }}
+                    @if ($person->death_city)
+                        {{ __('in') }} {{ $person->death_city }}
+                    @endif
+                @elseif (! $person->is_living && $person->death_city)
+                    &middot; {{ __('Died in') }} {{ $person->death_city }}
                 @endif
             </flux:text>
             <div class="mt-1">
