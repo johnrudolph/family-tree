@@ -67,6 +67,23 @@ test('a new person created inline from the tree panel can have a date of birth s
     expect($kid->dob?->toDateString())->toBe('2010-05-01');
 });
 
+test('an editor can remove a relationship from the tree panel', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $parent = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+    $relationship = Relationship::factory()->parentChild()->create(['person_a_id' => $parent->id, 'person_b_id' => $person->id]);
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $person->id)
+        ->call('removeRelationship', $relationship->id)
+        ->assertHasNoErrors()
+        ->assertDispatched('tree-data-updated');
+
+    expect($person->fresh()->parents()->pluck('id'))->not->toContain($parent->id);
+});
+
 test('removing a sibling parent pill in the tree panel leaves that parent unlinked', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $me = Person::factory()->create();

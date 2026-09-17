@@ -92,7 +92,7 @@ new #[Title('Edit person')] class extends Component {
 
         <flux:separator />
 
-        <flux:input wire:model.live="preferred_name" :label="__('Goes by')" :description="__('An informal name, if different — e.g. a nickname.')" />
+        <flux:input wire:model.live="preferred_name" :label="__('Goes by')" />
         @if ($preferred_name !== '')
             <flux:checkbox wire:model="use_preferred_name_everywhere" :label="__('Use this everywhere')" :description="__('Show \':name\' instead of the full name on the tree, dropdowns, and pages.', ['name' => $preferred_name])" />
         @endif

@@ -119,6 +119,38 @@ new #[Title('Family Tree')] class extends Component {
         return $this->selectedPerson ? $this->selectedPerson->siblings() : collect();
     }
 
+    #[Computed]
+    public function selectedPersonRelationshipRows()
+    {
+        if (! $this->selectedPerson) {
+            return collect();
+        }
+
+        $person = $this->selectedPerson;
+
+        return Relationship::query()
+            ->where('person_a_id', $person->id)
+            ->orWhere('person_b_id', $person->id)
+            ->with(['personA', 'personB'])
+            ->get()
+            ->map(function (Relationship $relationship) use ($person) {
+                $isA = $relationship->person_a_id === $person->id;
+                $other = $isA ? $relationship->personB : $relationship->personA;
+
+                $label = match (true) {
+                    $relationship->type === 'parent_child' && $isA => __('Child'),
+                    $relationship->type === 'parent_child' && ! $isA => __('Parent'),
+                    default => __('Spouse'),
+                };
+
+                return [
+                    'id' => $relationship->id,
+                    'label' => $label,
+                    'other' => $other,
+                ];
+            });
+    }
+
     public function selectPerson(int $id): void
     {
         $this->selectedPersonId = $id;
@@ -243,6 +275,25 @@ new #[Title('Family Tree')] class extends Component {
 
         $this->dispatch('tree-data-updated', data: FamilyTreeSerializer::toChartData());
     }
+
+    public function removeRelationship(int $relationshipId): void
+    {
+        abort_unless($this->selectedPerson, 404);
+        Gate::authorize('update', $this->selectedPerson);
+
+        Relationship::query()
+            ->where(fn ($query) => $query
+                ->where('person_a_id', $this->selectedPerson->id)
+                ->orWhere('person_b_id', $this->selectedPerson->id))
+            ->findOrFail($relationshipId)
+            ->delete();
+
+        unset($this->selectedPersonRelationshipRows, $this->selectedPersonSiblings, $this->existingParents, $this->candidatePeople);
+
+        Flux::toast(variant: 'success', text: __('Relationship removed.'));
+
+        $this->dispatch('tree-data-updated', data: FamilyTreeSerializer::toChartData());
+    }
 }; ?>
 
 <section
@@ -294,9 +345,31 @@ new #[Title('Family Tree')] class extends Component {
                 </div>
             </div>
 
+            <div class="mt-2">
+                <x-person-account-badges :person="$this->selectedPerson" />
+            </div>
+
             <flux:button :href="route('people.show', $this->selectedPerson)" wire:navigate size="sm" class="mt-3 w-full">
                 {{ __('View full page') }}
             </flux:button>
+
+            @if ($this->selectedPersonRelationshipRows->isNotEmpty())
+                <div class="mt-3 space-y-1">
+                    @foreach ($this->selectedPersonRelationshipRows as $row)
+                        <div class="flex items-center justify-between rounded-lg border border-zinc-200 px-2 py-1 dark:border-zinc-700" wire:key="rel-{{ $row['id'] }}">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <flux:badge size="sm">{{ $row['label'] }}</flux:badge>
+                                <a href="{{ route('people.show', $row['other']) }}" wire:navigate class="truncate text-sm hover:underline">
+                                    {{ $row['other']->fullName() }}
+                                </a>
+                            </div>
+                            @if ($this->canEditSelected)
+                                <flux:button wire:click="removeRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="x-mark" />
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
 
             @if ($this->canEditSelected)
                 <flux:modal.trigger name="add-relationship">

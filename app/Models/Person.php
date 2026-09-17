@@ -222,6 +222,26 @@ class Person extends Model implements HasMedia
     }
 
     /**
+     * Whether this person has joined and linked a user account — shown on
+     * their page so it's clear why enrichment fields (photo, contact info)
+     * are empty for people who haven't.
+     */
+    public function hasAccount(): bool
+    {
+        return $this->user !== null;
+    }
+
+    /**
+     * Whether the person themself is listed as an editor of their own page —
+     * normally true once they join (see PageEditorService::grantOwner), but
+     * shown explicitly since it can change if editors are reassigned.
+     */
+    public function isEditorOfOwnPage(): bool
+    {
+        return $this->user !== null && $this->isEditor($this->user);
+    }
+
+    /**
      * The user who created this person's page.
      *
      * @return BelongsTo<User, $this>
