@@ -151,6 +151,40 @@ test('an editor can remove a relationship directly from the person page', functi
     expect($person->fresh()->parents()->pluck('id'))->not->toContain($parent->id);
 });
 
+test('the manage-relationships list is collapsed by default and expands on toggle', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $parent = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+    $relationship = Relationship::factory()->parentChild()->create(['person_a_id' => $parent->id, 'person_b_id' => $person->id]);
+
+    $component = Livewire::actingAs($editor)->test('pages::people.show', ['person' => $person]);
+
+    // The remove button is unique to the expanded list — the mini family
+    // tree widget embeds every name in its JSON payload regardless, so a
+    // plain assertSee on a name wouldn't actually prove the list is hidden.
+    $component->assertSet('showManageRelationships', false)
+        ->assertDontSeeHtml("removeRelationship({$relationship->id})");
+
+    $component->set('showManageRelationships', true)
+        ->assertSeeHtml("removeRelationship({$relationship->id})");
+});
+
+test('adding a relationship dispatches a family-widget-updated event for the mini tree', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $other = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.show', ['person' => $person])
+        ->set('relType', 'spouse')
+        ->set('relMode', 'existing')
+        ->set('relExistingPersonId', $other->id)
+        ->call('addRelationship')
+        ->assertDispatched('family-widget-updated');
+});
+
 test('an editor can expand the editors and history sections on the person page', function () {
     $editor = User::factory()->withTwoFactor()->create(['name' => 'Editor Name']);
     $person = Person::factory()->create();

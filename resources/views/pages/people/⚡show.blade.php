@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\PageEditorService;
 use App\Services\RelationshipService;
 use App\Services\RevisionService;
+use App\Support\FamilyTreeSerializer;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,8 @@ new class extends Component {
     public bool $showEditors = false;
 
     public bool $showHistory = false;
+
+    public bool $showManageRelationships = false;
 
     public string $relType = 'parent';
 
@@ -75,6 +78,16 @@ new class extends Component {
     public function canManageEnrichment(): bool
     {
         return Gate::allows('manageEnrichment', $this->person);
+    }
+
+    /**
+     * A simplified, read-only visual of this person's immediate family —
+     * shown on their page in place of a plain relationship list.
+     */
+    #[Computed]
+    public function familyTreeData(): array
+    {
+        return FamilyTreeSerializer::toChartData();
     }
 
     #[Computed]
@@ -289,10 +302,12 @@ new class extends Component {
         }
 
         $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewIsLiving', 'relNewDod']);
-        unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents);
+        unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents, $this->familyTreeData);
         $this->seedAlsoLinkSuggestions();
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
+
+        $this->dispatch('family-widget-updated', data: FamilyTreeSerializer::toChartData());
     }
 
     public function removeRelationship(int $relationshipId): void
@@ -306,9 +321,11 @@ new class extends Component {
             ->findOrFail($relationshipId)
             ->delete();
 
-        unset($this->relationshipRows, $this->candidatePeople, $this->existingParents);
+        unset($this->relationshipRows, $this->candidatePeople, $this->existingParents, $this->familyTreeData);
 
         Flux::toast(variant: 'success', text: __('Relationship removed.'));
+
+        $this->dispatch('family-widget-updated', data: FamilyTreeSerializer::toChartData());
     }
 
     public function addEditor(): void
@@ -421,8 +438,66 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-3">
-        <div class="sm:col-span-2">
+    <div class="mt-8 flex flex-col gap-8">
+        <div
+            x-data
+            x-on:family-widget-updated.window="window.updatePersonFamilyWidget($refs.familyWidget, $event.detail.data)"
+        >
+            <flux:heading level="2">{{ __('Family') }}</flux:heading>
+
+            <div
+                wire:ignore
+                class="mt-2 h-96 w-full rounded-lg border border-zinc-200 dark:border-zinc-700"
+                x-init="initPersonFamilyWidget($refs.familyWidget, @js($this->familyTreeData), @js($person->id))"
+            >
+                <div x-ref="familyWidget" class="h-full w-full"></div>
+            </div>
+
+            @if ($this->canEdit)
+                <flux:modal.trigger name="add-relationship">
+                    <flux:button size="sm" variant="primary" class="mt-3">
+                        {{ __('Add a relationship') }}
+                    </flux:button>
+                </flux:modal.trigger>
+            @endif
+
+            <button type="button" wire:click="$toggle('showManageRelationships')" class="mt-3 flex w-full items-center justify-between text-left">
+                <flux:heading level="2" size="sm">{{ __('Manage relationships') }}</flux:heading>
+                <flux:icon.chevron-down class="size-4 text-zinc-400 {{ $showManageRelationships ? 'rotate-180' : '' }}" />
+            </button>
+
+            @if ($showManageRelationships)
+                <div class="mt-2 space-y-2">
+                    @forelse ($this->relationshipRows as $row)
+                        <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-2 dark:border-zinc-700" wire:key="rel-{{ $row['id'] }}">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <flux:badge size="sm">{{ $row['label'] }}</flux:badge>
+                                <a href="{{ route('people.show', $row['other']) }}" wire:navigate class="truncate text-sm hover:underline">
+                                    {{ $row['other']->fullName() }}
+                                </a>
+                            </div>
+                            @if ($this->canEdit)
+                                <flux:button wire:click="removeRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="x-mark" />
+                            @endif
+                        </div>
+                    @empty
+                        <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
+                    @endforelse
+
+                    @foreach ($this->derivedOnlySiblings as $sibling)
+                        <div class="flex items-center justify-between rounded-lg border border-dashed border-zinc-300 p-2 dark:border-zinc-600" wire:key="sibling-{{ $sibling->id }}">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <flux:badge size="sm">{{ __('Sibling') }}</flux:badge>
+                                <a href="{{ route('people.show', $sibling) }}" wire:navigate class="truncate text-sm hover:underline">{{ $sibling->fullName() }}</a>
+                            </div>
+                            <flux:text class="shrink-0 text-xs text-zinc-500">{{ __('via shared parent') }}</flux:text>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <div>
             <flux:heading level="2">{{ __('About') }}</flux:heading>
             <div class="prose prose-zinc dark:prose-invert mt-2 max-w-none">
                 @if ($person->bio)
@@ -508,46 +583,19 @@ new class extends Component {
                     </div>
                 @endif
             @endif
+
+            @if ($person->stories->isNotEmpty())
+                <flux:heading level="2" class="mt-8">{{ __('Stories') }}</flux:heading>
+                <div class="mt-2 space-y-1">
+                    @foreach ($person->stories as $story)
+                        <a href="{{ route('stories.show', $story) }}" wire:navigate class="block text-sm hover:underline">{{ $story->title }}</a>
+                    @endforeach
+                </div>
+            @endif
         </div>
+    </div>
 
-        <div>
-            <flux:heading level="2">{{ __('Relationships') }}</flux:heading>
-
-            <div class="mt-2 space-y-2">
-                @forelse ($this->relationshipRows as $row)
-                    <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-2 dark:border-zinc-700" wire:key="rel-{{ $row['id'] }}">
-                        <div class="flex min-w-0 items-center gap-2">
-                            <flux:badge size="sm">{{ $row['label'] }}</flux:badge>
-                            <a href="{{ route('people.show', $row['other']) }}" wire:navigate class="truncate text-sm hover:underline">
-                                {{ $row['other']->fullName() }}
-                            </a>
-                        </div>
-                        @if ($this->canEdit)
-                            <flux:button wire:click="removeRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="x-mark" />
-                        @endif
-                    </div>
-                @empty
-                    <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
-                @endforelse
-
-                @foreach ($this->derivedOnlySiblings as $sibling)
-                    <div class="flex items-center justify-between rounded-lg border border-dashed border-zinc-300 p-2 dark:border-zinc-600" wire:key="sibling-{{ $sibling->id }}">
-                        <div class="flex min-w-0 items-center gap-2">
-                            <flux:badge size="sm">{{ __('Sibling') }}</flux:badge>
-                            <a href="{{ route('people.show', $sibling) }}" wire:navigate class="truncate text-sm hover:underline">{{ $sibling->fullName() }}</a>
-                        </div>
-                        <flux:text class="shrink-0 text-xs text-zinc-500">{{ __('via shared parent') }}</flux:text>
-                    </div>
-                @endforeach
-            </div>
-
-            @if ($this->canEdit)
-                <flux:modal.trigger name="add-relationship">
-                    <flux:button size="sm" variant="primary" class="mt-3 w-full">
-                        {{ __('Add a relationship') }}
-                    </flux:button>
-                </flux:modal.trigger>
-
+    @if ($this->canEdit)
                 <flux:modal name="add-relationship" class="w-96">
                     <flux:heading level="2" size="sm">{{ __('Add a relationship') }}</flux:heading>
 
@@ -633,15 +681,6 @@ new class extends Component {
                         <flux:button type="submit" variant="primary" size="sm">{{ __('Add relationship') }}</flux:button>
                     </form>
                 </flux:modal>
-            @endif
-
-            @if ($person->stories->isNotEmpty())
-                <flux:heading level="2" class="mt-8">{{ __('Stories') }}</flux:heading>
-                <div class="mt-2 space-y-1">
-                    @foreach ($person->stories as $story)
-                        <a href="{{ route('stories.show', $story) }}" wire:navigate class="block text-sm hover:underline">{{ $story->title }}</a>
-                    @endforeach
-                </div>
             @endif
         </div>
     </div>
