@@ -147,6 +147,27 @@ test('removing a sibling parent pill in the tree panel leaves that parent unlink
         ->and($sibling->parents()->pluck('id'))->not->toContain($dad->id);
 });
 
+test('a new person created inline from the tree panel can be marked deceased with a date of death', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $person->id)
+        ->set('relType', 'child')
+        ->set('relMode', 'new')
+        ->set('relNewFirstName', 'Departed')
+        ->set('relNewIsLiving', false)
+        ->set('relNewDod', '2020-03-15')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $departed = Person::query()->where('first_name', 'Departed')->firstOrFail();
+    expect($departed->is_living)->toBeFalse();
+    expect($departed->dod?->toDateString())->toBe('2020-03-15');
+});
+
 test('adding a sibling from the tree panel creates a real, removable relationship shown in the panel', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $me = Person::factory()->create();

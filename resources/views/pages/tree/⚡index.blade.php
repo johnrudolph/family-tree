@@ -32,6 +32,10 @@ new #[Title('Family Tree')] class extends Component {
 
     public ?string $relNewDob = null;
 
+    public bool $relNewIsLiving = true;
+
+    public ?string $relNewDod = null;
+
     public string $relSpouseStatus = 'married';
 
     /** @var array<int, int> child ids to also link to the new spouse as parent */
@@ -211,6 +215,8 @@ new #[Title('Family Tree')] class extends Component {
             'relNewMiddleName' => ['nullable', 'string', 'max:255'],
             'relNewLastName' => ['nullable', 'string', 'max:255'],
             'relNewDob' => ['nullable', 'date'],
+            'relNewIsLiving' => ['boolean'],
+            'relNewDod' => ['nullable', 'date'],
             'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced,separated'],
         ]);
 
@@ -223,7 +229,8 @@ new #[Title('Family Tree')] class extends Component {
                 'last_name' => $validated['relNewLastName'] ?: null,
                 'dob' => $validated['relNewDob'] ?: null,
                 'dob_precision' => $validated['relNewDob'] ? 'exact' : 'unknown',
-                'is_living' => true,
+                'is_living' => $validated['relNewIsLiving'],
+                'dod' => $validated['relNewIsLiving'] ? null : ($validated['relNewDod'] ?: null),
                 'created_by' => Auth::id(),
             ]);
 
@@ -274,7 +281,7 @@ new #[Title('Family Tree')] class extends Component {
             }
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds', 'relAlsoSiblingParentIds']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewIsLiving', 'relNewDod', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds', 'relAlsoSiblingParentIds']);
         unset($this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
@@ -460,6 +467,10 @@ new #[Title('Family Tree')] class extends Component {
                         <flux:input wire:model="relNewMiddleName" :placeholder="__('Middle name')" />
                         <flux:input wire:model="relNewLastName" :placeholder="__('Last name')" />
                         <flux:input wire:model="relNewDob" type="date" :placeholder="__('Date of birth')" />
+                        <flux:checkbox wire:model.live="relNewIsLiving" :label="__('Living')" />
+                        @unless ($relNewIsLiving)
+                            <flux:input wire:model="relNewDod" type="date" :placeholder="__('Date of death')" />
+                        @endunless
                     @endif
 
                     <flux:button type="submit" variant="primary" size="sm">{{ __('Add relationship') }}</flux:button>

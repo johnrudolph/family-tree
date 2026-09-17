@@ -31,6 +31,10 @@ new #[Title('Manage relationships')] class extends Component {
 
     public ?string $new_dob = null;
 
+    public bool $new_is_living = true;
+
+    public ?string $new_dod = null;
+
     public string $spouseStatus = 'married';
 
     /** @var array<int, int> child ids to also link to the new spouse as parent */
@@ -167,6 +171,8 @@ new #[Title('Manage relationships')] class extends Component {
             'new_middle_name' => ['nullable', 'string', 'max:255'],
             'new_last_name' => ['nullable', 'string', 'max:255'],
             'new_dob' => ['nullable', 'date'],
+            'new_is_living' => ['boolean'],
+            'new_dod' => ['nullable', 'date'],
             'spouseStatus' => ['required_if:type,spouse', 'in:married,divorced,separated'],
         ]);
 
@@ -177,7 +183,8 @@ new #[Title('Manage relationships')] class extends Component {
                 'last_name' => $validated['new_last_name'] ?: null,
                 'dob' => $validated['new_dob'] ?: null,
                 'dob_precision' => $validated['new_dob'] ? 'exact' : 'unknown',
-                'is_living' => true,
+                'is_living' => $validated['new_is_living'],
+                'dod' => $validated['new_is_living'] ? null : ($validated['new_dod'] ?: null),
                 'created_by' => Auth::id(),
             ]);
 
@@ -228,7 +235,7 @@ new #[Title('Manage relationships')] class extends Component {
             }
         }
 
-        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'new_dob', 'alsoParentOfChildIds', 'alsoCoParentIds', 'alsoSiblingParentIds']);
+        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'new_dob', 'new_is_living', 'new_dod', 'alsoParentOfChildIds', 'alsoCoParentIds', 'alsoSiblingParentIds']);
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents);
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
@@ -359,6 +366,10 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:input wire:model="new_middle_name" :label="__('Middle name')" />
             <flux:input wire:model="new_last_name" :label="__('Last name')" />
             <flux:input wire:model="new_dob" type="date" :label="__('Date of birth')" />
+            <flux:checkbox wire:model.live="new_is_living" :label="__('Living')" />
+            @unless ($new_is_living)
+                <flux:input wire:model="new_dod" type="date" :label="__('Date of death')" />
+            @endunless
         @endif
 
         <div>

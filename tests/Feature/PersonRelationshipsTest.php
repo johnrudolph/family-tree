@@ -42,6 +42,26 @@ test('an editor can add a spouse by creating a brand new person inline', functio
     expect($spouse->isEditor($editor))->toBeTrue();
 });
 
+test('a new person created inline can be marked deceased with a date of death', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $person])
+        ->set('type', 'child')
+        ->set('mode', 'new')
+        ->set('new_first_name', 'Departed')
+        ->set('new_is_living', false)
+        ->set('new_dod', '2020-03-15')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $departed = Person::query()->where('first_name', 'Departed')->firstOrFail();
+    expect($departed->is_living)->toBeFalse();
+    expect($departed->dod?->toDateString())->toBe('2020-03-15');
+});
+
 test('a duplicate relationship is rejected gracefully', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $child = Person::factory()->create();
