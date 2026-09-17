@@ -16,6 +16,14 @@
     outline-offset: 2px;
 }
 
+/* People who've actually joined (linked user account) get a persistent
+   outline, distinct from the transient hover cue above, so it's obvious
+   at a glance who's on the site vs. who's tree-only. */
+.f3 .card-inner.has-account {
+    outline: 2px solid var(--color-blue-500, #3b82f6);
+    outline-offset: 2px;
+}
+
 /* family-chart's default card background (light gray, for the "genderless"
    case we always hit since we don't collect gender) and white connecting
    lines assume a light page. In dark mode that leaves white card text on a

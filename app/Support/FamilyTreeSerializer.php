@@ -15,7 +15,7 @@ class FamilyTreeSerializer
      */
     public static function toChartData(): array
     {
-        $people = Person::query()->get()->keyBy('id');
+        $people = Person::query()->with('user')->get()->keyBy('id');
 
         $parentsOf = [];
         $childrenOf = [];
@@ -43,6 +43,7 @@ class FamilyTreeSerializer
                 'birthday' => $person->dob?->format('Y'),
                 'dob_sort' => $person->dob?->format('Y-m-d'),
                 'avatar' => $person->hasConsented() ? $person->photoUrl() : null,
+                'has_account' => $person->hasAccount(),
                 'url' => $person->wikiShowUrl(),
                 'living' => $person->is_living,
             ],

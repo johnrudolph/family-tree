@@ -76,3 +76,13 @@ test('a living person without consent has no avatar in the tree data', function 
 
     expect($data[(string) $person->id]['data']['avatar'])->toBeNull();
 });
+
+test('the tree data flags whether each person has a linked user account', function () {
+    $withAccount = User::factory()->withTwoFactor()->create()->person;
+    $without = Person::factory()->create();
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $withAccount->id]['data']['has_account'])->toBeTrue();
+    expect($data[(string) $without->id]['data']['has_account'])->toBeFalse();
+});

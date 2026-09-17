@@ -62,6 +62,11 @@ export function initFamilyTree(container, data, { mainId } = {}) {
         .setStyle('imageCircleRect')
         .setCardDisplay([['first name', 'last name'], ['birthday']])
         .setCardImageField('avatar')
+        // Give people with a linked user account a visible outline, so it's
+        // obvious at a glance who's actually joined vs. who's tree-only.
+        .setOnCardUpdate(function (d) {
+            this.querySelector('.card-inner')?.classList.toggle('has-account', !!d.data.data.has_account);
+        })
         .setOnCardClick((e, d) => {
             // Don't animate here too — this dispatch round-trips through Livewire
             // (see x-on:family-tree-card-click in tree/index.blade.php), which
