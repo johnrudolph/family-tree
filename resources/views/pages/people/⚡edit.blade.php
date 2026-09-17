@@ -2,6 +2,7 @@
 
 use App\Models\Person;
 use App\Services\RevisionService;
+use App\Support\RichTextSanitizer;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -69,6 +70,7 @@ new #[Title('Edit person')] class extends Component {
             'last_name' => $validated['last_name'] ?: null,
             'preferred_name' => $validated['preferred_name'] ?: null,
             'use_preferred_name_everywhere' => $validated['preferred_name'] && $validated['use_preferred_name_everywhere'],
+            'bio' => RichTextSanitizer::clean($validated['bio']),
         ];
 
         $this->person->update($data);
@@ -104,7 +106,7 @@ new #[Title('Edit person')] class extends Component {
         @unless ($is_living)
             <flux:input wire:model="dod" type="date" :label="__('Date of death')" />
         @endunless
-        <flux:textarea wire:model="bio" :label="__('Bio (markdown supported)')" rows="10" />
+        <flux:editor wire:model="bio" :label="__('Bio')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-56" />
 
         <div class="flex gap-2">
             <flux:button type="submit" variant="primary">{{ __('Save') }}</flux:button>

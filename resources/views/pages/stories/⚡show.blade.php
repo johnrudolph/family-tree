@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Story;
-use App\Support\MarkdownRenderer;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -14,12 +13,6 @@ new class extends Component {
     public function mount(Story $story): void
     {
         $this->story = $story;
-    }
-
-    #[Computed]
-    public function bodyHtml(): string
-    {
-        return MarkdownRenderer::toHtml($this->story->body);
     }
 
     #[Computed]
@@ -78,6 +71,6 @@ new class extends Component {
     @endif
 
     <div class="prose prose-zinc dark:prose-invert mt-6 max-w-none">
-        {!! $this->bodyHtml !!}
+        {!! $story->body !!}
     </div>
 </section>

@@ -48,7 +48,7 @@ new #[Title('Suggest an edit')] class extends Component {
 
     <form wire:submit="submit" class="mt-6 flex flex-col gap-6">
         <flux:input wire:model="title" :label="__('Title')" required />
-        <flux:textarea wire:model="body" :label="__('Story (markdown supported)')" rows="12" />
+        <flux:editor wire:model="body" :label="__('Story')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-64" />
 
         <div class="flex gap-2">
             <flux:button type="submit" variant="primary">{{ __('Submit suggestion') }}</flux:button>

@@ -71,6 +71,34 @@ test('an editor can merge a suggestion with their own changes', function () {
     expect($suggestion->fresh()->status)->toBe('merged_with_changes');
 });
 
+test('a submitted bio suggestion is sanitized before it is stored', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    $reader = User::factory()->withTwoFactor()->create();
+    $suggestion = app(SuggestionService::class)->submit($person, $reader, [
+        'bio' => '<p>hello</p><script>alert(1)</script>',
+    ]);
+
+    expect($suggestion->payload['bio'])->toBe('<p>hello</p>');
+});
+
+test('a bio suggestion is sanitized again at merge time, even with override changes', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    $reader = User::factory()->withTwoFactor()->create();
+    $suggestion = app(SuggestionService::class)->submit($person, $reader, ['bio' => '<p>original</p>']);
+
+    app(SuggestionService::class)->merge($suggestion, $editor, [
+        'bio' => '<p onclick="alert(1)">edited</p>',
+    ]);
+
+    expect($person->fresh()->bio)->toBe('<p>edited</p>');
+});
+
 test('an editor can reject a suggestion, leaving the page unchanged', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create(['first_name' => 'Original']);

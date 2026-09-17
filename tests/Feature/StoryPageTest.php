@@ -21,9 +21,23 @@ test('any member can create a story and tag people in it', function () {
     expect($story->people->pluck('id')->all())->toBe([$person->id]);
 });
 
-test('a story page shows tagged people and renders markdown', function () {
+test('creating a story sanitizes the rich text body before saving', function () {
+    $user = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($user)
+        ->test('pages::stories.create')
+        ->set('title', 'Tainted Story')
+        ->set('body', '<p>hello</p><script>alert(1)</script>')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $story = Story::query()->where('title', 'Tainted Story')->firstOrFail();
+    expect($story->body)->toBe('<p>hello</p>');
+});
+
+test('a story page shows tagged people and renders its rich text body', function () {
     $viewer = User::factory()->withTwoFactor()->create();
-    $story = Story::factory()->create(['title' => 'A Family Tale', 'body' => '**bold** text']);
+    $story = Story::factory()->create(['title' => 'A Family Tale', 'body' => '<p><strong>bold</strong> text</p>']);
 
     $this->actingAs($viewer)
         ->get(route('stories.show', $story))

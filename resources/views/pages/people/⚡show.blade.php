@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Services\PageEditorService;
 use App\Services\RelationshipService;
 use App\Services\RevisionService;
-use App\Support\MarkdownRenderer;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -58,12 +57,6 @@ new class extends Component {
     public function mount(Person $person): void
     {
         $this->person = $person;
-    }
-
-    #[Computed]
-    public function bioHtml(): string
-    {
-        return MarkdownRenderer::toHtml($this->person->bio);
     }
 
     #[Computed]
@@ -432,8 +425,8 @@ new class extends Component {
         <div class="sm:col-span-2">
             <flux:heading level="2">{{ __('About') }}</flux:heading>
             <div class="prose prose-zinc dark:prose-invert mt-2 max-w-none">
-                @if ($this->bioHtml)
-                    {!! $this->bioHtml !!}
+                @if ($person->bio)
+                    {!! $person->bio !!}
                 @else
                     <flux:text class="text-zinc-500">{{ __('No bio yet.') }}</flux:text>
                 @endif

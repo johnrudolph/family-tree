@@ -54,6 +54,19 @@ test('an admin can edit a person\'s core facts', function () {
     expect($person->fresh()->first_name)->toBe('Updated');
 });
 
+test('editing a person\'s bio sanitizes the rich text before saving', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $person = Person::factory()->create();
+
+    Livewire::actingAs($admin)
+        ->test('pages::people.edit', ['person' => $person])
+        ->set('bio', '<p>hello</p><script>alert(1)</script>')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($person->fresh()->bio)->toBe('<p>hello</p>');
+});
+
 test('only the linked user can manage their own enrichment fields and doing so records consent', function () {
     $user = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();

@@ -8,6 +8,7 @@ use App\Models\Suggestion;
 use App\Models\User;
 use App\Notifications\SuggestionReviewed;
 use App\Notifications\SuggestionSubmitted;
+use App\Support\RichTextSanitizer;
 use Illuminate\Support\Facades\Notification;
 use RuntimeException;
 
@@ -25,7 +26,7 @@ class SuggestionService
     {
         $suggestion = $page->suggestions()->create([
             'user_id' => $proposer->id,
-            'payload' => $payload,
+            'payload' => $this->sanitizeRichText($payload),
             'status' => 'pending',
         ]);
 
@@ -39,7 +40,7 @@ class SuggestionService
      */
     public function merge(Suggestion $suggestion, User $reviewer, ?array $overridePayload = null): void
     {
-        $finalPayload = $overridePayload ?? $suggestion->payload;
+        $finalPayload = $this->sanitizeRichText($overridePayload ?? $suggestion->payload);
         $page = $suggestion->suggestable;
 
         if (! $page instanceof Person && ! $page instanceof Story) {
@@ -56,6 +57,25 @@ class SuggestionService
         ]);
 
         $suggestion->user->notify(new SuggestionReviewed($suggestion));
+    }
+
+    /**
+     * Rich text fields go through Flux's editor client-side, but the request
+     * that submits them can always be forged — sanitize server-side too,
+     * wherever a payload is about to be stored or applied.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function sanitizeRichText(array $payload): array
+    {
+        foreach (['bio', 'body'] as $field) {
+            if (array_key_exists($field, $payload)) {
+                $payload[$field] = RichTextSanitizer::clean($payload[$field]);
+            }
+        }
+
+        return $payload;
     }
 
     public function reject(Suggestion $suggestion, User $reviewer, ?string $note = null): void

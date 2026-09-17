@@ -102,7 +102,7 @@ new #[Title('Suggest an edit')] class extends Component {
         @unless ($is_living)
             <flux:input wire:model="dod" type="date" :label="__('Date of death')" />
         @endunless
-        <flux:textarea wire:model="bio" :label="__('Bio (markdown supported)')" rows="10" />
+        <flux:editor wire:model="bio" :label="__('Bio')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-56" />
 
         <div class="flex gap-2">
             <flux:button type="submit" variant="primary">{{ __('Submit suggestion') }}</flux:button>

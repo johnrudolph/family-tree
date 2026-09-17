@@ -3,6 +3,7 @@
 use App\Models\Person;
 use App\Models\Story;
 use App\Services\PageEditorService;
+use App\Support\RichTextSanitizer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Title;
@@ -39,7 +40,7 @@ new #[Title('New story')] class extends Component {
 
         $story = Story::create([
             'title' => $validated['title'],
-            'body' => $validated['body'],
+            'body' => RichTextSanitizer::clean($validated['body']),
             'created_by' => Auth::id(),
         ]);
 
@@ -56,7 +57,7 @@ new #[Title('New story')] class extends Component {
 
     <form wire:submit="save" class="mt-6 flex flex-col gap-6">
         <flux:input wire:model="title" :label="__('Title')" required />
-        <flux:textarea wire:model="body" :label="__('Story (markdown supported)')" rows="12" />
+        <flux:editor wire:model="body" :label="__('Story')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-64" />
 
         <flux:select variant="listbox" searchable multiple wire:model="person_ids" :label="__('Who is this story about?')" :placeholder="__('Search people…')">
             @foreach ($this->people() as $person)
