@@ -320,7 +320,7 @@ new #[Title('Manage relationships')] class extends Component {
             @endif
         </flux:radio.group>
 
-        @if ($type === 'spouse')
+        <div x-show="$wire.type === 'spouse'">
             <flux:select wire:model="spouseStatus" :label="__('Status')">
                 <flux:select.option value="married">{{ __('Married') }}</flux:select.option>
                 <flux:select.option value="divorced">{{ __('Divorced') }}</flux:select.option>
@@ -334,9 +334,9 @@ new #[Title('Manage relationships')] class extends Component {
                 :candidates="$this->candidateStepchildren"
                 :selected-ids="$alsoParentOfChildIds"
             />
-        @endif
+        </div>
 
-        @if ($type === 'child')
+        <div x-show="$wire.type === 'child'">
             <x-relationship-pills
                 :label="__('Also mark as parent')"
                 :hint="__('Click × to remove anyone who isn\'t also a parent of this child.')"
@@ -344,9 +344,9 @@ new #[Title('Manage relationships')] class extends Component {
                 :candidates="$this->candidateCoParents"
                 :selected-ids="$alsoCoParentIds"
             />
-        @endif
+        </div>
 
-        @if ($type === 'sibling')
+        <div x-show="$wire.type === 'sibling'">
             <x-relationship-pills
                 :label="__('Also link as parent')"
                 :hint="__('Click × to remove anyone who doesn\'t apply.')"
@@ -363,31 +363,33 @@ new #[Title('Manage relationships')] class extends Component {
                     </flux:text>
                 </div>
             @endif
-        @endif
+        </div>
 
         <flux:separator />
 
-        <flux:radio.group wire:model.live="mode" :label="__('Who?')">
+        <flux:radio.group wire:model="mode" :label="__('Who?')">
             <flux:radio value="existing" label="{{ __('Someone already on the tree') }}" />
             <flux:radio value="new" label="{{ __('A new person, not yet on the tree') }}" />
         </flux:radio.group>
 
-        @if ($mode === 'existing')
+        <div x-show="$wire.mode === 'existing'">
             <flux:select variant="combobox" wire:model="existingPersonId" :label="__('Person')" :placeholder="__('Search people…')" clearable>
                 @foreach ($this->candidatePeople as $candidate)
                     <flux:select.option value="{{ $candidate->id }}">{{ $candidate->fullName() }}</flux:select.option>
                 @endforeach
             </flux:select>
-        @else
+        </div>
+
+        <div x-show="$wire.mode === 'new'" class="flex flex-col gap-6">
             <flux:input wire:model="new_first_name" :label="__('First name')" />
             <flux:input wire:model="new_middle_name" :label="__('Middle name')" />
             <flux:input wire:model="new_last_name" :label="__('Last name')" />
             <flux:input wire:model="new_dob" type="date" :label="__('Date of birth')" />
-            <flux:checkbox wire:model.live="new_is_living" :label="__('Living')" />
-            @unless ($new_is_living)
+            <flux:checkbox wire:model="new_is_living" :label="__('Living')" />
+            <div x-show="! $wire.new_is_living">
                 <flux:input wire:model="new_dod" type="date" :label="__('Date of death')" />
-            @endunless
-        @endif
+            </div>
+        </div>
 
         <div>
             <flux:button type="submit" variant="primary">{{ __('Add relationship') }}</flux:button>

@@ -412,7 +412,7 @@ new #[Title('Family Tree')] class extends Component {
                         @endif
                     </flux:radio.group>
 
-                    @if ($relType === 'spouse')
+                    <div x-show="$wire.relType === 'spouse'">
                         <flux:select wire:model="relSpouseStatus">
                             <flux:select.option value="married">{{ __('Married') }}</flux:select.option>
                             <flux:select.option value="divorced">{{ __('Divorced') }}</flux:select.option>
@@ -426,9 +426,9 @@ new #[Title('Family Tree')] class extends Component {
                             :candidates="$this->candidateStepchildren"
                             :selected-ids="$relAlsoParentOfChildIds"
                         />
-                    @endif
+                    </div>
 
-                    @if ($relType === 'child')
+                    <div x-show="$wire.relType === 'child'">
                         <x-relationship-pills
                             :label="__('Also mark as parent')"
                             :hint="__('Click × to remove anyone who doesn\'t apply.')"
@@ -436,9 +436,9 @@ new #[Title('Family Tree')] class extends Component {
                             :candidates="$this->candidateCoParents"
                             :selected-ids="$relAlsoCoParentIds"
                         />
-                    @endif
+                    </div>
 
-                    @if ($relType === 'sibling')
+                    <div x-show="$wire.relType === 'sibling'">
                         <x-relationship-pills
                             :label="__('Also link as parent')"
                             :hint="__('Click × to remove anyone who doesn\'t apply.')"
@@ -455,31 +455,33 @@ new #[Title('Family Tree')] class extends Component {
                                 </flux:text>
                             </div>
                         @endif
-                    @endif
+                    </div>
 
                     <flux:separator />
 
-                    <flux:radio.group wire:model.live="relMode">
+                    <flux:radio.group wire:model="relMode">
                         <flux:radio value="existing" label="{{ __('Existing person') }}" />
                         <flux:radio value="new" label="{{ __('New person') }}" />
                     </flux:radio.group>
 
-                    @if ($relMode === 'existing')
+                    <div x-show="$wire.relMode === 'existing'">
                         <flux:select variant="combobox" wire:model="relExistingPersonId" :placeholder="__('Search people…')" clearable>
                             @foreach ($this->candidatePeople as $candidate)
                                 <flux:select.option value="{{ $candidate->id }}">{{ $candidate->fullName() }}</flux:select.option>
                             @endforeach
                         </flux:select>
-                    @else
+                    </div>
+
+                    <div x-show="$wire.relMode === 'new'" class="flex flex-col gap-3">
                         <flux:input wire:model="relNewFirstName" :placeholder="__('First name')" />
                         <flux:input wire:model="relNewMiddleName" :placeholder="__('Middle name')" />
                         <flux:input wire:model="relNewLastName" :placeholder="__('Last name')" />
                         <flux:input wire:model="relNewDob" type="date" :placeholder="__('Date of birth')" />
-                        <flux:checkbox wire:model.live="relNewIsLiving" :label="__('Living')" />
-                        @unless ($relNewIsLiving)
+                        <flux:checkbox wire:model="relNewIsLiving" :label="__('Living')" />
+                        <div x-show="! $wire.relNewIsLiving">
                             <flux:input wire:model="relNewDod" type="date" :placeholder="__('Date of death')" />
-                        @endunless
-                    @endif
+                        </div>
+                    </div>
 
                     <flux:button type="submit" variant="primary" size="sm" wire:loading.attr="disabled" wire:target="addRelationship">{{ __('Add relationship') }}</flux:button>
                     </form>
