@@ -85,7 +85,7 @@ class TimelineSerializer
                 'person_id' => null,
                 'story_id' => $story->id,
                 'avatar_url' => null,
-                'featured_image_url' => $featured?->getTemporaryUrl(now()->addHour()),
+                'featured_image_url' => $featured ? MediaUrl::of($featured) : null,
                 'body_html' => StoryBodyParser::render($story->body ?? ''),
                 'url' => route('stories.show', $story),
             ];

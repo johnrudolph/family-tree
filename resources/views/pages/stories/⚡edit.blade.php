@@ -3,6 +3,7 @@
 use App\Models\Person;
 use App\Models\Story;
 use App\Services\RevisionService;
+use App\Support\MediaUrl;
 use App\Support\RichTextSanitizer;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -178,7 +179,7 @@ new #[Title('Edit story')] class extends Component {
                             wire:key="gallery-{{ $media->id }}"
                             class="relative aspect-square overflow-hidden rounded {{ $media->getCustomProperty('featured') ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}"
                         >
-                            <img src="{{ $media->getTemporaryUrl(now()->addHour()) }}" class="h-full w-full object-cover" alt="">
+                            <img src="{{ MediaUrl::of($media) }}" class="h-full w-full object-cover" alt="">
                             @if ($media->getCustomProperty('featured'))
                                 <flux:badge size="sm" class="absolute bottom-1 left-1">{{ __('Featured') }}</flux:badge>
                             @endif

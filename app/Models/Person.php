@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasWikiWorkflow;
+use App\Support\MediaUrl;
 use Database\Factories\PersonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -96,7 +97,7 @@ class Person extends Model implements HasMedia
             return null;
         }
 
-        return $media->getTemporaryUrl(now()->addHour());
+        return MediaUrl::of($media);
     }
 
     public function hasConsented(): bool

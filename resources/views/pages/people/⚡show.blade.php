@@ -8,6 +8,7 @@ use App\Services\RelationshipLabelService;
 use App\Services\RelationshipService;
 use App\Services\RevisionService;
 use App\Support\FamilyTreeSerializer;
+use App\Support\MediaUrl;
 use App\Support\StoryBodyParser;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
@@ -475,6 +476,64 @@ new class extends Component {
     @endif
 
     <div class="mt-8 flex flex-col gap-8">
+        <div>
+            <flux:heading level="2">{{ __('About') }}</flux:heading>
+            <div class="prose prose-zinc dark:prose-invert mt-2 max-w-none">
+                @if ($person->bio)
+                    {!! $person->bio !!}
+                @else
+                    <flux:text class="text-zinc-500">{{ __('No bio yet.') }}</flux:text>
+                @endif
+            </div>
+
+            @if ($person->canShowEnrichment() && ($person->address || $person->phone || $person->contact_email || $person->social_links))
+                <flux:heading level="2" class="mt-8">{{ __('Contact') }}</flux:heading>
+                <dl class="mt-2 space-y-1">
+                    @if ($person->contact_email)
+                        <div><flux:text class="text-zinc-500">{{ __('Email') }}:</flux:text> {{ $person->contact_email }}</div>
+                    @endif
+                    @if ($person->phone)
+                        <div><flux:text class="text-zinc-500">{{ __('Phone') }}:</flux:text> {{ $person->phone }}</div>
+                    @endif
+                    @if ($person->address)
+                        <div><flux:text class="text-zinc-500">{{ __('Address') }}:</flux:text> {{ $person->address }}</div>
+                    @endif
+                    @foreach ($person->social_links ?? [] as $link)
+                        <div><a href="{{ $link }}" class="text-blue-600 hover:underline dark:text-blue-400" target="_blank" rel="noopener">{{ $link }}</a></div>
+                    @endforeach
+                </dl>
+            @endif
+        </div>
+
+        @if ($this->relatedStories->isNotEmpty())
+            <div>
+                <flux:heading level="2">{{ __('Stories') }}</flux:heading>
+                <div class="mt-2 space-y-2">
+                    @foreach ($this->relatedStories as $story)
+                        @php($featured = $story->featuredImage())
+                        <a href="{{ route('stories.show', $story) }}" wire:navigate class="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
+                            @if ($featured)
+                                <img src="{{ MediaUrl::of($featured) }}" class="size-12 shrink-0 rounded object-cover" alt="">
+                            @else
+                                <div class="flex size-12 shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-700">
+                                    <flux:icon.book-open class="size-5 text-zinc-400" />
+                                </div>
+                            @endif
+                            <div class="min-w-0">
+                                <flux:text class="block truncate font-medium text-zinc-800 dark:text-zinc-100">{{ $story->title }}</flux:text>
+                                <flux:text class="text-xs text-zinc-500">
+                                    {{ $story->start_date_precision === 'year' ? $story->start_date->format('Y') : $story->start_date->format('F j, Y') }}
+                                    @if ($story->end_date)
+                                        &ndash; {{ $story->end_date_precision === 'year' ? $story->end_date->format('Y') : $story->end_date->format('F j, Y') }}
+                                    @endif
+                                </flux:text>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <div
             x-data
             x-on:family-widget-updated.window="window.updatePersonFamilyWidget($refs.familyWidget, $event.detail.data)"
@@ -538,37 +597,8 @@ new class extends Component {
             @endif
         </div>
 
-        <div>
-            <flux:heading level="2">{{ __('About') }}</flux:heading>
-            <div class="prose prose-zinc dark:prose-invert mt-2 max-w-none">
-                @if ($person->bio)
-                    {!! $person->bio !!}
-                @else
-                    <flux:text class="text-zinc-500">{{ __('No bio yet.') }}</flux:text>
-                @endif
-            </div>
-
-            @if ($person->canShowEnrichment() && ($person->address || $person->phone || $person->contact_email || $person->social_links))
-                <flux:heading level="2" class="mt-8">{{ __('Contact') }}</flux:heading>
-                <dl class="mt-2 space-y-1">
-                    @if ($person->contact_email)
-                        <div><flux:text class="text-zinc-500">{{ __('Email') }}:</flux:text> {{ $person->contact_email }}</div>
-                    @endif
-                    @if ($person->phone)
-                        <div><flux:text class="text-zinc-500">{{ __('Phone') }}:</flux:text> {{ $person->phone }}</div>
-                    @endif
-                    @if ($person->address)
-                        <div><flux:text class="text-zinc-500">{{ __('Address') }}:</flux:text> {{ $person->address }}</div>
-                    @endif
-                    @foreach ($person->social_links ?? [] as $link)
-                        <div><a href="{{ $link }}" class="text-blue-600 hover:underline dark:text-blue-400" target="_blank" rel="noopener">{{ $link }}</a></div>
-                    @endforeach
-                </dl>
-            @endif
-
-            @if ($this->canEdit)
-                <flux:separator class="my-8" />
-
+        @if ($this->canEdit)
+            <div>
                 <button type="button" wire:click="$toggle('showEditors')" class="flex w-full items-center justify-between text-left">
                     <flux:heading level="2">{{ __('Editors') }} ({{ $this->editors->count() }})</flux:heading>
                     <flux:icon.chevron-down class="size-4 text-zinc-400 {{ $showEditors ? 'rotate-180' : '' }}" />
@@ -596,9 +626,9 @@ new class extends Component {
                         <flux:button type="submit" size="sm">{{ __('Add') }}</flux:button>
                     </form>
                 @endif
+            </div>
 
-                <flux:separator class="my-8" />
-
+            <div>
                 <button type="button" wire:click="$toggle('showHistory')" class="flex w-full items-center justify-between text-left">
                     <flux:heading level="2">{{ __('History') }}</flux:heading>
                     <flux:icon.chevron-down class="size-4 text-zinc-400 {{ $showHistory ? 'rotate-180' : '' }}" />
@@ -623,17 +653,8 @@ new class extends Component {
                         @endforelse
                     </div>
                 @endif
-            @endif
-
-            @if ($this->relatedStories->isNotEmpty())
-                <flux:heading level="2" class="mt-8">{{ __('Stories') }}</flux:heading>
-                <div class="mt-2 space-y-1">
-                    @foreach ($this->relatedStories as $story)
-                        <a href="{{ route('stories.show', $story) }}" wire:navigate class="block text-sm hover:underline">{{ $story->title }}</a>
-                    @endforeach
-                </div>
-            @endif
-        </div>
+            </div>
+        @endif
     </div>
 
     @if ($this->canEdit)

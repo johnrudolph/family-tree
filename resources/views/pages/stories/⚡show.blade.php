@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Story;
+use App\Support\MediaUrl;
 use App\Support\StoryBodyParser;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
@@ -69,7 +70,7 @@ new class extends Component {
     @if ($story->galleryMedia()->isNotEmpty())
         <div class="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
             @foreach ($story->galleryMedia() as $media)
-                @php($mediaUrl = $media->getTemporaryUrl(now()->addHour()))
+                @php($mediaUrl = MediaUrl::of($media))
                 <a href="{{ $mediaUrl }}" target="_blank" rel="noopener">
                     <img src="{{ $mediaUrl }}" class="aspect-square rounded-lg object-cover" alt="">
                 </a>
