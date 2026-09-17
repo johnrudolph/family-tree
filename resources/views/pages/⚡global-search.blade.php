@@ -23,12 +23,13 @@ new class extends Component {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
             event.preventDefault();
             $flux.modal('global-search').show();
+            setTimeout(() => $refs.searchInput.focus(), 50);
         }
     "
 >
-    <flux:modal name="global-search" class="w-full max-w-md">
+    <flux:modal name="global-search" variant="bare" class="w-full max-w-md">
         <flux:command>
-            <flux:command.input :placeholder="__('Jump to a person… (⌘K)')" clearable />
+            <flux:command.input x-ref="searchInput" :placeholder="__('Jump to a person… (⌘K)')" clearable />
             <flux:command.items>
                 @foreach ($this->people as $person)
                     <flux:command.item wire:click="goToPerson({{ $person->id }})" wire:key="global-search-{{ $person->id }}">
