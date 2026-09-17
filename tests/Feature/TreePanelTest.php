@@ -43,16 +43,15 @@ test('the tree defaults to the widest connected family group, even if it isn\'t 
     expect($mainId)->toBe($bigRoot->id);
 });
 
-test('searching finds a person by name', function () {
+test('the search command palette lists every person for client-side filtering', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     Person::factory()->create(['first_name' => 'Ada', 'last_name' => 'Lovelace']);
     Person::factory()->create(['first_name' => 'Grace', 'last_name' => 'Hopper']);
 
     Livewire::actingAs($viewer)
         ->test('pages::tree.index')
-        ->set('search', 'Ada')
         ->assertSee('Ada Lovelace')
-        ->assertDontSee('Grace Hopper');
+        ->assertSee('Grace Hopper');
 });
 
 test('selecting a person shows their card and dispatches a center-on event', function () {

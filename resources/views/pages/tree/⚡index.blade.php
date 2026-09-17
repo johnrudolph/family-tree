@@ -15,8 +15,6 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Family Tree')] class extends Component {
-    public string $search = '';
-
     public ?int $selectedPersonId = null;
 
     public string $relType = 'parent';
@@ -65,20 +63,16 @@ new #[Title('Family Tree')] class extends Component {
         return FamilyTreeSerializer::widestRootPersonId();
     }
 
+    /**
+     * All people, for the command-palette search box — filtering happens
+     * entirely client-side (Flux's <flux:command> filters its own options
+     * against the typed text), so the list doesn't round-trip to the server
+     * on every keystroke.
+     */
     #[Computed]
-    public function searchResults()
+    public function searchablePeople()
     {
-        if ($this->search === '') {
-            return collect();
-        }
-
-        return Person::query()
-            ->where(fn ($query) => $query
-                ->where('first_name', 'like', "%{$this->search}%")
-                ->orWhere('last_name', 'like', "%{$this->search}%"))
-            ->orderBy('first_name')
-            ->limit(8)
-            ->get();
+        return Person::query()->orderBy('first_name')->get();
     }
 
     #[Computed]
@@ -165,7 +159,6 @@ new #[Title('Family Tree')] class extends Component {
     public function selectPerson(int $id): void
     {
         $this->selectedPersonId = $id;
-        $this->search = '';
         $this->relType = 'parent';
         unset($this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents);
 
@@ -331,6 +324,7 @@ new #[Title('Family Tree')] class extends Component {
     x-on:tree-center-on.window="window.familyTreeCenterOn($event.detail.id)"
     x-on:tree-data-updated.window="window.familyTreeUpdateData($event.detail.data)"
     x-on:family-tree-card-click.window="$wire.selectPerson($event.detail.id)"
+    x-on:keydown.window="if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); $refs.searchInput.focus(); $refs.searchInput.select(); }"
 >
     <div
         wire:ignore
@@ -343,23 +337,16 @@ new #[Title('Family Tree')] class extends Component {
     <div class="w-80 shrink-0 overflow-y-auto rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
         <flux:heading level="1" size="sm">{{ __('Family Tree') }}</flux:heading>
 
-        <flux:input wire:model.live.debounce.200ms="search" :placeholder="__('Search people…')" class="mt-3" />
-
-        @if ($search !== '')
-            <div class="mt-2 space-y-1">
-                @forelse ($this->searchResults as $result)
-                    <button
-                        type="button"
-                        wire:click="selectPerson({{ $result->id }})"
-                        class="block w-full rounded px-2 py-1 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                    >
+        <flux:command class="mt-3 max-h-64">
+            <flux:command.input x-ref="searchInput" :placeholder="__('Search people… (⌘F)')" clearable />
+            <flux:command.items class="max-h-48">
+                @foreach ($this->searchablePeople as $result)
+                    <flux:command.item wire:click="selectPerson({{ $result->id }})" wire:key="search-{{ $result->id }}">
                         {{ $result->fullName() }}
-                    </button>
-                @empty
-                    <flux:text class="text-sm text-zinc-500">{{ __('No matches.') }}</flux:text>
-                @endforelse
-            </div>
-        @endif
+                    </flux:command.item>
+                @endforeach
+            </flux:command.items>
+        </flux:command>
 
         @if ($this->selectedPerson)
             <flux:separator class="my-4" />
