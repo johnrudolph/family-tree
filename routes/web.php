@@ -23,6 +23,7 @@ Route::middleware(['auth', 'verified', 'two-factor.enabled'])->group(function ()
     Route::livewire('tree', 'pages::tree.index')->name('tree.index');
 
     Route::livewire('admin/invites', 'pages::invites.invite-person')->name('invites.create');
+    Route::livewire('admin/members', 'pages::admin.members')->name('admin.members');
 
     Route::livewire('people', 'pages::people.index')->name('people.index');
     Route::livewire('people/create', 'pages::people.create')->name('people.create');

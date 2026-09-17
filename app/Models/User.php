@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -40,6 +41,13 @@ class User extends Authenticatable implements PasskeyUser
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
+     * The one account that is always an admin, regardless of the is_admin
+     * column — a permanent fallback so admin access can never be lost by a
+     * database mistake or every other admin being demoted.
+     */
+    public const SUPER_ADMIN_EMAIL = 'johnrudolphdrexler@gmail.com';
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -52,6 +60,25 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'is_admin' => 'boolean',
         ];
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->email === self::SUPER_ADMIN_EMAIL;
+    }
+
+    /**
+     * Overrides reads of the is_admin column so the super admin is always
+     * treated as an admin everywhere in the app, without needing to touch
+     * every existing $user->is_admin check.
+     *
+     * @return Attribute<bool, never>
+     */
+    protected function isAdmin(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?bool $value) => (bool) $value || $this->isSuperAdmin(),
+        );
     }
 
     /**

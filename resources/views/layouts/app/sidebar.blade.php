@@ -32,6 +32,10 @@
                         <flux:sidebar.item icon="user-plus" :href="route('invites.create')" :current="request()->routeIs('invites.create')" wire:navigate>
                             {{ __('Invite a member') }}
                         </flux:sidebar.item>
+
+                        <flux:sidebar.item icon="shield-check" :href="route('admin.members')" :current="request()->routeIs('admin.members')" wire:navigate>
+                            {{ __('Manage admins') }}
+                        </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
             </flux:sidebar.nav>
