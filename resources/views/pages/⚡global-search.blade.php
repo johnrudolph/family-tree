@@ -43,15 +43,28 @@ new class extends Component {
     x-on:modal-show.window="if ($event.detail.name === 'global-search') focusSearchInput()"
 >
     <flux:modal name="global-search" variant="bare" class="w-full max-w-md">
-        <flux:command>
-            <flux:command.input x-ref="searchInput" autofocus :placeholder="__('Jump to a person… (⌘K)')" clearable />
-            <flux:command.items>
-                @foreach ($this->people as $person)
-                    <flux:command.item wire:click="goToPerson({{ $person->id }})" wire:key="global-search-{{ $person->id }}">
-                        {{ $person->fullName() }}
-                    </flux:command.item>
-                @endforeach
-            </flux:command.items>
-        </flux:command>
+        <div class="relative">
+            <flux:command>
+                <flux:command.input x-ref="searchInput" autofocus :placeholder="__('Jump to a person… (⌘K)')" clearable />
+                {{-- Fixed height (5 rows) so the box never resizes — and
+                     never re-centers — as filtering narrows the list. --}}
+                <flux:command.items class="h-[210px]">
+                    @foreach ($this->people as $person)
+                        <flux:command.item wire:click="goToPerson({{ $person->id }})" wire:key="global-search-{{ $person->id }}">
+                            {{ $person->fullName() }}
+                        </flux:command.item>
+                    @endforeach
+                </flux:command.items>
+            </flux:command>
+
+            <div
+                wire:loading
+                wire:target="goToPerson"
+                class="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-white/90 dark:bg-zinc-700/90"
+            >
+                <flux:icon.loading class="size-5 text-zinc-500" />
+                <flux:text class="text-zinc-500">{{ __('Going there…') }}</flux:text>
+            </div>
+        </div>
     </flux:modal>
 </div>
