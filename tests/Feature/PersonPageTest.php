@@ -17,6 +17,22 @@ test('a member can view a person page', function () {
         ->assertSee($person->fullName());
 });
 
+test('the person page shows the viewer\'s relationship to the person, but not to themself', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $parent = Person::factory()->create();
+    Relationship::factory()->parentChild()->create(['person_a_id' => $parent->id, 'person_b_id' => $viewer->person->id]);
+
+    $this->actingAs($viewer)
+        ->get(route('people.show', $parent))
+        ->assertOk()
+        ->assertSee('Your parent');
+
+    $this->actingAs($viewer)
+        ->get(route('people.show', $viewer->person))
+        ->assertOk()
+        ->assertDontSee('Your parent');
+});
+
 test('relationships are shown on a person page', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $parent = Person::factory()->create(['first_name' => 'Parent']);

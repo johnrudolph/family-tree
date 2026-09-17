@@ -4,6 +4,7 @@ use App\Models\Person;
 use App\Models\Relationship;
 use App\Models\User;
 use App\Services\PageEditorService;
+use App\Services\RelationshipLabelService;
 use App\Services\RelationshipService;
 use App\Services\RevisionService;
 use App\Support\FamilyTreeSerializer;
@@ -66,6 +67,18 @@ new class extends Component {
     public function isSelf(): bool
     {
         return Auth::user()->person_id === $this->person->id;
+    }
+
+    #[Computed]
+    public function relationshipToViewer(): ?string
+    {
+        $viewer = Auth::user()->person;
+
+        if (! $viewer || $this->isSelf) {
+            return null;
+        }
+
+        return app(RelationshipLabelService::class)->label($viewer, $this->person);
     }
 
     #[Computed]
@@ -377,6 +390,9 @@ new class extends Component {
 
         <div class="min-w-0 flex-1">
             <flux:heading level="1">{{ $person->fullName() }}</flux:heading>
+            @if ($this->relationshipToViewer)
+                <flux:text class="text-xs text-zinc-400 dark:text-zinc-500">{{ ucfirst($this->relationshipToViewer) }}</flux:text>
+            @endif
             <flux:text class="text-zinc-500">
                 {{ $person->is_living ? __('Living') : __('Deceased') }}
                 @if ($person->dob)

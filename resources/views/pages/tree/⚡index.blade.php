@@ -3,6 +3,7 @@
 use App\Models\Person;
 use App\Models\Relationship;
 use App\Services\PageEditorService;
+use App\Services\RelationshipLabelService;
 use App\Services\RelationshipService;
 use App\Support\FamilyTreeSerializer;
 use Flux\Flux;
@@ -84,6 +85,18 @@ new #[Title('Family Tree')] class extends Component {
     public function selectedPerson(): ?Person
     {
         return $this->selectedPersonId ? Person::find($this->selectedPersonId) : null;
+    }
+
+    #[Computed]
+    public function selectedPersonRelationshipToViewer(): ?string
+    {
+        $viewer = Auth::user()->person;
+
+        if (! $viewer || ! $this->selectedPerson || $viewer->id === $this->selectedPerson->id) {
+            return null;
+        }
+
+        return app(RelationshipLabelService::class)->label($viewer, $this->selectedPerson);
     }
 
     #[Computed]
@@ -360,6 +373,9 @@ new #[Title('Family Tree')] class extends Component {
                 <x-person-avatar :person="$this->selectedPerson" size="lg" />
                 <div class="min-w-0">
                     <flux:text class="truncate font-medium">{{ $this->selectedPerson->fullName() }}</flux:text>
+                    @if ($this->selectedPersonRelationshipToViewer)
+                        <flux:text class="block text-xs text-zinc-400 dark:text-zinc-500">{{ ucfirst($this->selectedPersonRelationshipToViewer) }}</flux:text>
+                    @endif
                     <flux:text class="text-xs text-zinc-500">
                         {{ $this->selectedPerson->is_living ? __('Living') : __('Deceased') }}
                     </flux:text>

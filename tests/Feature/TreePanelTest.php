@@ -12,7 +12,19 @@ test('the tree panel starts with the viewer themself selected', function () {
     Livewire::actingAs($viewer)
         ->test('pages::tree.index')
         ->assertSet('selectedPersonId', $viewer->person->id)
-        ->assertSee($viewer->person->fullName());
+        ->assertSee($viewer->person->fullName())
+        ->assertDontSee('Your parent');
+});
+
+test('the tree panel shows the relationship between the viewer and the selected person', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $parent = Person::factory()->create();
+    Relationship::factory()->parentChild()->create(['person_a_id' => $parent->id, 'person_b_id' => $viewer->person->id]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $parent->id)
+        ->assertSee('Your parent');
 });
 
 test('the tree defaults to centering on the root ancestor of the viewer\'s branch', function () {
