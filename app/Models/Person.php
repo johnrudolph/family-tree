@@ -88,11 +88,13 @@ class Person extends Model implements HasMedia
      */
     public function photoUrl(): ?string
     {
-        if (! $this->getFirstMedia('photo')) {
+        $media = $this->getFirstMedia('photo');
+
+        if (! $media) {
             return null;
         }
 
-        return $this->getFirstTemporaryUrl(now()->addHour(), 'photo');
+        return $media->getTemporaryUrl(now()->addHour());
     }
 
     public function hasConsented(): bool

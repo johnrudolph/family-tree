@@ -20,6 +20,7 @@ new #[Title('People')] class extends Component {
     public function people()
     {
         return Person::query()
+            ->with('media')
             ->when($this->search, fn ($query) => $query
                 ->where('first_name', 'like', "%{$this->search}%")
                 ->orWhere('last_name', 'like', "%{$this->search}%"))

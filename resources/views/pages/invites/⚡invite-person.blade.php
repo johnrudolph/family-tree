@@ -94,21 +94,22 @@ new #[Title('Invite a member')] class extends Component {
     <flux:subheading>{{ __('Every account is tied to a specific person on the tree — invite them by name, not by email alone.') }}</flux:subheading>
 
     <form wire:submit="sendInvite" class="my-6 flex max-w-lg flex-col gap-6">
-        <flux:radio.group wire:model.live="createNewPerson" label="{{ __('Who are you inviting?') }}">
+        <flux:radio.group wire:model="createNewPerson" label="{{ __('Who are you inviting?') }}">
             <flux:radio value="1" label="{{ __('A new person, not yet on the tree') }}" />
             <flux:radio value="" label="{{ __('An existing person who doesn\'t have an account yet') }}" />
         </flux:radio.group>
 
-        @if ($createNewPerson)
+        <div x-show="$wire.createNewPerson">
             <flux:input wire:model="first_name" :label="__('First name')" required />
             <flux:input wire:model="last_name" :label="__('Last name')" />
-        @else
+        </div>
+        <div x-show="! $wire.createNewPerson">
             <flux:select variant="combobox" wire:model="existingPersonId" :label="__('Person')" :placeholder="__('Search people…')" clearable>
                 @foreach ($this->invitablePeople as $person)
                     <flux:select.option value="{{ $person->id }}">{{ $person->fullName() }}</flux:select.option>
                 @endforeach
             </flux:select>
-        @endif
+        </div>
 
         <flux:input wire:model="email" type="email" :label="__('Their email address')" required />
 

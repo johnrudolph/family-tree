@@ -94,18 +94,18 @@ new #[Title('Edit person')] class extends Component {
 
         <flux:separator />
 
-        <flux:input wire:model.live="preferred_name" :label="__('Goes by')" />
-        @if ($preferred_name !== '')
+        <flux:input wire:model="preferred_name" :label="__('Goes by')" />
+        <div x-show="$wire.preferred_name !== ''">
             <flux:checkbox wire:model="use_preferred_name_everywhere" :label="__('Use this everywhere')" :description="__('Show \':name\' instead of the full name on the tree, dropdowns, and pages.', ['name' => $preferred_name])" />
-        @endif
+        </div>
 
         <flux:separator />
 
         <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />
-        <flux:checkbox wire:model.live="is_living" :label="__('Living')" />
-        @unless ($is_living)
+        <flux:checkbox wire:model="is_living" :label="__('Living')" />
+        <div x-show="! $wire.is_living">
             <flux:input wire:model="dod" type="date" :label="__('Date of death')" />
-        @endunless
+        </div>
         <flux:editor wire:model="bio" :label="__('Bio')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-56" />
 
         <div class="flex gap-2">

@@ -4,6 +4,7 @@ use App\Models\Person;
 use App\Models\Relationship;
 use App\Models\User;
 use App\Support\FamilyTreeSerializer;
+use Illuminate\Support\Facades\DB;
 
 test('the tree page renders for an authenticated member', function () {
     $user = User::factory()->withTwoFactor()->create();
@@ -75,6 +76,20 @@ test('a living person without consent has no avatar in the tree data', function 
     $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
 
     expect($data[(string) $person->id]['data']['avatar'])->toBeNull();
+});
+
+test('serializing the tree does not N+1 query per person for accounts or photos', function () {
+    User::factory()->withTwoFactor()->create();
+    Person::factory()->consented()->count(10)->create();
+
+    DB::enableQueryLog();
+    FamilyTreeSerializer::toChartData();
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    // A small constant number of queries regardless of person count — people,
+    // relationships, plus eager-loaded user/media — not one per person.
+    expect($queryCount)->toBeLessThan(10);
 });
 
 test('the tree data flags whether each person has a linked user account', function () {

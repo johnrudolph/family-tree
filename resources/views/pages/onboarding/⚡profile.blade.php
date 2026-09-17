@@ -144,10 +144,10 @@ new #[Layout('layouts.auth')] #[Title('Your profile')] class extends Component {
                 <flux:input wire:model="first_name" :label="__('First name')" required />
                 <flux:input wire:model="middle_name" :label="__('Middle name')" />
                 <flux:input wire:model="last_name" :label="__('Last name')" />
-                <flux:input wire:model.live="preferred_name" :label="__('Goes by')" />
-                @if ($preferred_name !== '')
+                <flux:input wire:model="preferred_name" :label="__('Goes by')" />
+                <div x-show="$wire.preferred_name !== ''">
                     <flux:checkbox wire:model="use_preferred_name_everywhere" :label="__('Use this everywhere')" :description="__('Show \':name\' instead of the full name on the tree, dropdowns, and pages.', ['name' => $preferred_name])" />
-                @endif
+                </div>
                 <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />
             </div>
         </section>

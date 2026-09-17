@@ -15,7 +15,9 @@ class FamilyTreeSerializer
      */
     public static function toChartData(): array
     {
-        $people = Person::query()->with('user')->get()->keyBy('id');
+        // Eager-load both — hasAccount()/photoUrl() are called once per
+        // person below, and without this each one is a fresh N+1 query.
+        $people = Person::query()->with(['user', 'media'])->get()->keyBy('id');
 
         $parentsOf = [];
         $childrenOf = [];
