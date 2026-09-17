@@ -256,7 +256,20 @@ export function initTimeline(root, events) {
     root.querySelector('svg.timeline-svg').addEventListener(
         'wheel',
         (wheelEvent) => {
-            if (wheelEvent.ctrlKey) return;
+            if (wheelEvent.ctrlKey) {
+                // A pinch gesture always arrives as a ctrlKey wheel event.
+                // d3-zoom only calls preventDefault() itself when the zoom
+                // level actually changes — right at the min/max of
+                // scaleExtent (e.g. the initial fully-zoomed-out view, or
+                // pinching past the max), it silently no-ops and leaves the
+                // event unhandled, so the browser's own page-zoom kicks in
+                // instead. Claim it ourselves unconditionally so that can
+                // never happen; d3-zoom's own listener still runs after
+                // this and handles the actual zooming.
+                wheelEvent.preventDefault();
+
+                return;
+            }
 
             wheelEvent.preventDefault();
             wheelEvent.stopImmediatePropagation();

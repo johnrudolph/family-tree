@@ -155,7 +155,18 @@ function setupTrackpadPanning(container) {
     canvas.addEventListener(
         'wheel',
         (event) => {
-            if (event.ctrlKey) return;
+            if (event.ctrlKey) {
+                // A pinch gesture always arrives as a ctrlKey wheel event.
+                // d3-zoom (which family-chart uses internally) only calls
+                // preventDefault() itself when the zoom level actually
+                // changes — right at its min/max zoom it silently no-ops,
+                // so the browser's own page-zoom kicks in instead. Claim it
+                // ourselves unconditionally so that can never happen;
+                // family-chart's own zoom handler still runs after this.
+                event.preventDefault();
+
+                return;
+            }
 
             const zoom = canvas.__zoomObj;
             if (!zoom) return;
