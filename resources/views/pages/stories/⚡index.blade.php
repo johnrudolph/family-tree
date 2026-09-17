@@ -12,7 +12,7 @@ new #[Title('Stories')] class extends Component {
     #[Computed]
     public function stories()
     {
-        return Story::query()->latest()->paginate(15);
+        return Story::query()->orderByDesc('start_date')->paginate(15);
     }
 }; ?>
 
@@ -28,7 +28,8 @@ new #[Title('Stories')] class extends Component {
                class="block rounded-lg border border-zinc-200 p-4 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
                 <flux:heading level="3">{{ $story->title }}</flux:heading>
                 <flux:text class="text-xs text-zinc-500">
-                    {{ __('By') }} {{ $story->creator->name }} &middot; {{ $story->created_at->diffForHumans() }}
+                    {{ $story->start_date_precision === 'year' ? $story->start_date->format('Y') : $story->start_date->format('F j, Y') }}
+                    &middot; {{ __('By') }} {{ $story->creator->name }}
                 </flux:text>
             </a>
         @empty

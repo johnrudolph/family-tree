@@ -150,23 +150,36 @@ from the first unchecked item in the current phase.
 
 ## Implementation phases
 
-### Phase 1 — Story schema + featured image + title constraint
-- [ ] Migration: `start_date`, `start_date_precision`, `end_date`,
-      `end_date_precision` on `stories`.
-- [ ] `Story` model: fillable + casts + docblock updates.
-- [ ] Title validation cap (70) wired into create/edit/suggest forms.
-- [ ] Date + precision inputs on create/edit/suggest forms (mirror the
-      `dob`/`dob_precision` UI pattern from the Person forms, if one
-      exists — check `people` forms for how `dob_precision` is
-      currently surfaced, since summary showed it in the model but
-      not obviously in a form control).
-- [ ] Featured-image picker (gallery grid, click to mark featured) in
-      create/edit forms; `Story::featuredImage()` accessor.
-- [ ] Update `stories.suggestions` field-label map and diff rendering
-      for the new fields (mirrors what was just done for
-      `birth_city`/`death_city` on people).
-- [ ] Tests: date validation, featured-image selection persists and
-      is mutually exclusive, title length enforced.
+### Phase 1 — Story schema + featured image + title constraint — ✅ DONE (2026-09-17)
+- [x] Migration: `start_date` (not null), `start_date_precision`
+      (default `exact`), `end_date`, `end_date_precision` on
+      `stories`. No backfill needed — table was empty.
+- [x] `Story` model: fillable + `date` casts + docblock updates,
+      `featuredImage()` / `featureImage(Media $media)`.
+- [x] Title validation cap (70) wired into create/edit/suggest forms
+      (`maxlength` attr + `max:70` validation rule).
+- [x] Date + precision inputs on create/edit/suggest forms. Note:
+      checked and `Person.dob_precision` actually has **no dedicated
+      form control anywhere** in the app today — it's silently
+      inferred as `exact`/`unknown` from whether a date was typed.
+      Stories needed a real precision picker since dates are
+      required, so this introduces the first explicit
+      exact/year-only radio-button pattern in the app (values
+      `exact`/`year`, not `exact`/`approx`/`unknown` — simpler than
+      `Person`'s enum since a story always has *some* known date).
+      Year-only stores `{year}-01-01` and displays as just the year.
+- [x] Featured-image picker: gallery grid in the edit form, click a
+      photo to toggle `featured` (Spatie MediaLibrary custom
+      property, not a new column) — mutual exclusivity enforced in
+      `Story::featureImage()`.
+- [x] Updated `stories.suggestions` field-label map for the 4 new
+      fields.
+- [x] Story index/show pages now display start–end dates (year-only
+      formatted without a day/month) instead of just `created_at`.
+- [x] Tests added to `StoryPageTest.php`: year-only + end-date
+      creation, title-length rejection, featured-image toggle/mutual
+      exclusivity. Full suite (174 tests), Pint, and Larastan all
+      green.
 
 ### Phase 2 — Inline person tagging
 - [ ] Resolve the editor-insertion open question above first.

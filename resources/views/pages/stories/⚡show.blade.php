@@ -47,6 +47,12 @@ new class extends Component {
             @endif
         </div>
     </div>
+    <flux:text class="text-zinc-500">
+        {{ $story->start_date_precision === 'year' ? $story->start_date->format('Y') : $story->start_date->format('F j, Y') }}
+        @if ($story->end_date)
+            &ndash; {{ $story->end_date_precision === 'year' ? $story->end_date->format('Y') : $story->end_date->format('F j, Y') }}
+        @endif
+    </flux:text>
     <flux:text class="text-xs text-zinc-500">
         {{ __('By') }} {{ $story->creator->name }} &middot; {{ $story->created_at->diffForHumans() }}
     </flux:text>

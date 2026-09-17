@@ -31,6 +31,10 @@ new #[Title('Review suggestions')] class extends Component {
         return match ($field) {
             'title' => 'Title',
             'body' => 'Story',
+            'start_date' => 'Start date',
+            'start_date_precision' => 'Start date precision',
+            'end_date' => 'End date',
+            'end_date_precision' => 'End date precision',
             default => $field,
         };
     }
