@@ -69,8 +69,9 @@ new class extends Component {
     @if ($story->galleryMedia()->isNotEmpty())
         <div class="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
             @foreach ($story->galleryMedia() as $media)
-                <a href="{{ $media->getUrl() }}" target="_blank" rel="noopener">
-                    <img src="{{ $media->getUrl() }}" class="aspect-square rounded-lg object-cover" alt="">
+                @php($mediaUrl = $media->getTemporaryUrl(now()->addHour()))
+                <a href="{{ $mediaUrl }}" target="_blank" rel="noopener">
+                    <img src="{{ $mediaUrl }}" class="aspect-square rounded-lg object-cover" alt="">
                 </a>
             @endforeach
         </div>

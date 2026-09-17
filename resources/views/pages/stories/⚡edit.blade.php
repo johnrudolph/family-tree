@@ -92,7 +92,7 @@ new #[Title('Edit story')] class extends Component {
         @if ($story->galleryMedia()->isNotEmpty())
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($story->galleryMedia() as $media)
-                    <img src="{{ $media->getUrl() }}" class="aspect-square rounded object-cover" alt="">
+                    <img src="{{ $media->getTemporaryUrl(now()->addHour()) }}" class="aspect-square rounded object-cover" alt="">
                 @endforeach
             </div>
         @endif

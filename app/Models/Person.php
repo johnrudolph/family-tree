@@ -81,9 +81,18 @@ class Person extends Model implements HasMedia
         $this->addMediaCollection('photo')->singleFile();
     }
 
+    /**
+     * A short-lived signed URL rather than a permanent public one — this app
+     * is invite-only and photos shouldn't be reachable by anyone who merely
+     * guesses or leaks a URL, on R2 or otherwise.
+     */
     public function photoUrl(): ?string
     {
-        return $this->getFirstMediaUrl('photo') ?: null;
+        if (! $this->getFirstMedia('photo')) {
+            return null;
+        }
+
+        return $this->getFirstTemporaryUrl(now()->addHour(), 'photo');
     }
 
     public function hasConsented(): bool
