@@ -1,6 +1,6 @@
 # Stories + Timeline — Implementation Plan
 
-Status: **IMPLEMENTING — decisions locked, working through phases below.**
+Status: **COMPLETE — all four phases shipped and verified 2026-09-17.**
 Last updated: 2026-09-17
 
 ## Why this doc exists
@@ -225,31 +225,102 @@ from the first unchecked item in the current phase.
       (scratchpad only) but the flow is now known-working end to end,
       not just type-checked.
 
-### Phase 3 — Timeline data layer
-- [ ] `TimelineSerializer` unifying birth/death + story events into
-      one JSON payload, consent/privacy-safe (reuse
-      `Person::photoUrl()` pattern).
-- [ ] Route + Livewire full-page component `pages::timeline.index`.
-- [ ] Tests: birth/death event generation from Person records
-      (including precision handling), story dot vs. span
-      classification, ordering.
+### Phase 3 — Timeline data layer — DONE (2026-09-17)
+- [x] `App\Support\TimelineSerializer::events()` — plain-array
+      assembly (not `Collection`, to sidestep PHPStan/Larastan's
+      generic-covariance complaints about merging differently-shaped
+      array literals) unifying birth events, death events, and story
+      events, sorted by date via `usort`. Each event carries a
+      uniform key set (type, date, date_precision, end_date,
+      end_date_precision, title, person_id, story_id, avatar_url,
+      featured_image_url, body_html, url) so the client never has to
+      branch on shape. Birth/death titles append "in {city}" when
+      birth_city/death_city is set. Reuses `Person::photoUrl()` as-is
+      for avatars — already consent-safe by construction (a
+      non-consented living person can never have a photo uploaded in
+      the first place, so no extra gating needed here). `body_html`
+      on story events is pre-rendered via `StoryBodyParser::render()`
+      so the timeline's modal never needs a Livewire round-trip to
+      show a story.
+- [x] Route `timeline` -> `pages::timeline.index`, inside the
+      existing `auth + verified + two-factor.enabled` group. Sidebar
+      nav entry added (clock icon, between Family Tree and People).
+- [x] Tests (`TimelineSerializerTest.php`, `TimelinePageTest.php`):
+      birth/death event shape and city-suffixed titles, no-dob/no-dod
+      exclusion, dot-vs-span classification via end_date presence,
+      chronological ordering across mixed types, featured-image
+      inclusion, route auth-gating. 190 tests total, Pint, Larastan
+      all green.
 
-### Phase 4 — Timeline UI
-- [ ] `resources/js/timeline.js`: D3-based zoom/pan, decade → year →
-      month gridline switching by zoom level, initial viewport
-      (earliest event → today, right-anchored to "now").
-- [ ] Zoom-level meter control (UI element showing/controlling current
-      zoom, in addition to pinch/wheel).
-- [ ] Event rendering: dot (point event) vs. span (ranged story) on
-      the baseline, vertical leader line up to a card (title +
-      featured image or avatar).
-- [ ] Clustering/decluttering at low zoom (see open question above).
-- [ ] Click → full-story modal (reuse existing story show content) or
-      navigate to person page for birth/death events.
-- [ ] Sidebar nav entry + route.
-- [ ] Manual browser verification (per this repo's UI-change
-      convention) — launch dev server, actually zoom/pan/click through
-      it, check both light and dark mode.
+### Phase 4 — Timeline UI — DONE (2026-09-17)
+- [x] `resources/js/timeline.js`: hand-rolled with d3-zoom +
+      d3-scaleTime, following the exact pattern already established
+      in `family-tree.js` (raw wheel listener splitting two-finger
+      trackpad pan from ctrlKey-tagged pinch/mouse-wheel zoom, which
+      falls through to d3-zoom's own handler). Initial view: x0
+      domain is [earliest event date, now] mapped to [0, width] with
+      the identity transform — this alone satisfies "always start
+      fully zoomed out, earliest on the left, today on the right," no
+      special-casing needed. A dashed "today" line is drawn at its
+      real scaled position (stays correct as you pan away from it,
+      not pinned to the edge).
+- [x] Gridlines are tiered by currently-visible day-span: >10 years ->
+      decade ticks, >2 years -> year ticks, else -> month ticks —
+      "show whatever is coherently readable," recomputed every
+      zoom/pan frame.
+- [x] Zoom-level meter: an input[type=range] in the header, two-way
+      bound to the d3-zoom transform (scaleTo on input, slider value
+      updated on every zoom event unless the user is actively
+      dragging it).
+- [x] Every event always gets a dot (point) or a thicker rounded span
+      (ranged story, drawn between start_date/end_date) on the
+      baseline — declutter only ever affects cards, never the
+      baseline marks. Cards are chosen left-to-right with a minimum
+      110px pixel gap between consecutively shown cards; skipped
+      events still have their dot/span, just no card, and become
+      individually clickable again once zooming spreads them out
+      past the gap threshold.
+- [x] Card -> vertical leader line -> title + avatar/featured-image
+      (falls back to a emoji badge when there's no image). Clicking a
+      story card opens a hand-rolled modal (title + pre-rendered
+      body_html + featured image, no Flux dependency since this is
+      driven from vanilla JS outside Livewire's request cycle);
+      clicking a birth/death card navigates to that person's page via
+      Livewire.navigate (same fallback pattern as family-tree.js's
+      widget click handler).
+- [x] Sidebar nav entry + route (done as part of Phase 3 above).
+- [x] Real browser verification, not just Pest — same Playwright +
+      live-TOTP technique as Phase 2. This is genuinely where the
+      value was: caught and fixed a real bug (d3.zoom() had no
+      translateExtent, so panning could scroll into empty
+      centuries-away void with nothing on screen — added
+      .extent()/.translateExtent() clamped to the data's actual
+      domain) that no amount of code review would have caught.
+      Confirmed working end-to-end: initial zoomed-out render (dots,
+      spans, decade gridlines, decluttered cards, avatars/emoji),
+      pinch-zoom (ctrl+wheel) correctly rescaling and re-tiering
+      gridlines down to month-level, the zoom meter driving the same
+      transform, clamped panning (post-fix), dark mode styling, and
+      the full click -> modal -> close flow on a story card. Test
+      data cleaned up afterward.
+
+## Status: all four phases complete.
+
+Remaining follow-ups intentionally left for later (not blocking, not
+forgotten):
+- Card layout is a single row above the baseline — dense periods with
+  many simultaneously-decluttered cards at very tight zoom could
+  still overlap horizontally in rare cases; no vertical stacking
+  implemented. Revisit if it comes up in real use.
+- No automated JS test coverage for timeline.js/story-tagging.js (this
+  repo has no JS test runner set up at all — verification for both
+  was real-browser/Playwright, ad hoc, not checked into the suite).
+  Business logic (TimelineSerializer, StoryBodyParser) is fully
+  covered by Pest instead.
+- `Person.dob_precision` still has no explicit UI control anywhere in
+  the app outside of stories' new exact/year picker (noted in Phase 1
+  — it's inferred, not chosen). Not in scope here, just flagging the
+  inconsistency for whoever touches person dates next.
 
 ## Progress log
 

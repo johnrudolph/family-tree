@@ -20,6 +20,10 @@
                         {{ __('Family Tree') }}
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="clock" :href="route('timeline.index')" :current="request()->routeIs('timeline.*')" wire:navigate>
+                        {{ __('Timeline') }}
+                    </flux:sidebar.item>
+
                     <flux:sidebar.item icon="users" :href="route('people.index')" :current="request()->routeIs('people.*')" wire:navigate>
                         {{ __('People') }}
                     </flux:sidebar.item>
