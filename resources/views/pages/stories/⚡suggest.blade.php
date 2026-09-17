@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Person;
 use App\Models\Story;
 use App\Services\SuggestionService;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,11 @@ new #[Title('Suggest an edit')] class extends Component {
     public ?string $end_date = null;
 
     public ?string $end_year = null;
+
+    public function people()
+    {
+        return Person::query()->orderBy('first_name')->get();
+    }
 
     public function mount(Story $story): void
     {
@@ -87,7 +93,9 @@ new #[Title('Suggest an edit')] class extends Component {
 
     <form wire:submit="submit" class="mt-6 flex flex-col gap-6">
         <flux:input wire:model="title" :label="__('Title')" maxlength="70" required />
-        <flux:editor wire:model="body" :label="__('Story')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-64" />
+        <div wire:ignore x-data x-init="initStoryTagging($el, @js($this->people()->map(fn ($p) => ['id' => $p->id, 'name' => $p->fullName()])))">
+            <flux:editor wire:model="body" :label="__('Story')" :description="__('Type [[ to tag a person by name.')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-64" />
+        </div>
 
         <flux:separator />
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Story;
+use App\Support\StoryBodyParser;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -77,6 +78,6 @@ new class extends Component {
     @endif
 
     <div class="prose prose-zinc dark:prose-invert mt-6 max-w-none">
-        {!! $story->body !!}
+        {!! StoryBodyParser::render($story->body ?? '') !!}
     </div>
 </section>

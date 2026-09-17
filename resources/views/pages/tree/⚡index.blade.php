@@ -6,6 +6,7 @@ use App\Services\PageEditorService;
 use App\Services\RelationshipLabelService;
 use App\Services\RelationshipService;
 use App\Support\FamilyTreeSerializer;
+use App\Support\StoryBodyParser;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -111,6 +112,20 @@ new #[Title('Family Tree')] class extends Component {
         }
 
         return app(RelationshipLabelService::class)->label($viewer, $this->selectedPerson);
+    }
+
+    #[Computed]
+    public function selectedPersonStories()
+    {
+        if (! $this->selectedPerson) {
+            return collect();
+        }
+
+        return $this->selectedPerson->stories
+            ->merge(StoryBodyParser::storiesTagging($this->selectedPerson))
+            ->unique('id')
+            ->sortByDesc('start_date')
+            ->values();
     }
 
     #[Computed]
@@ -421,6 +436,19 @@ new #[Title('Family Tree')] class extends Component {
                             @endif
                         </div>
                     @endforeach
+                </div>
+            @endif
+
+            @if ($this->selectedPersonStories->isNotEmpty())
+                <div class="mt-3">
+                    <flux:heading level="3" size="sm">{{ __('Stories') }}</flux:heading>
+                    <div class="mt-1 space-y-1">
+                        @foreach ($this->selectedPersonStories as $story)
+                            <a href="{{ route('stories.show', $story) }}" wire:navigate class="block truncate text-sm hover:underline">
+                                {{ $story->title }}
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
             @endif
 

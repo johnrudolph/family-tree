@@ -8,6 +8,7 @@ use App\Services\RelationshipLabelService;
 use App\Services\RelationshipService;
 use App\Services\RevisionService;
 use App\Support\FamilyTreeSerializer;
+use App\Support\StoryBodyParser;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -107,6 +108,21 @@ new class extends Component {
     public function pendingSuggestionCount(): int
     {
         return $this->canEdit ? $this->person->pendingSuggestions()->count() : 0;
+    }
+
+    /**
+     * Every story this person appears in — the curated "who is this about"
+     * list plus anything they're `[[tagged]]` in within a story body, merged
+     * and deduped since a reader just wants "stories I show up in."
+     */
+    #[Computed]
+    public function relatedStories()
+    {
+        return $this->person->stories
+            ->merge(StoryBodyParser::storiesTagging($this->person))
+            ->unique('id')
+            ->sortByDesc('start_date')
+            ->values();
     }
 
     #[Computed]
@@ -609,10 +625,10 @@ new class extends Component {
                 @endif
             @endif
 
-            @if ($person->stories->isNotEmpty())
+            @if ($this->relatedStories->isNotEmpty())
                 <flux:heading level="2" class="mt-8">{{ __('Stories') }}</flux:heading>
                 <div class="mt-2 space-y-1">
-                    @foreach ($person->stories as $story)
+                    @foreach ($this->relatedStories as $story)
                         <a href="{{ route('stories.show', $story) }}" wire:navigate class="block text-sm hover:underline">{{ $story->title }}</a>
                     @endforeach
                 </div>

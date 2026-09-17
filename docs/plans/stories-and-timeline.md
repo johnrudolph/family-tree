@@ -181,15 +181,49 @@ from the first unchecked item in the current phase.
       exclusivity. Full suite (174 tests), Pint, and Larastan all
       green.
 
-### Phase 2 — Inline person tagging
-- [ ] Resolve the editor-insertion open question above first.
-- [ ] `StoryBodyParser`: render + taggedPersonIds, with tests
-      covering exact match, case-insensitivity, no-match (renders
-      plain), multiple tags, duplicate tags.
-- [ ] Autocomplete popup (Alpine) triggered on `[[`.
-- [ ] "Tagged in" section on person show page.
-- [ ] "Tagged in" section on tree right panel.
-- [ ] Tests for tagged-in display on both surfaces.
+### Phase 2 — Inline person tagging — ✅ DONE (2026-09-17)
+- [x] **Editor-insertion question resolved, and it's good news.**
+      Flux's closed `<ui-editor>` custom element exposes a plain,
+      *public* `this.editor` property holding the real TipTap `Editor`
+      instance (confirmed by reading the bundled JS — `this.editor =
+      new Editor({...})`, not a `#private` field). That means no
+      custom TipTap extension was needed at all:
+      `resources/js/story-tagging.js` polls for
+      `document.querySelector('ui-editor').editor`, listens to its
+      `update`/`selectionUpdate` events, and on typing `[[` renders a
+      plain Alpine-free positioned `<div>` popup listing matching
+      people (via `getBoundingClientRect()` on the current
+      `Selection` for placement). Picking a person calls
+      `editor.chain().focus().insertContentAt({from, to}, text).run()`
+      to replace the typed query with the full bracketed name — same
+      TipTap command API Flux's own toolbar buttons use, so it's not
+      fighting the editor, just driving its public surface.
+      Wired into create/edit/suggest via a `wire:ignore` wrapper (same
+      pattern as the family-chart widget) so Livewire re-renders never
+      tear down the popup wiring.
+- [x] `App\Support\StoryBodyParser`: `render()` (link resolution,
+      case-insensitive, unresolved tags render as literal
+      `[[bracketed text]]` rather than a broken link) and
+      `taggedPersonIds()` / `storiesTagging(Person)`. 5 unit tests.
+- [x] "Tagged in" merged into the existing "Stories" section on the
+      person show page (`relatedStories` computed = curated "about"
+      pivot ∪ body-derived tags, deduped) rather than a second
+      section — reads more naturally as "stories you show up in."
+- [x] Same merge-and-show pattern added to the tree's right panel
+      (`selectedPersonStories` computed) under a new "Stories"
+      heading.
+- [x] Tests for both surfaces, StoryBodyParser, and the create/edit
+      flow. Full suite (181 tests), Pint, Larastan all green.
+- [x] **Actually verified in a real browser**, not just Pest: spun up
+      a throwaway user with a real TOTP secret (Google2FA, computed
+      the live OTP via tinker), drove Playwright through login → 2FA
+      → story creation → typing `[[Jane` → clicking the popup result
+      → publishing → confirmed the rendered link, the person page's
+      "tagged in" story, and the tree right panel's "tagged in" story
+      all appeared correctly, in both light and dark mode. Test
+      data cleaned up afterward. Screenshots aren't kept in the repo
+      (scratchpad only) but the flow is now known-working end to end,
+      not just type-checked.
 
 ### Phase 3 — Timeline data layer
 - [ ] `TimelineSerializer` unifying birth/death + story events into

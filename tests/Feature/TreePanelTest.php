@@ -2,6 +2,7 @@
 
 use App\Models\Person;
 use App\Models\Relationship;
+use App\Models\Story;
 use App\Models\User;
 use App\Services\PageEditorService;
 use Livewire\Livewire;
@@ -102,6 +103,15 @@ test('the tree defaults to the widest connected family group, even if it isn\'t 
     $mainId = Livewire::actingAs($viewer)->test('pages::tree.index')->instance()->mainId();
 
     expect($mainId)->toBe($bigRoot->id);
+});
+
+test('the tree panel shows stories the selected person is tagged in', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    Story::factory()->create(['title' => 'A Tale About The Viewer', 'body' => '<p>[['.$viewer->person->fullName().']] did a thing.</p>']);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::tree.index')
+        ->assertSee('A Tale About The Viewer');
 });
 
 test('the search command palette lists every person for client-side filtering', function () {

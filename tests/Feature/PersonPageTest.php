@@ -2,6 +2,7 @@
 
 use App\Models\Person;
 use App\Models\Relationship;
+use App\Models\Story;
 use App\Models\User;
 use App\Services\PageEditorService;
 use App\Services\RevisionService;
@@ -78,6 +79,16 @@ test('an admin can edit a person\'s core facts', function () {
         ->assertHasNoErrors();
 
     expect($person->fresh()->first_name)->toBe('Updated');
+});
+
+test('a person page shows stories they are tagged in via [[Name]], not just the curated "about" list', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Drexler']);
+    Story::factory()->create(['title' => 'Tagged Only Story', 'body' => '<p>[[Jane Drexler]] did a thing.</p>']);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::people.show', ['person' => $person])
+        ->assertSee('Tagged Only Story');
 });
 
 test('an admin can set birth and death cities and they show on the person page', function () {
