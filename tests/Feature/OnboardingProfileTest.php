@@ -9,7 +9,7 @@ test('the security onboarding page explains who can see personal information her
     $this->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => time()])
         ->get(route('onboarding.security'))
-        ->assertSee('There is personal information on this site. The only users on this site are family members who have opted in to share their information.');
+        ->assertSee('There is personal information on this site. The only users on this site are family members.');
 });
 
 test('a user without 2FA cannot reach the profile onboarding step directly', function () {

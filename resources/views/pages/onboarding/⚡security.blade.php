@@ -66,7 +66,7 @@ new #[Layout('layouts.auth')] #[Title('Secure your account')] class extends Comp
             {{ __('We want to ensure the privacy of everyone in this family tree. Before continuing, please set up two-factor authentication or a passkey.') }}
         </flux:text>
         <flux:text>
-            {{ __('There is personal information on this site. The only users on this site are family members who have opted in to share their information.') }}
+            {{ __('There is personal information on this site. The only users on this site are family members.') }}
         </flux:text>
     </div>
 
