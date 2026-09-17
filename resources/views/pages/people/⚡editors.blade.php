@@ -93,8 +93,7 @@ new #[Title('Manage editors')] class extends Component {
     <flux:heading level="2">{{ __('Add a co-editor') }}</flux:heading>
 
     <form wire:submit="addEditor" class="mt-4 flex flex-col gap-4">
-        <flux:select wire:model="newEditorUserId" :label="__('Member')">
-            <flux:select.option value="">{{ __('Select a member…') }}</flux:select.option>
+        <flux:select variant="combobox" wire:model="newEditorUserId" :label="__('Member')" :placeholder="__('Search members…')" clearable>
             @foreach ($this->candidateUsers as $candidate)
                 <flux:select.option value="{{ $candidate->id }}">{{ $candidate->name }}</flux:select.option>
             @endforeach

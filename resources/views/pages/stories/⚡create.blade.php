@@ -58,7 +58,7 @@ new #[Title('New story')] class extends Component {
         <flux:input wire:model="title" :label="__('Title')" required />
         <flux:textarea wire:model="body" :label="__('Story (markdown supported)')" rows="12" />
 
-        <flux:select wire:model="person_ids" :label="__('Who is this story about?')" multiple>
+        <flux:select variant="listbox" searchable multiple wire:model="person_ids" :label="__('Who is this story about?')" :placeholder="__('Search people…')">
             @foreach ($this->people() as $person)
                 <flux:select.option value="{{ $person->id }}">{{ $person->fullName() }}</flux:select.option>
             @endforeach

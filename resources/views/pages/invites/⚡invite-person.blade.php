@@ -103,8 +103,7 @@ new #[Title('Invite a member')] class extends Component {
             <flux:input wire:model="first_name" :label="__('First name')" required />
             <flux:input wire:model="last_name" :label="__('Last name')" />
         @else
-            <flux:select wire:model="existingPersonId" :label="__('Person')">
-                <flux:select.option value="">{{ __('Select a person…') }}</flux:select.option>
+            <flux:select variant="combobox" wire:model="existingPersonId" :label="__('Person')" :placeholder="__('Search people…')" clearable>
                 @foreach ($this->invitablePeople as $person)
                     <flux:select.option value="{{ $person->id }}">{{ $person->fullName() }}</flux:select.option>
                 @endforeach

@@ -442,8 +442,7 @@ new class extends Component {
                     </div>
 
                     <form wire:submit="addEditor" class="mt-3 flex items-end gap-2">
-                        <flux:select wire:model="newEditorUserId" :label="__('Add a co-editor')" class="flex-1">
-                            <flux:select.option value="">{{ __('Select a member…') }}</flux:select.option>
+                        <flux:select variant="combobox" wire:model="newEditorUserId" :label="__('Add a co-editor')" :placeholder="__('Search members…')" clearable class="flex-1">
                             @foreach ($this->candidateUsers as $candidate)
                                 <flux:select.option value="{{ $candidate->id }}">{{ $candidate->name }}</flux:select.option>
                             @endforeach
@@ -585,8 +584,7 @@ new class extends Component {
                         </flux:radio.group>
 
                         @if ($relMode === 'existing')
-                            <flux:select wire:model="relExistingPersonId">
-                                <flux:select.option value="">{{ __('Select…') }}</flux:select.option>
+                            <flux:select variant="combobox" wire:model="relExistingPersonId" :placeholder="__('Search people…')" clearable>
                                 @foreach ($this->candidatePeople as $candidate)
                                     <flux:select.option value="{{ $candidate->id }}">{{ $candidate->fullName() }}</flux:select.option>
                                 @endforeach

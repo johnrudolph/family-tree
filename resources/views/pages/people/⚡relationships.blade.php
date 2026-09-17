@@ -336,8 +336,7 @@ new #[Title('Manage relationships')] class extends Component {
         </flux:radio.group>
 
         @if ($mode === 'existing')
-            <flux:select wire:model="existingPersonId" :label="__('Person')">
-                <flux:select.option value="">{{ __('Select a person…') }}</flux:select.option>
+            <flux:select variant="combobox" wire:model="existingPersonId" :label="__('Person')" :placeholder="__('Search people…')" clearable>
                 @foreach ($this->candidatePeople as $candidate)
                     <flux:select.option value="{{ $candidate->id }}">{{ $candidate->fullName() }}</flux:select.option>
                 @endforeach

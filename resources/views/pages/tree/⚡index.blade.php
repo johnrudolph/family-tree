@@ -444,8 +444,7 @@ new #[Title('Family Tree')] class extends Component {
                     </flux:radio.group>
 
                     @if ($relMode === 'existing')
-                        <flux:select wire:model="relExistingPersonId">
-                            <flux:select.option value="">{{ __('Select…') }}</flux:select.option>
+                        <flux:select variant="combobox" wire:model="relExistingPersonId" :placeholder="__('Search people…')" clearable>
                             @foreach ($this->candidatePeople as $candidate)
                                 <flux:select.option value="{{ $candidate->id }}">{{ $candidate->fullName() }}</flux:select.option>
                             @endforeach
