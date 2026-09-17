@@ -2,6 +2,7 @@ import { select, scaleTime, zoom as d3zoom, zoomIdentity, timeYear, timeMonth, t
 
 const CARD_MIN_GAP_PX = 110;
 const BASELINE_OFFSET_PX = 56;
+const ROW_HEIGHT_PX = 52;
 
 let zoomBehavior = null;
 let currentTransform = null;
@@ -36,7 +37,11 @@ function eventIcon(event) {
         return `<img src="${event.avatar_url || event.featured_image_url}" class="size-8 rounded-full object-cover shrink-0" alt="">`;
     }
 
-    const emoji = event.type === 'birth' ? '🎉' : event.type === 'death' ? '🕊️' : '📖';
+    if (event.type === 'birth') {
+        return '<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-700"></span>';
+    }
+
+    const emoji = event.type === 'death' ? '🕊️' : '📖';
 
     return `<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm dark:bg-zinc-700">${emoji}</span>`;
 }
@@ -138,19 +143,26 @@ function render(root, events, scale) {
         .attr('cy', baselineY)
         .attr('cx', (d) => scale(new Date(d.date)));
 
-    // Cards: declutter by minimum pixel gap between consecutively rendered
-    // cards, ordered left to right. Every event still has a dot/span above —
-    // this only decides which ones also get a title+image card.
+    // Cards: declutter by minimum pixel gap, ordered left to right. Every
+    // event still has a dot/span above — this only decides which ones also
+    // get a title+image card. Two cards that would collide horizontally
+    // don't just hide one — the second is pushed up to the next row instead,
+    // stacking on longer leader lines. A card is only ever hidden outright
+    // once every row runs out of vertical room.
+    const maxRows = Math.max(1, Math.floor((baselineY - 40) / ROW_HEIGHT_PX));
+    const rowLastX = new Array(maxRows).fill(-Infinity);
     const allSorted = [...events].sort((a, b) => scale(new Date(a.date)) - scale(new Date(b.date)));
     const shown = [];
-    let lastX = -Infinity;
 
     for (const event of allSorted) {
         const x = scale(new Date(event.date));
         if (x < -50 || x > width + 50) continue;
-        if (x - lastX < CARD_MIN_GAP_PX) continue;
-        shown.push({ event, x });
-        lastX = x;
+
+        const row = rowLastX.findIndex((lastX) => x - lastX >= CARD_MIN_GAP_PX);
+        if (row === -1) continue;
+
+        rowLastX[row] = x;
+        shown.push({ event, x, row });
     }
 
     const cardLayer = select(root).select('.timeline-cards');
@@ -181,8 +193,8 @@ function render(root, events, scale) {
         });
 
     const cardAll = cardEnter.merge(cardSel);
-    cardAll.style('left', (d) => `${d.x}px`).style('bottom', `${height - baselineY + 8}px`);
-    cardAll.select('.timeline-card-line').style('height', '20px');
+    cardAll.style('left', (d) => `${d.x}px`).style('bottom', (d) => `${height - baselineY + 8 + d.row * ROW_HEIGHT_PX}px`);
+    cardAll.select('.timeline-card-line').style('height', (d) => `${20 + d.row * ROW_HEIGHT_PX}px`);
 }
 
 export function initTimeline(root, events) {
