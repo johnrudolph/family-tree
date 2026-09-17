@@ -1,4 +1,5 @@
 import * as f3 from 'family-chart';
+import { select } from 'd3';
 import 'family-chart/styles/family-chart.css';
 
 let chart = null;
@@ -78,7 +79,39 @@ export function initFamilyTree(container, data, { mainId } = {}) {
 
     chart.updateTree({ initial: true });
 
+    setupTrackpadPanning(container);
+
     return chart;
+}
+
+/**
+ * family-chart's zoom (via d3-zoom) only ever zooms on a wheel event — a
+ * plain two-finger trackpad scroll and pinch-to-zoom both just scale the
+ * tree, there's no panning. Trackpad pinch sends a synthetic ctrlKey with
+ * its wheel events (the standard way browsers distinguish the two
+ * gestures), so: ctrlKey → let family-chart's own zoom handle it as
+ * before; otherwise, pan by the scroll delta ourselves.
+ */
+function setupTrackpadPanning(container) {
+    const canvas = container.querySelector('#f3Canvas');
+    if (!canvas) return;
+
+    canvas.addEventListener(
+        'wheel',
+        (event) => {
+            if (event.ctrlKey) return;
+
+            const zoom = canvas.__zoomObj;
+            if (!zoom) return;
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            const k = canvas.__zoom ? canvas.__zoom.k : 1;
+            select(canvas).call(zoom.translateBy, -event.deltaX / k, -event.deltaY / k);
+        },
+        { capture: true, passive: false },
+    );
 }
 
 /** Recenter the already-mounted tree on a person, e.g. after a search selection. */
