@@ -18,18 +18,33 @@ new class extends Component {
 }; ?>
 
 <div
-    x-data
+    x-data="{
+        focusSearchInput() {
+            // Flux's own command/select internals sometimes reclaim focus
+            // right after the dialog opens (e.g. for keyboard-nav setup), so
+            // a single focus() call — even delayed — can lose the race.
+            // Retry across a few animation frames until it actually sticks.
+            let attempts = 0
+            const tryFocus = () => {
+                this.$refs.searchInput.focus()
+                if (document.activeElement !== this.$refs.searchInput && attempts++ < 15) {
+                    requestAnimationFrame(tryFocus)
+                }
+            }
+            requestAnimationFrame(tryFocus)
+        },
+    }"
     x-on:keydown.window="
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
             event.preventDefault();
             $flux.modal('global-search').show();
-            setTimeout(() => $refs.searchInput.focus(), 50);
         }
     "
+    x-on:modal-show.window="if ($event.detail.name === 'global-search') focusSearchInput()"
 >
     <flux:modal name="global-search" variant="bare" class="w-full max-w-md">
         <flux:command>
-            <flux:command.input x-ref="searchInput" :placeholder="__('Jump to a person… (⌘K)')" clearable />
+            <flux:command.input x-ref="searchInput" autofocus :placeholder="__('Jump to a person… (⌘K)')" clearable />
             <flux:command.items>
                 @foreach ($this->people as $person)
                     <flux:command.item wire:click="goToPerson({{ $person->id }})" wire:key="global-search-{{ $person->id }}">
