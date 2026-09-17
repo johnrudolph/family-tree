@@ -24,6 +24,13 @@
     outline-offset: 2px;
 }
 
+/* family-chart puts a heavy light-gray/white outline on whoever is
+   currently "main" (selected/centered) — distracting, and easy to
+   mistake for the has-account outline above. Turn it off. */
+.f3 div.card-main .card-inner {
+    outline: none !important;
+}
+
 /* family-chart's default card background (light gray, for the "genderless"
    case we always hit since we don't collect gender) and white connecting
    lines assume a light page. In dark mode that leaves white card text on a
