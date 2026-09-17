@@ -52,7 +52,12 @@ new #[Title('Family Tree')] class extends Component {
     #[Computed]
     public function mainId(): ?int
     {
-        return Auth::user()->person_id;
+        // Default to the widest possible view rather than one scoped tightly
+        // around the viewer's own lineage — family-chart only ever renders
+        // what's reachable from one main_id, so this picks the root of the
+        // largest connected family group in the whole dataset (not
+        // necessarily the viewer's own) to show as much as one chart can.
+        return FamilyTreeSerializer::widestRootPersonId();
     }
 
     #[Computed]

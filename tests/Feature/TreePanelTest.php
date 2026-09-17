@@ -6,6 +6,43 @@ use App\Models\User;
 use App\Services\PageEditorService;
 use Livewire\Livewire;
 
+test('the tree defaults to centering on the root ancestor of the viewer\'s branch', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $grandparent = Person::factory()->create();
+    $parent = Person::factory()->create();
+    Relationship::factory()->parentChild()->create(['person_a_id' => $grandparent->id, 'person_b_id' => $parent->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $parent->id, 'person_b_id' => $viewer->person->id]);
+
+    $mainId = Livewire::actingAs($viewer)->test('pages::tree.index')->instance()->mainId();
+
+    expect($mainId)->toBe($grandparent->id);
+});
+
+test('the tree centers on the viewer themself when they have no recorded parents', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+
+    $mainId = Livewire::actingAs($viewer)->test('pages::tree.index')->instance()->mainId();
+
+    expect($mainId)->toBe($viewer->person->id);
+});
+
+test('the tree defaults to the widest connected family group, even if it isn\'t the viewer\'s own branch', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+
+    // A much larger, unrelated family group the viewer isn't part of.
+    $bigRoot = Person::factory()->create();
+    $bigChild1 = Person::factory()->create();
+    $bigChild2 = Person::factory()->create();
+    $bigGrandchild = Person::factory()->create();
+    Relationship::factory()->parentChild()->create(['person_a_id' => $bigRoot->id, 'person_b_id' => $bigChild1->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $bigRoot->id, 'person_b_id' => $bigChild2->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $bigChild1->id, 'person_b_id' => $bigGrandchild->id]);
+
+    $mainId = Livewire::actingAs($viewer)->test('pages::tree.index')->instance()->mainId();
+
+    expect($mainId)->toBe($bigRoot->id);
+});
+
 test('searching finds a person by name', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     Person::factory()->create(['first_name' => 'Ada', 'last_name' => 'Lovelace']);

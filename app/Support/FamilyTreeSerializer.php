@@ -53,4 +53,72 @@ class FamilyTreeSerializer
             ],
         ])->values()->all();
     }
+
+    /**
+     * The best single starting point for "zoomed out, show everyone": the
+     * root ancestor (no recorded parents) of the largest connected group of
+     * people — connected via either a parent/child or spouse link. family-
+     * chart only ever renders ancestry+progeny+spouses reachable from one
+     * main_id, so centering on the viewer's own lineage can miss whole
+     * branches (in-laws' families, people connected only through marriage,
+     * etc.) that this instead surfaces by picking the widest group outright.
+     */
+    public static function widestRootPersonId(): ?int
+    {
+        $peopleIds = Person::query()->pluck('id')->all();
+
+        if ($peopleIds === []) {
+            return null;
+        }
+
+        $adjacency = array_fill_keys($peopleIds, []);
+
+        Relationship::query()->get(['person_a_id', 'person_b_id'])->each(function (Relationship $relationship) use (&$adjacency) {
+            $adjacency[$relationship->person_a_id][] = $relationship->person_b_id;
+            $adjacency[$relationship->person_b_id][] = $relationship->person_a_id;
+        });
+
+        $visited = [];
+        $components = [];
+
+        foreach ($peopleIds as $id) {
+            if (isset($visited[$id])) {
+                continue;
+            }
+
+            $component = [];
+            $stack = [$id];
+            $visited[$id] = true;
+
+            while ($stack !== []) {
+                $current = array_pop($stack);
+                $component[] = $current;
+
+                foreach ($adjacency[$current] as $neighborId) {
+                    if (! isset($visited[$neighborId])) {
+                        $visited[$neighborId] = true;
+                        $stack[] = $neighborId;
+                    }
+                }
+            }
+
+            $components[] = $component;
+        }
+
+        usort($components, fn (array $a, array $b) => count($b) <=> count($a));
+        $largest = $components[0];
+
+        $hasRecordedParent = Relationship::query()
+            ->where('type', 'parent_child')
+            ->pluck('person_b_id')
+            ->flip();
+
+        foreach ($largest as $id) {
+            if (! $hasRecordedParent->has($id)) {
+                return $id;
+            }
+        }
+
+        return $largest[0];
+    }
 }

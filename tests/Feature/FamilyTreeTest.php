@@ -52,6 +52,23 @@ test('the serializer includes a sortable ISO date of birth for stable birth-orde
     expect($data[(string) $unknownDob->id]['data']['dob_sort'])->toBeNull();
 });
 
+test('widestRootPersonId picks the root of the largest connected group, spouse links included', function () {
+    $small = Person::factory()->create();
+
+    $bigRoot = Person::factory()->create();
+    $bigSpouse = Person::factory()->create();
+    $bigChild = Person::factory()->create();
+    Relationship::factory()->create(['person_a_id' => $bigRoot->id, 'person_b_id' => $bigSpouse->id, 'type' => 'spouse']);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $bigRoot->id, 'person_b_id' => $bigChild->id]);
+
+    expect(FamilyTreeSerializer::widestRootPersonId())->toBe($bigRoot->id);
+    expect(FamilyTreeSerializer::widestRootPersonId())->not->toBe($small->id);
+});
+
+test('widestRootPersonId returns null when there are no people at all', function () {
+    expect(FamilyTreeSerializer::widestRootPersonId())->toBeNull();
+});
+
 test('a living person without consent has no avatar in the tree data', function () {
     $person = Person::factory()->create();
 
