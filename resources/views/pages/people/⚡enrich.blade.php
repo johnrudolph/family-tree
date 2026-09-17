@@ -68,7 +68,7 @@ new #[Title('Photo & details')] class extends Component {
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'contact_email' => ['nullable', 'email', 'max:255'],
-            'photo' => ['nullable', 'image', 'max:5120'],
+            'photo' => ['nullable', 'image', 'max:20480'],
         ]);
 
         $this->person->update([
@@ -112,7 +112,7 @@ new #[Title('Photo & details')] class extends Component {
     <form wire:submit="save" class="mt-6 flex flex-col gap-6">
         <div class="flex items-center gap-4">
             <x-person-avatar :person="$person" size="xl" />
-            <div class="flex-1">
+            <div class="flex-1" x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — try a smaller image, or check your connection and try again.')), { variant: 'danger', duration: 8000 })">
                 <flux:input type="file" wire:model="photo" accept="image/*" :label="__('Photo')" />
                 @if ($photo)
                     <flux:text class="mt-1 text-xs text-zinc-500">{{ __('New photo selected — save to apply.') }}</flux:text>

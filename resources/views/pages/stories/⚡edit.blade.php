@@ -95,7 +95,7 @@ new #[Title('Edit story')] class extends Component {
             'end_year' => ['nullable', 'integer', 'min:1000', 'max:'.($currentYear + 1)],
             'person_ids' => ['array'],
             'person_ids.*' => ['exists:people,id'],
-            'newPhotos.*' => ['image', 'max:5120'],
+            'newPhotos.*' => ['image', 'max:20480'],
         ]);
 
         $data = [
@@ -189,7 +189,9 @@ new #[Title('Edit story')] class extends Component {
             </div>
         @endif
 
-        <flux:input type="file" wire:model="newPhotos" multiple accept="image/*" :label="__('Add photos')" />
+        <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
+            <flux:input type="file" wire:model="newPhotos" multiple accept="image/*" :label="__('Add photos')" />
+        </div>
 
         <div class="flex gap-2">
             <flux:button type="submit" variant="primary">{{ __('Save') }}</flux:button>

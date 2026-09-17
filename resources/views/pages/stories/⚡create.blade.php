@@ -65,7 +65,7 @@ new #[Title('New story')] class extends Component {
             'end_year' => ['nullable', 'integer', 'min:1000', 'max:'.($currentYear + 1)],
             'person_ids' => ['array'],
             'person_ids.*' => ['exists:people,id'],
-            'photos.*' => ['image', 'max:5120'],
+            'photos.*' => ['image', 'max:20480'],
         ]);
 
         $story = Story::create([
@@ -136,7 +136,9 @@ new #[Title('New story')] class extends Component {
             @endforeach
         </flux:select>
 
-        <flux:input type="file" wire:model="photos" multiple accept="image/*" :label="__('Photos')" :description="__('You can pick a featured image for the timeline after publishing, from the edit page.')" />
+        <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
+            <flux:input type="file" wire:model="photos" multiple accept="image/*" :label="__('Photos')" :description="__('You can pick a featured image for the timeline after publishing, from the edit page.')" />
+        </div>
         @if ($photos)
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($photos as $photo)
