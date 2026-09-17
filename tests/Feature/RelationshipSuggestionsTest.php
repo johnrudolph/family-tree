@@ -154,6 +154,20 @@ test('the existing-person picker excludes anyone already directly related', func
     expect($candidateIds)->toContain($stranger->id);
 });
 
+test('the existing-person picker excludes an already-derived sibling', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $mom = Person::factory()->create();
+    $me = Person::factory()->create(['first_name' => 'Me']);
+    $sister = Person::factory()->create(['first_name' => 'Sister']);
+    app(PageEditorService::class)->grantOwner($me, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $me->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $sister->id]);
+
+    $component = Livewire::actingAs($editor)->test('pages::people.relationships', ['person' => $me]);
+
+    expect($component->instance()->candidatePeople()->pluck('id'))->not->toContain($sister->id);
+});
+
 test('siblings are derived from shared parents and shown even though no direct relationship is stored', function () {
     $mom = Person::factory()->create();
     $me = Person::factory()->create(['first_name' => 'Me']);

@@ -298,18 +298,17 @@ new #[Title('Family Tree')] class extends Component {
                 {{ __('View full page') }}
             </flux:button>
 
-            @if ($this->selectedPersonSiblings->isNotEmpty())
-                <flux:text class="mt-2 text-xs text-zinc-500">
-                    {{ __('Siblings (via shared parent):') }}
-                    {{ $this->selectedPersonSiblings->map->fullName()->join(', ') }}
-                </flux:text>
-            @endif
-
             @if ($this->canEditSelected)
-                <flux:separator class="my-4" />
-                <flux:heading level="2" size="sm">{{ __('Add a relationship') }}</flux:heading>
+                <flux:modal.trigger name="add-relationship">
+                    <flux:button size="sm" variant="primary" class="mt-2 w-full">
+                        {{ __('Add a relationship') }}
+                    </flux:button>
+                </flux:modal.trigger>
 
-                <form wire:submit="addRelationship" class="mt-3 flex flex-col gap-3">
+                <flux:modal name="add-relationship" class="w-96" x-on:tree-data-updated.window="$flux.modal('add-relationship').close()">
+                    <flux:heading level="2" size="sm">{{ __('Add a relationship') }}</flux:heading>
+
+                    <form wire:submit="addRelationship" class="mt-3 flex flex-col gap-3">
                     <flux:radio.group wire:model.live="relType">
                         <flux:radio value="parent" label="{{ __('Parent') }}" />
                         <flux:radio value="child" label="{{ __('Child') }}" />
@@ -386,7 +385,8 @@ new #[Title('Family Tree')] class extends Component {
                     @endif
 
                     <flux:button type="submit" variant="primary" size="sm">{{ __('Add relationship') }}</flux:button>
-                </form>
+                    </form>
+                </flux:modal>
             @endif
         @endif
     </div>

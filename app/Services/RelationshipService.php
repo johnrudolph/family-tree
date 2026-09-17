@@ -79,10 +79,11 @@ class RelationshipService
     }
 
     /**
-     * People already directly related to this person in any way (parent, child,
-     * or spouse) — excluded from "pick an existing person" pickers, since picking
-     * someone already related would either duplicate or contradict that relationship
-     * (e.g. a recorded parent can't also be picked as a new sibling).
+     * People already related to this person in any way — directly (parent, child,
+     * or spouse) or derived (siblings via shared parents) — excluded from "pick an
+     * existing person" pickers, since picking someone already related would either
+     * duplicate or contradict that relationship (e.g. a recorded parent can't also
+     * be picked as a new sibling, and an existing sibling can't be picked again).
      *
      * @return Collection<int, Person>
      */
@@ -94,8 +95,15 @@ class RelationshipService
             ->get()
             ->map(fn (Relationship $r) => $r->person_a_id === $person->id ? $r->person_b_id : $r->person_a_id);
 
+        // ->map() on an Eloquent collection stays an Eloquent collection even once
+        // it holds plain ints, and Eloquent Collection::merge() assumes models
+        // (it calls getKey()) — collect() first to get a plain Support Collection.
+        $excludedIds = collect($relatedIds->all())
+            ->push($person->id)
+            ->merge($person->siblings()->pluck('id'));
+
         return Person::query()
-            ->whereNotIn('id', $relatedIds->push($person->id))
+            ->whereNotIn('id', $excludedIds)
             ->orderBy('first_name')
             ->get();
     }
