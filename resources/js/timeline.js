@@ -17,8 +17,17 @@ function formatEventDate(event) {
     return timeFormat('%B %-d, %Y')(date);
 }
 
-function gridlineGenerator(scale, width) {
+function gridlineGenerator(scale) {
     const [start, end] = scale.domain();
+
+    // At extreme zoom/pan, the visible domain can momentarily collapse to a
+    // zero-width or invalid range (e.g. mid-transform). d3's interval.range()
+    // isn't guaranteed to hand back a clean array of Dates in that case —
+    // bail out to no gridlines rather than let it crash the render.
+    if (!(start instanceof Date) || !(end instanceof Date) || Number.isNaN(+start) || Number.isNaN(+end) || start >= end) {
+        return { ticks: [], format: timeFormat('%Y'), tier: 'none' };
+    }
+
     const spanDays = (end - start) / 86400000;
 
     if (spanDays > 365 * 10) {
@@ -108,9 +117,10 @@ function render(root, events, scale) {
         .style('display', todayX >= 0 && todayX <= width ? null : 'none');
 
     // Gridlines, tiered by how much time is currently visible.
-    const { ticks, format, tier } = gridlineGenerator(scale, width);
+    const { ticks, format, tier } = gridlineGenerator(scale);
+    const validTicks = ticks.filter((d) => d instanceof Date && !Number.isNaN(+d));
     const gridGroup = svg.select('g.timeline-gridlines');
-    const gridSel = gridGroup.selectAll('g.tick').data(ticks, (d) => tier + d.getTime());
+    const gridSel = gridGroup.selectAll('g.tick').data(validTicks, (d) => tier + d.getTime());
 
     gridSel.exit().remove();
 
