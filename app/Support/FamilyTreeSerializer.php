@@ -41,6 +41,7 @@ class FamilyTreeSerializer
                     ? ''
                     : ($person->last_name ?? ''),
                 'birthday' => $person->dob?->format('Y'),
+                'dob_sort' => $person->dob?->format('Y-m-d'),
                 'avatar' => $person->hasConsented() ? $person->photoUrl() : null,
                 'url' => $person->wikiShowUrl(),
                 'living' => $person->is_living,

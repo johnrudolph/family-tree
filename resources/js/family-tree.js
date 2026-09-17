@@ -35,6 +35,21 @@ export function initFamilyTree(container, data, { mainId } = {}) {
     // spouses, and children all at once, not make relatives disappear.
     chart.setShowSiblingsOfMain(true);
 
+    // Without this, sibling (and child) order isn't stable — it can shift
+    // depending on who's selected as "main". Sort by birth date so order is
+    // always chronological and never rearranges when you click a sibling.
+    // People with an unknown dob sort last, after everyone with a known one.
+    chart.setSortChildrenFunction((a, b) => {
+        const aDob = a.data.dob_sort;
+        const bDob = b.data.dob_sort;
+
+        if (!aDob && !bDob) return 0;
+        if (!aDob) return 1;
+        if (!bDob) return -1;
+
+        return aDob < bDob ? -1 : aDob > bDob ? 1 : 0;
+    });
+
     if (mainId) {
         chart.updateMainId(String(mainId));
     }

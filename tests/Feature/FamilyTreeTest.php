@@ -42,6 +42,16 @@ test('the tree shows a goes-by name only when the use-everywhere toggle is on', 
     expect($data[(string) $without->id]['data']['last name'])->toBe('Jones');
 });
 
+test('the serializer includes a sortable ISO date of birth for stable birth-order sorting', function () {
+    $person = Person::factory()->create(['dob' => '1990-05-12']);
+    $unknownDob = Person::factory()->create(['dob' => null]);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['dob_sort'])->toBe('1990-05-12');
+    expect($data[(string) $unknownDob->id]['data']['dob_sort'])->toBeNull();
+});
+
 test('a living person without consent has no avatar in the tree data', function () {
     $person = Person::factory()->create();
 
