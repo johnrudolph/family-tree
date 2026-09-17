@@ -31,7 +31,7 @@ new #[Layout('layouts.auth')] #[Title('Secure your account')] class extends Comp
         $this->loadPasskeys();
 
         if ($this->isSecured()) {
-            $this->redirect(route('dashboard'), navigate: true);
+            $this->redirect(route('onboarding.profile'), navigate: true);
         }
     }
 
@@ -40,7 +40,7 @@ new #[Layout('layouts.auth')] #[Title('Secure your account')] class extends Comp
         $this->passkeyCount = auth()->user()->passkeys()->count();
 
         if ($this->isSecured()) {
-            $this->redirect(route('dashboard'), navigate: true);
+            $this->redirect(route('onboarding.profile'), navigate: true);
         }
     }
 
@@ -49,7 +49,7 @@ new #[Layout('layouts.auth')] #[Title('Secure your account')] class extends Comp
     {
         $this->twoFactorEnabled = true;
 
-        $this->redirect(route('dashboard'), navigate: true);
+        $this->redirect(route('onboarding.profile'), navigate: true);
     }
 
     private function isSecured(): bool
@@ -64,6 +64,9 @@ new #[Layout('layouts.auth')] #[Title('Secure your account')] class extends Comp
         <flux:heading size="lg">{{ __('Secure your account') }}</flux:heading>
         <flux:text>
             {{ __('We want to ensure the privacy of everyone in this family tree. Before continuing, please set up two-factor authentication or a passkey.') }}
+        </flux:text>
+        <flux:text>
+            {{ __('There is personal information on this site. The only users on this site are family members who have opted in to share their information.') }}
         </flux:text>
     </div>
 

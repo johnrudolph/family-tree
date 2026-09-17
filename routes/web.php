@@ -17,6 +17,10 @@ Route::livewire('onboarding/security', 'pages::onboarding.security')
     ])
     ->name('onboarding.security');
 
+Route::livewire('onboarding/profile', 'pages::onboarding.profile')
+    ->middleware(['auth', 'two-factor.enabled'])
+    ->name('onboarding.profile');
+
 Route::middleware(['auth', 'verified', 'two-factor.enabled'])->group(function () {
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
 

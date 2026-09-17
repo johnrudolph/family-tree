@@ -28,13 +28,13 @@ test('the onboarding page is reachable once the password is confirmed', function
         ->assertSee('Secure your account');
 });
 
-test('a user with 2FA already enabled is bounced straight through onboarding to the dashboard', function () {
+test('a user with 2FA already enabled is bounced straight through onboarding to the profile step', function () {
     $user = User::factory()->withTwoFactor()->create();
 
     $this->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => time()])
         ->get(route('onboarding.security'))
-        ->assertRedirect(route('dashboard'));
+        ->assertRedirect(route('onboarding.profile'));
 });
 
 test('a user with a passkey already registered is not gated', function () {
