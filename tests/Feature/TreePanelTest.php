@@ -194,6 +194,39 @@ test('adding a sibling from the tree panel creates a real, removable relationshi
     expect(Relationship::query()->where('id', $relationship->id)->exists())->toBeFalse();
 });
 
+test('adding a second sibling without reselecting the type still links parents', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $me = Person::factory()->create();
+    $mom = Person::factory()->create();
+    $dad = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($me, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $me->id]);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $dad->id, 'person_b_id' => $me->id]);
+
+    $component = Livewire::actingAs($editor)->test('pages::tree.index')
+        ->call('selectPerson', $me->id)
+        ->set('relType', 'sibling')
+        ->set('relMode', 'new')
+        ->set('relNewFirstName', 'First')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $first = Person::query()->where('first_name', 'First')->firstOrFail();
+    expect($first->parents()->pluck('id'))->toContain($mom->id, $dad->id);
+
+    // Deliberately don't touch relType again — this reproduces adding a
+    // second sibling from an already-open panel without re-clicking the
+    // "Sibling" radio, which used to leave relAlsoSiblingParentIds stale
+    // and empty after the first submission's reset.
+    $component
+        ->set('relNewFirstName', 'Second')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $second = Person::query()->where('first_name', 'Second')->firstOrFail();
+    expect($second->parents()->pluck('id'))->toContain($mom->id, $dad->id);
+});
+
 test('a non-editor does not see the add relationship form for the selected person', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();

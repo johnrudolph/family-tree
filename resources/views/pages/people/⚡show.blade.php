@@ -10,6 +10,7 @@ use App\Support\MarkdownRenderer;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -176,17 +177,30 @@ new class extends Component {
      * Reset the "also link" suggestions whenever the relationship type changes,
      * defaulting to everyone selected — the user un-checks the ones that don't apply.
      */
-    public function updatedRelType(string $value): void
+    public function updatedRelType(): void
     {
-        $this->relAlsoParentOfChildIds = $value === 'spouse'
+        $this->seedAlsoLinkSuggestions();
+    }
+
+    /**
+     * Populate the "also link" pill defaults for the current relType. Called
+     * both when the user switches relType and after a successful submit —
+     * the latter matters because the arrays are otherwise left stale (empty,
+     * from the post-submit reset) if someone adds a second relationship of
+     * the same type without touching the relType radio again, e.g. adding
+     * two siblings back to back from an already-open panel.
+     */
+    private function seedAlsoLinkSuggestions(): void
+    {
+        $this->relAlsoParentOfChildIds = $this->relType === 'spouse'
             ? $this->candidateStepchildren->pluck('id')->all()
             : [];
 
-        $this->relAlsoCoParentIds = $value === 'child'
+        $this->relAlsoCoParentIds = $this->relType === 'child'
             ? $this->candidateCoParents->pluck('id')->all()
             : [];
 
-        $this->relAlsoSiblingParentIds = $value === 'sibling'
+        $this->relAlsoSiblingParentIds = $this->relType === 'sibling'
             ? $this->existingParents->pluck('id')->all()
             : [];
     }
@@ -220,67 +234,70 @@ new class extends Component {
             'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced,separated'],
         ]);
 
-        if ($this->relMode === 'new') {
-            $other = Person::create([
-                'first_name' => $validated['relNewFirstName'],
-                'middle_name' => $validated['relNewMiddleName'] ?: null,
-                'last_name' => $validated['relNewLastName'] ?: null,
-                'dob' => $validated['relNewDob'] ?: null,
-                'dob_precision' => $validated['relNewDob'] ? 'exact' : 'unknown',
-                'is_living' => $validated['relNewIsLiving'],
-                'dod' => $validated['relNewIsLiving'] ? null : ($validated['relNewDod'] ?: null),
-                'created_by' => Auth::id(),
-            ]);
-
-            app(PageEditorService::class)->grantOwner($other, Auth::user());
-        } else {
-            $other = Person::findOrFail($validated['relExistingPersonId']);
-        }
-
         $relationships = app(RelationshipService::class);
 
         try {
-            match ($this->relType) {
-                'parent' => Relationship::create([
-                    'person_a_id' => $other->id,
-                    'person_b_id' => $this->person->id,
-                    'type' => 'parent_child',
-                ]),
-                'child' => Relationship::create([
-                    'person_a_id' => $this->person->id,
-                    'person_b_id' => $other->id,
-                    'type' => 'parent_child',
-                ]),
-                'spouse' => Relationship::create([
-                    'person_a_id' => $this->person->id,
-                    'person_b_id' => $other->id,
-                    'type' => 'spouse',
-                    'status' => $validated['relSpouseStatus'],
-                ]),
-                'sibling' => $relationships->addSibling($this->person, $other),
-            };
+            DB::transaction(function () use ($validated, $relationships) {
+                if ($this->relMode === 'new') {
+                    $other = Person::create([
+                        'first_name' => $validated['relNewFirstName'],
+                        'middle_name' => $validated['relNewMiddleName'] ?: null,
+                        'last_name' => $validated['relNewLastName'] ?: null,
+                        'dob' => $validated['relNewDob'] ?: null,
+                        'dob_precision' => $validated['relNewDob'] ? 'exact' : 'unknown',
+                        'is_living' => $validated['relNewIsLiving'],
+                        'dod' => $validated['relNewIsLiving'] ? null : ($validated['relNewDod'] ?: null),
+                        'created_by' => Auth::id(),
+                    ]);
+
+                    app(PageEditorService::class)->grantOwner($other, Auth::user());
+                } else {
+                    $other = Person::findOrFail($validated['relExistingPersonId']);
+                }
+
+                match ($this->relType) {
+                    'parent' => Relationship::create([
+                        'person_a_id' => $other->id,
+                        'person_b_id' => $this->person->id,
+                        'type' => 'parent_child',
+                    ]),
+                    'child' => Relationship::create([
+                        'person_a_id' => $this->person->id,
+                        'person_b_id' => $other->id,
+                        'type' => 'parent_child',
+                    ]),
+                    'spouse' => Relationship::create([
+                        'person_a_id' => $this->person->id,
+                        'person_b_id' => $other->id,
+                        'type' => 'spouse',
+                        'status' => $validated['relSpouseStatus'],
+                    ]),
+                    'sibling' => $relationships->addSibling($this->person, $other),
+                };
+
+                if ($this->relType === 'spouse') {
+                    foreach (Person::query()->whereIn('id', $this->relAlsoParentOfChildIds)->get() as $child) {
+                        $relationships->linkParentChildIfMissing($other, $child);
+                    }
+                } elseif ($this->relType === 'child') {
+                    foreach (Person::query()->whereIn('id', $this->relAlsoCoParentIds)->get() as $spouse) {
+                        $relationships->linkParentChildIfMissing($spouse, $other);
+                    }
+                } elseif ($this->relType === 'sibling') {
+                    foreach (Person::query()->whereIn('id', $this->relAlsoSiblingParentIds)->get() as $parent) {
+                        $relationships->linkParentChildIfMissing($parent, $other);
+                    }
+                }
+            });
         } catch (QueryException) {
             Flux::toast(variant: 'danger', text: __('That relationship already exists.'));
 
             return;
         }
 
-        if ($this->relType === 'spouse') {
-            foreach (Person::query()->whereIn('id', $this->relAlsoParentOfChildIds)->get() as $child) {
-                $relationships->linkParentChildIfMissing($other, $child);
-            }
-        } elseif ($this->relType === 'child') {
-            foreach (Person::query()->whereIn('id', $this->relAlsoCoParentIds)->get() as $spouse) {
-                $relationships->linkParentChildIfMissing($spouse, $other);
-            }
-        } elseif ($this->relType === 'sibling') {
-            foreach (Person::query()->whereIn('id', $this->relAlsoSiblingParentIds)->get() as $parent) {
-                $relationships->linkParentChildIfMissing($parent, $other);
-            }
-        }
-
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewIsLiving', 'relNewDod', 'relAlsoParentOfChildIds', 'relAlsoCoParentIds', 'relAlsoSiblingParentIds']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewIsLiving', 'relNewDod']);
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents);
+        $this->seedAlsoLinkSuggestions();
 
         Flux::toast(variant: 'success', text: __('Relationship added.'));
     }
