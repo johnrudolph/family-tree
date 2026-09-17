@@ -33,6 +33,16 @@ test('the person page shows the viewer\'s relationship to the person, but not to
         ->assertDontSee('Your parent');
 });
 
+test('the person page links to viewing that person centered in the family tree', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+
+    $this->actingAs($viewer)
+        ->get(route('people.show', $person))
+        ->assertOk()
+        ->assertSee(route('tree.index', ['person' => $person->id]), false);
+});
+
 test('relationships are shown on a person page', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $parent = Person::factory()->create(['first_name' => 'Parent']);

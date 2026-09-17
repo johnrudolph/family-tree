@@ -459,7 +459,12 @@ new class extends Component {
             x-data
             x-on:family-widget-updated.window="window.updatePersonFamilyWidget($refs.familyWidget, $event.detail.data)"
         >
-            <flux:heading level="2">{{ __('Family') }}</flux:heading>
+            <div class="flex items-center justify-between">
+                <flux:heading level="2">{{ __('Family') }}</flux:heading>
+                <flux:button :href="route('tree.index', ['person' => $person->id])" wire:navigate size="sm">
+                    {{ __('View in family tree') }}
+                </flux:button>
+            </div>
 
             <div
                 wire:ignore

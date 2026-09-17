@@ -18,9 +18,17 @@ use Livewire\Component;
 new #[Title('Family Tree')] class extends Component {
     public ?int $selectedPersonId = null;
 
+    public ?int $requestedPersonId = null;
+
     public function mount(): void
     {
-        $this->selectedPersonId = Auth::user()->person_id;
+        $requestedId = request()->integer('person') ?: null;
+
+        if ($requestedId && Person::query()->whereKey($requestedId)->exists()) {
+            $this->requestedPersonId = $requestedId;
+        }
+
+        $this->selectedPersonId = $this->requestedPersonId ?? Auth::user()->person_id;
     }
 
     public string $relType = 'parent';
@@ -61,11 +69,17 @@ new #[Title('Family Tree')] class extends Component {
     #[Computed]
     public function mainId(): ?int
     {
-        // Default to the widest possible view rather than one scoped tightly
-        // around the viewer's own lineage — family-chart only ever renders
-        // what's reachable from one main_id, so this picks the root of the
-        // largest connected family group in the whole dataset (not
-        // necessarily the viewer's own) to show as much as one chart can.
+        // Arriving via a specific person's "View in family tree" link — center
+        // on them directly rather than the usual wide default view.
+        if ($this->requestedPersonId) {
+            return $this->requestedPersonId;
+        }
+
+        // Otherwise, default to the widest possible view rather than one
+        // scoped tightly around the viewer's own lineage — family-chart only
+        // ever renders what's reachable from one main_id, so this picks the
+        // root of the largest connected family group in the whole dataset
+        // (not necessarily the viewer's own) to show as much as one chart can.
         return FamilyTreeSerializer::widestRootPersonId();
     }
 

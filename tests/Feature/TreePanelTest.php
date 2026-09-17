@@ -27,6 +27,37 @@ test('the tree panel shows the relationship between the viewer and the selected 
         ->assertSee('Your parent');
 });
 
+test('linking to the tree with a person query param selects and centers on them', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $target = Person::factory()->create();
+
+    $this->actingAs($viewer)
+        ->get(route('tree.index', ['person' => $target->id]))
+        ->assertOk()
+        ->assertSee(route('people.show', $target), false);
+});
+
+test('a valid person query param selects and centers the chart on them', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $target = Person::factory()->create();
+
+    $component = Livewire::actingAs($viewer)
+        ->withUrlParams(['person' => $target->id])
+        ->test('pages::tree.index');
+
+    $component->assertSet('selectedPersonId', $target->id);
+    expect($component->instance()->mainId())->toBe($target->id);
+});
+
+test('an invalid person query param is ignored, falling back to the viewer', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($viewer)
+        ->withUrlParams(['person' => 999999])
+        ->test('pages::tree.index')
+        ->assertSet('selectedPersonId', $viewer->person->id);
+});
+
 test('the tree defaults to centering on the root ancestor of the viewer\'s branch', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $grandparent = Person::factory()->create();
