@@ -6,6 +6,15 @@ use App\Models\User;
 use App\Services\PageEditorService;
 use Livewire\Livewire;
 
+test('the tree panel starts with the viewer themself selected', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($viewer)
+        ->test('pages::tree.index')
+        ->assertSet('selectedPersonId', $viewer->person->id)
+        ->assertSee($viewer->person->fullName());
+});
+
 test('the tree defaults to centering on the root ancestor of the viewer\'s branch', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $grandparent = Person::factory()->create();

@@ -17,6 +17,11 @@ use Livewire\Component;
 new #[Title('Family Tree')] class extends Component {
     public ?int $selectedPersonId = null;
 
+    public function mount(): void
+    {
+        $this->selectedPersonId = Auth::user()->person_id;
+    }
+
     public string $relType = 'parent';
 
     public string $relMode = 'existing';
