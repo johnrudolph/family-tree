@@ -33,26 +33,32 @@ function gridlineGenerator(scale, width) {
 }
 
 function eventIcon(event) {
-    if (event.avatar_url || event.featured_image_url) {
-        return `<img src="${event.avatar_url || event.featured_image_url}" class="size-8 rounded-full object-cover shrink-0" alt="">`;
+    const src = event.avatar_url || event.featured_image_url;
+
+    if (!src) return '';
+
+    return `<img src="${src}" class="size-8 rounded-full object-cover shrink-0" alt="">`;
+}
+
+function formatEventDateRange(event) {
+    let label = formatEventDate(event);
+
+    if (event.end_date) {
+        label += ` – ${formatEventDate({ date: event.end_date, date_precision: event.end_date_precision })}`;
     }
 
-    if (event.type === 'birth') {
-        return '<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-700"></span>';
-    }
-
-    const emoji = event.type === 'death' ? '🕊️' : '📖';
-
-    return `<span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm dark:bg-zinc-700">${emoji}</span>`;
+    return label;
 }
 
 function openStoryModal(root, event) {
     const modal = root.querySelector('[data-timeline-modal]');
     const body = root.querySelector('[data-timeline-modal-body]');
     const title = root.querySelector('[data-timeline-modal-title]');
+    const date = root.querySelector('[data-timeline-modal-date]');
     const image = root.querySelector('[data-timeline-modal-image]');
 
     title.textContent = event.title;
+    date.textContent = formatEventDateRange(event);
     body.innerHTML = event.body_html || '';
 
     if (event.featured_image_url) {
@@ -63,10 +69,13 @@ function openStoryModal(root, event) {
     }
 
     modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 function closeStoryModal(root) {
-    root.querySelector('[data-timeline-modal]')?.classList.add('hidden');
+    const modal = root.querySelector('[data-timeline-modal]');
+    modal?.classList.add('hidden');
+    modal?.classList.remove('flex');
 }
 
 function navigateTo(url) {

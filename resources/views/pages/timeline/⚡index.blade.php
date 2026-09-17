@@ -51,8 +51,11 @@ new #[Title('Timeline')] class extends Component {
         <div data-timeline-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
             <div class="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-800">
                 <div class="flex items-start justify-between gap-4">
-                    <flux:heading level="2" data-timeline-modal-title></flux:heading>
-                    <button type="button" data-timeline-modal-close class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+                    <div class="min-w-0">
+                        <flux:heading level="2" data-timeline-modal-title></flux:heading>
+                        <flux:text data-timeline-modal-date class="text-zinc-500"></flux:text>
+                    </div>
+                    <button type="button" data-timeline-modal-close class="shrink-0 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
                         <flux:icon.x-mark class="size-5" />
                     </button>
                 </div>
