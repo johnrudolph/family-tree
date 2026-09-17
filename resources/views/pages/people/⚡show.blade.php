@@ -133,12 +133,6 @@ new class extends Component {
         return app(RelationshipService::class)->existingParents($this->person);
     }
 
-    #[Computed]
-    public function personHasParents(): bool
-    {
-        return $this->existingParents->isNotEmpty();
-    }
-
     /**
      * Siblings not already shown as a removable row above — only the legacy
      * case of sharing a parent without an explicit sibling relationship yet.
@@ -625,9 +619,7 @@ new class extends Component {
                             <flux:radio value="parent" label="{{ __('Parent') }}" />
                             <flux:radio value="child" label="{{ __('Child') }}" />
                             <flux:radio value="spouse" label="{{ __('Spouse') }}" />
-                            @if ($this->personHasParents)
-                                <flux:radio value="sibling" label="{{ __('Sibling') }}" />
-                            @endif
+                            <flux:radio value="sibling" label="{{ __('Sibling') }}" />
                         </flux:radio.group>
 
                         <div x-show="$wire.relType === 'spouse'">

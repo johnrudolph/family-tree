@@ -177,14 +177,31 @@ test('adding a sibling previews who the new person will also become a sibling of
         ->assertSee('Existing Sibling');
 });
 
-test('the sibling option is not offered for a person with no recorded parents', function () {
+test('the sibling option is offered even for a person with no recorded parents yet', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();
     app(PageEditorService::class)->grantOwner($person, $editor);
 
     Livewire::actingAs($editor)
         ->test('pages::people.relationships', ['person' => $person])
-        ->assertDontSee('Sibling of');
+        ->assertSee('Sibling of');
+});
+
+test('adding a sibling with no recorded parents yet still creates the sibling relationship', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $person])
+        ->set('type', 'sibling')
+        ->set('mode', 'new')
+        ->set('new_first_name', 'Sibling')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $sibling = Person::query()->where('first_name', 'Sibling')->firstOrFail();
+    expect($person->fresh()->siblings()->pluck('id'))->toContain($sibling->id);
 });
 
 test('the existing-person picker excludes anyone already directly related', function () {

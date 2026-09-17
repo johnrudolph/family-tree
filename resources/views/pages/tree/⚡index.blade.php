@@ -144,12 +144,6 @@ new #[Title('Family Tree')] class extends Component {
     }
 
     #[Computed]
-    public function selectedPersonHasParents(): bool
-    {
-        return $this->existingParents->isNotEmpty();
-    }
-
-    #[Computed]
     public function selectedPersonSiblings()
     {
         return $this->selectedPerson ? $this->selectedPerson->siblings() : collect();
@@ -437,9 +431,7 @@ new #[Title('Family Tree')] class extends Component {
                         <flux:radio value="parent" label="{{ __('Parent') }}" />
                         <flux:radio value="child" label="{{ __('Child') }}" />
                         <flux:radio value="spouse" label="{{ __('Spouse') }}" />
-                        @if ($this->selectedPersonHasParents)
-                            <flux:radio value="sibling" label="{{ __('Sibling') }}" />
-                        @endif
+                        <flux:radio value="sibling" label="{{ __('Sibling') }}" />
                     </flux:radio.group>
 
                     <div x-show="$wire.relType === 'spouse'">

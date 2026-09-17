@@ -78,11 +78,6 @@ new #[Title('Manage relationships')] class extends Component {
         return app(RelationshipService::class)->existingParents($this->person);
     }
 
-    #[Computed]
-    public function personHasParents(): bool
-    {
-        return $this->existingParents->isNotEmpty();
-    }
 
     #[Computed]
     public function siblings()
@@ -315,9 +310,7 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:radio value="parent" label="{{ __('Parent of').' '.$person->fullName() }}" />
             <flux:radio value="child" label="{{ __('Child of').' '.$person->fullName() }}" />
             <flux:radio value="spouse" label="{{ __('Spouse of').' '.$person->fullName() }}" />
-            @if ($this->personHasParents)
-                <flux:radio value="sibling" label="{{ __('Sibling of').' '.$person->fullName() }}" />
-            @endif
+            <flux:radio value="sibling" label="{{ __('Sibling of').' '.$person->fullName() }}" />
         </flux:radio.group>
 
         <div x-show="$wire.type === 'spouse'">
