@@ -34,8 +34,12 @@ class FamilyTreeSerializer
         return $people->map(fn ($person) => [
             'id' => (string) $person->id,
             'data' => [
-                'first name' => $person->preferred_name ?: $person->first_name,
-                'last name' => $person->last_name ?? '',
+                'first name' => $person->use_preferred_name_everywhere && $person->preferred_name
+                    ? $person->preferred_name
+                    : $person->first_name,
+                'last name' => $person->use_preferred_name_everywhere && $person->preferred_name
+                    ? ''
+                    : ($person->last_name ?? ''),
                 'birthday' => $person->dob?->format('Y'),
                 'avatar' => $person->hasConsented() ? $person->photoUrl() : null,
                 'url' => $person->wikiShowUrl(),

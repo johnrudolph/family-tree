@@ -21,6 +21,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string|null $middle_name
  * @property string|null $last_name
  * @property string|null $preferred_name
+ * @property bool $use_preferred_name_everywhere
  * @property Carbon|null $dob
  * @property string $dob_precision
  * @property Carbon|null $dod
@@ -36,13 +37,25 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read User $creator
  */
 #[Fillable([
-    'first_name', 'middle_name', 'last_name', 'preferred_name', 'dob', 'dob_precision', 'dod', 'is_living', 'bio', 'created_by',
+    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'dod', 'is_living', 'bio', 'created_by',
     'consented_at', 'address', 'phone', 'contact_email', 'social_links',
 ])]
 class Person extends Model implements HasMedia
 {
     /** @use HasFactory<PersonFactory> */
     use HasFactory, HasWikiWorkflow, InteractsWithMedia;
+
+    /**
+     * Eloquent doesn't reload a model's attributes from the DB after insert,
+     * so a freshly `create()`d Person without this key explicitly passed
+     * would otherwise read as null in-memory even though the DB column
+     * default is false — set it here so it's always a real bool.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'use_preferred_name_everywhere' => false,
+    ];
 
     /**
      * @return array<string, string>
@@ -53,6 +66,7 @@ class Person extends Model implements HasMedia
             'dob' => 'date',
             'dod' => 'date',
             'is_living' => 'boolean',
+            'use_preferred_name_everywhere' => 'boolean',
             'consented_at' => 'datetime',
             'social_links' => 'array',
         ];
@@ -156,7 +170,26 @@ class Person extends Model implements HasMedia
             ->values();
     }
 
+    /**
+     * The name shown throughout the app. Uses the "goes by" name in place of
+     * the full legal name when the person (or their editor) has opted into
+     * that via `use_preferred_name_everywhere` — otherwise the legal name.
+     */
     public function fullName(): string
+    {
+        if ($this->use_preferred_name_everywhere && $this->preferred_name) {
+            return $this->preferred_name;
+        }
+
+        return $this->legalName();
+    }
+
+    /**
+     * The name on record — first, middle, and last — regardless of any
+     * "goes by" preference. Used on the edit form itself, where both names
+     * need to be visible and distinct.
+     */
+    public function legalName(): string
     {
         return collect([$this->first_name, $this->middle_name, $this->last_name])
             ->filter()

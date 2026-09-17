@@ -30,6 +30,18 @@ test('the serializer produces family-chart compatible parent/child/spouse rels',
     expect($data[(string) $spouse->id]['rels']['spouses'])->toBe([(string) $parent->id]);
 });
 
+test('the tree shows a goes-by name only when the use-everywhere toggle is on', function () {
+    $withToggle = Person::factory()->create(['first_name' => 'Jonathan', 'last_name' => 'Smith', 'preferred_name' => 'Johnny', 'use_preferred_name_everywhere' => true]);
+    $without = Person::factory()->create(['first_name' => 'Robert', 'last_name' => 'Jones', 'preferred_name' => 'Bob']);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $withToggle->id]['data']['first name'])->toBe('Johnny');
+    expect($data[(string) $withToggle->id]['data']['last name'])->toBe('');
+    expect($data[(string) $without->id]['data']['first name'])->toBe('Robert');
+    expect($data[(string) $without->id]['data']['last name'])->toBe('Jones');
+});
+
 test('a living person without consent has no avatar in the tree data', function () {
     $person = Person::factory()->create();
 

@@ -72,3 +72,44 @@ test('middle name is included in the full name and can be edited', function () {
     expect($person->middle_name)->toBe('King');
     expect($person->fullName())->toBe('Ada King Lovelace');
 });
+
+test('a goes-by name is only used as the display name when the toggle is on', function () {
+    $person = Person::factory()->create(['first_name' => 'Jonathan', 'last_name' => 'Smith', 'preferred_name' => 'Johnny']);
+
+    expect($person->fullName())->toBe('Jonathan Smith');
+
+    $person->use_preferred_name_everywhere = true;
+    expect($person->fullName())->toBe('Johnny');
+
+    expect($person->legalName())->toBe('Jonathan Smith');
+});
+
+test('editing a person to use their goes-by name everywhere updates the display name', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create(['first_name' => 'Jonathan', 'last_name' => 'Smith']);
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.edit', ['person' => $person])
+        ->set('preferred_name', 'Johnny')
+        ->set('use_preferred_name_everywhere', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($person->fresh()->fullName())->toBe('Johnny');
+});
+
+test('the use-everywhere toggle is ignored without a goes-by name set', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create(['first_name' => 'Jonathan', 'last_name' => 'Smith']);
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.edit', ['person' => $person])
+        ->set('preferred_name', '')
+        ->set('use_preferred_name_everywhere', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($person->fresh()->use_preferred_name_everywhere)->toBeFalse();
+});
