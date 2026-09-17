@@ -62,8 +62,7 @@ new class extends Component {
                 wire:target="goToPerson"
                 class="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-white/90 dark:bg-zinc-700/90"
             >
-                <flux:icon.loading class="size-5 text-zinc-500" />
-                <flux:text class="text-zinc-500">{{ __('Going there…') }}</flux:text>
+                <flux:icon.loading class="size-6 text-zinc-500" />
             </div>
         </div>
     </flux:modal>
