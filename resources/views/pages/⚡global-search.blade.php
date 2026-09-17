@@ -37,6 +37,17 @@ new class extends Component {
     x-on:keydown.window="
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
             event.preventDefault();
+
+            // The family tree page has its own always-visible search field —
+            // two overlapping search UIs on the same page is worse than one,
+            // so send Cmd+K there instead of opening this modal on top of it.
+            const treeSearchInput = document.getElementById('tree-search-input');
+            if (treeSearchInput) {
+                treeSearchInput.focus();
+                treeSearchInput.select();
+                return;
+            }
+
             $flux.modal('global-search').show();
         }
     "

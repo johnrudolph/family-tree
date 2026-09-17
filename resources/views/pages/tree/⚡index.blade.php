@@ -364,7 +364,7 @@ new #[Title('Family Tree')] class extends Component {
         <flux:heading level="1" size="sm">{{ __('Family Tree') }}</flux:heading>
 
         <flux:command class="mt-3 max-h-64">
-            <flux:command.input x-ref="searchInput" :placeholder="__('Search people… (⌘F)')" clearable />
+            <flux:command.input id="tree-search-input" x-ref="searchInput" :placeholder="__('Search people… (⌘F / ⌘K)')" clearable />
             <flux:command.items class="max-h-48">
                 @foreach ($this->searchablePeople as $result)
                     <flux:command.item wire:click="selectPerson({{ $result->id }})" wire:key="search-{{ $result->id }}">

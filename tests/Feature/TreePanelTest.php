@@ -16,6 +16,15 @@ test('the tree panel starts with the viewer themself selected', function () {
         ->assertDontSee('Your parent');
 });
 
+test('the tree panel search field has an addressable id for the global Cmd+K handler to defer to', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+
+    $this->actingAs($viewer)
+        ->get(route('tree.index'))
+        ->assertOk()
+        ->assertSee('id="tree-search-input"', false);
+});
+
 test('the tree panel shows the relationship between the viewer and the selected person', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $parent = Person::factory()->create();
