@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 new #[Title('New story')] class extends Component {
+    use WithFileUploads;
+
     public string $title = '';
 
     public string $body = '';
@@ -30,6 +33,9 @@ new #[Title('New story')] class extends Component {
 
     /** @var array<int, int> */
     public array $person_ids = [];
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $photos = [];
 
     public function mount(): void
     {
@@ -59,6 +65,7 @@ new #[Title('New story')] class extends Component {
             'end_year' => ['nullable', 'integer', 'min:1000', 'max:'.($currentYear + 1)],
             'person_ids' => ['array'],
             'person_ids.*' => ['exists:people,id'],
+            'photos.*' => ['image', 'max:5120'],
         ]);
 
         $story = Story::create([
@@ -72,6 +79,12 @@ new #[Title('New story')] class extends Component {
         ]);
 
         $story->people()->sync($validated['person_ids']);
+
+        foreach ($this->photos as $photo) {
+            $story->addMedia($photo->getRealPath())
+                ->usingFileName($photo->getClientOriginalName())
+                ->toMediaCollection('gallery');
+        }
 
         app(PageEditorService::class)->grantOwner($story, Auth::user());
 
@@ -122,6 +135,15 @@ new #[Title('New story')] class extends Component {
                 <flux:select.option value="{{ $person->id }}">{{ $person->fullName() }}</flux:select.option>
             @endforeach
         </flux:select>
+
+        <flux:input type="file" wire:model="photos" multiple accept="image/*" :label="__('Photos')" :description="__('You can pick a featured image for the timeline after publishing, from the edit page.')" />
+        @if ($photos)
+            <div class="grid grid-cols-4 gap-2">
+                @foreach ($photos as $photo)
+                    <img src="{{ $photo->temporaryUrl() }}" class="aspect-square rounded object-cover" alt="">
+                @endforeach
+            </div>
+        @endif
 
         <div class="flex gap-2">
             <flux:button type="submit" variant="primary">{{ __('Publish') }}</flux:button>

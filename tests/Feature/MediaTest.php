@@ -26,6 +26,21 @@ test('a user can upload their own profile photo via the enrichment form', functi
     expect($person->fresh()->photoUrl())->not->toBeNull();
 });
 
+test('a user can add photos to a story\'s gallery while creating it', function () {
+    $user = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($user)
+        ->test('pages::stories.create')
+        ->set('title', 'A Photographed Day')
+        ->set('start_date', '2020-01-01')
+        ->set('photos', [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $story = Story::query()->where('title', 'A Photographed Day')->firstOrFail();
+    expect($story->galleryMedia())->toHaveCount(2);
+});
+
 test('an editor can add photos to a story gallery', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $story = Story::factory()->create();
