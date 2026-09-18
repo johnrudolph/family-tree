@@ -64,17 +64,30 @@ function openStoryModal(root, event) {
     const body = root.querySelector('[data-timeline-modal-body]');
     const title = root.querySelector('[data-timeline-modal-title]');
     const date = root.querySelector('[data-timeline-modal-date]');
-    const image = root.querySelector('[data-timeline-modal-image]');
+    const gallery = root.querySelector('[data-timeline-modal-gallery]');
 
     title.textContent = event.title;
     date.textContent = formatEventDateRange(event);
     body.innerHTML = event.body_html || '';
 
-    if (event.featured_image_url) {
-        image.src = event.featured_image_url;
-        image.classList.remove('hidden');
+    const urls = event.gallery_urls || [];
+    gallery.innerHTML = '';
+
+    if (urls.length > 0) {
+        gallery.classList.remove('hidden');
+        gallery.classList.add('grid');
+
+        urls.forEach((url, i) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'aspect-square overflow-hidden rounded-lg';
+            button.innerHTML = `<img src="${url}" class="h-full w-full object-cover" alt="">`;
+            button.addEventListener('click', () => window.openLightbox(urls, i));
+            gallery.appendChild(button);
+        });
     } else {
-        image.classList.add('hidden');
+        gallery.classList.add('hidden');
+        gallery.classList.remove('grid');
     }
 
     modal.classList.remove('hidden');

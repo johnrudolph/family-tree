@@ -41,6 +41,7 @@ class TimelineSerializer
             'story_id' => null,
             'avatar_url' => $person->photoUrl(),
             'featured_image_url' => null,
+            'gallery_urls' => [],
             'body_html' => null,
             'url' => route('people.show', $person),
         ])->all();
@@ -62,6 +63,7 @@ class TimelineSerializer
             'story_id' => null,
             'avatar_url' => $person->photoUrl(),
             'featured_image_url' => null,
+            'gallery_urls' => [],
             'body_html' => null,
             'url' => route('people.show', $person),
         ])->all();
@@ -86,6 +88,7 @@ class TimelineSerializer
                 'story_id' => $story->id,
                 'avatar_url' => null,
                 'featured_image_url' => $featured ? MediaUrl::of($featured) : null,
+                'gallery_urls' => $story->galleryMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all(),
                 'body_html' => StoryBodyParser::render($story->body ?? ''),
                 'url' => route('stories.show', $story),
             ];

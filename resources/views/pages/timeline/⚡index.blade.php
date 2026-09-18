@@ -59,7 +59,7 @@ new #[Title('Timeline')] class extends Component {
                         <flux:icon.x-mark class="size-5" />
                     </button>
                 </div>
-                <img data-timeline-modal-image class="mt-4 hidden max-h-80 w-full rounded-lg object-cover" alt="">
+                <div data-timeline-modal-gallery class="mt-4 hidden grid-cols-2 gap-2 sm:grid-cols-4"></div>
                 <div data-timeline-modal-body class="prose prose-zinc dark:prose-invert mt-4 max-w-none"></div>
             </div>
         </div>

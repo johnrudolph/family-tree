@@ -86,3 +86,23 @@ test('a story\'s featured image is included when one is set', function () {
 
     expect($event['featured_image_url'])->not->toBeNull();
 });
+
+test('a story\'s full gallery is included for the timeline\'s lightbox', function () {
+    Storage::fake('public');
+
+    $story = Story::factory()->create();
+    $story->addMediaFromString('fake-image-bytes-1')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('gallery');
+    $story->addMediaFromString('fake-image-bytes-2')->usingFileName('b.jpg')->preservingOriginal()->toMediaCollection('gallery');
+
+    $event = collect(TimelineSerializer::events())->firstWhere('story_id', $story->id);
+
+    expect($event['gallery_urls'])->toHaveCount(2);
+});
+
+test('birth and death events have an empty gallery_urls, not null', function () {
+    $person = Person::factory()->create(['dob' => '1950-01-01']);
+
+    $event = collect(TimelineSerializer::events())->firstWhere('person_id', $person->id);
+
+    expect($event['gallery_urls'])->toBe([]);
+});

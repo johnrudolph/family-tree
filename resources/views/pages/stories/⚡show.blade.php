@@ -28,6 +28,12 @@ new class extends Component {
     {
         return $this->canEdit ? $this->story->pendingSuggestions()->count() : 0;
     }
+
+    #[Computed]
+    public function galleryUrls(): array
+    {
+        return $this->story->galleryMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all();
+    }
 }; ?>
 
 <section class="w-full max-w-2xl">
@@ -67,13 +73,12 @@ new class extends Component {
         </div>
     @endif
 
-    @if ($story->galleryMedia()->isNotEmpty())
+    @if ($this->galleryUrls)
         <div class="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            @foreach ($story->galleryMedia() as $media)
-                @php($mediaUrl = MediaUrl::of($media))
-                <a href="{{ $mediaUrl }}" target="_blank" rel="noopener">
+            @foreach ($this->galleryUrls as $i => $mediaUrl)
+                <button type="button" onclick="openLightbox(@js($this->galleryUrls), {{ $i }})">
                     <img src="{{ $mediaUrl }}" class="aspect-square rounded-lg object-cover" alt="">
-                </a>
+                </button>
             @endforeach
         </div>
     @endif
