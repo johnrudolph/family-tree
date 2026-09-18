@@ -257,7 +257,7 @@ export function initTimeline(root, events) {
             currentTransform = zoomEvent.transform;
             x = currentTransform.rescaleX(x0);
             redraw();
-            updateZoomMeter(root, currentTransform.k);
+            updateZoomMeter(currentTransform.k);
         });
 
     const svgSel = select(root).select('svg.timeline-svg');
@@ -296,7 +296,9 @@ export function initTimeline(root, events) {
         if (e.target.hasAttribute('data-timeline-modal')) closeStoryModal(root);
     });
 
-    const meter = root.querySelector('[data-timeline-zoom-meter]');
+    // Lives in the page header, outside `root` (the timeline canvas itself) —
+    // has to be looked up from the document, not scoped to root.
+    const meter = document.querySelector('[data-timeline-zoom-meter]');
     meter?.addEventListener('input', (inputEvent) => {
         const k = Number(inputEvent.target.value);
         svgSel.call(zoomBehavior.scaleTo, k);
@@ -307,8 +309,8 @@ export function initTimeline(root, events) {
     window.addEventListener('resize', redraw);
 }
 
-function updateZoomMeter(root, k) {
-    const meter = root.querySelector('[data-timeline-zoom-meter]');
+function updateZoomMeter(k) {
+    const meter = document.querySelector('[data-timeline-zoom-meter]');
     if (meter && document.activeElement !== meter) {
         meter.value = String(k);
     }
