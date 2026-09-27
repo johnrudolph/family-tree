@@ -4,6 +4,7 @@ use App\Models\Person;
 use App\Models\Relationship;
 use App\Models\User;
 use App\Services\PageEditorService;
+use App\Services\PersonDeletionService;
 use App\Services\RelationshipLabelService;
 use App\Services\RelationshipService;
 use App\Services\RevisionService;
@@ -106,6 +107,12 @@ new class extends Component {
     public function canManageEnrichment(): bool
     {
         return Gate::allows('manageEnrichment', $this->person);
+    }
+
+    #[Computed]
+    public function canDelete(): bool
+    {
+        return Gate::allows('delete', $this->person);
     }
 
     /**
@@ -421,6 +428,27 @@ new class extends Component {
 
         Flux::toast(variant: 'success', text: __('Rolled back.'));
     }
+
+    public string $deleteConfirmationName = '';
+
+    public function deletePerson(): void
+    {
+        Gate::authorize('delete', $this->person);
+
+        $this->validate([
+            'deleteConfirmationName' => ['required', function ($attribute, $value, $fail) {
+                if ($value !== $this->person->fullName()) {
+                    $fail(__('That doesn\'t match — type the name exactly to confirm.'));
+                }
+            }],
+        ]);
+
+        app(PersonDeletionService::class)->delete($this->person);
+
+        Flux::toast(variant: 'success', text: __('Person deleted.'));
+
+        $this->redirect(route('people.index'), navigate: true);
+    }
 }; ?>
 
 <section class="w-full max-w-3xl">
@@ -684,6 +712,50 @@ new class extends Component {
             </div>
         @endif
     </div>
+
+    @if ($this->canDelete)
+        <div class="mt-6 rounded-lg border border-red-200 p-4 dark:border-red-900">
+            <flux:heading level="2" size="sm" class="text-red-700 dark:text-red-400">{{ __('Danger zone') }}</flux:heading>
+            <flux:text class="mt-1 text-zinc-500">{{ __('Only admins can see this.') }}</flux:text>
+
+            <flux:modal.trigger name="delete-person">
+                <flux:button variant="danger" size="sm" class="mt-3">{{ __('Delete person') }}</flux:button>
+            </flux:modal.trigger>
+        </div>
+
+        <flux:modal name="delete-person" class="w-96" @close="$set('deleteConfirmationName', '')">
+            <form wire:submit="deletePerson" class="flex flex-col gap-4">
+                <div>
+                    <flux:heading size="lg">{{ __('Delete :name?', ['name' => $person->fullName()]) }}</flux:heading>
+                    <flux:subheading class="mt-2">
+                        {{ __('This can\'t be undone. Their relationships to other people and their tags in any stories are removed too. Edit history and pending suggestions for this page are deleted.') }}
+                        @if ($person->hasAccount())
+                            {{ __('Their account isn\'t deleted — it\'ll just no longer be linked to anyone on the tree.') }}
+                        @endif
+                    </flux:subheading>
+                </div>
+
+                <flux:input
+                    wire:model="deleteConfirmationName"
+                    :label="__('Type :name to confirm', ['name' => $person->fullName()])"
+                />
+
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                    </flux:modal.close>
+
+                    <flux:button
+                        variant="danger"
+                        type="submit"
+                        x-bind:disabled="$wire.deleteConfirmationName !== @js($person->fullName())"
+                    >
+                        {{ __('Delete person') }}
+                    </flux:button>
+                </div>
+            </form>
+        </flux:modal>
+    @endif
 
     @if ($this->canEdit)
                 <flux:modal name="add-relationship" class="w-96">
