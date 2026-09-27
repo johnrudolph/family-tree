@@ -6,6 +6,7 @@ use App\Concerns\HasWikiWorkflow;
 use App\Support\MediaUrl;
 use Database\Factories\PersonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,9 +26,13 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property bool $use_preferred_name_everywhere
  * @property Carbon|null $dob
  * @property string $dob_precision
+ * @property bool $dob_unknown
  * @property int|null $birth_location_id
+ * @property bool $birth_location_unknown
  * @property Carbon|null $dod
+ * @property bool $dod_unknown
  * @property int|null $death_location_id
+ * @property bool $death_location_unknown
  * @property bool $is_living
  * @property string|null $bio
  * @property Carbon|null $consented_at
@@ -42,7 +47,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read Location|null $deathLocation
  */
 #[Fillable([
-    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'birth_location_id', 'dod', 'death_location_id', 'is_living', 'bio', 'created_by',
+    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'dob_unknown', 'birth_location_id', 'birth_location_unknown',
+    'dod', 'dod_unknown', 'death_location_id', 'death_location_unknown', 'is_living', 'bio', 'created_by',
     'consented_at', 'address', 'phone', 'contact_email', 'social_links',
 ])]
 class Person extends Model implements HasMedia
@@ -69,7 +75,11 @@ class Person extends Model implements HasMedia
     {
         return [
             'dob' => 'date',
+            'dob_unknown' => 'boolean',
+            'birth_location_unknown' => 'boolean',
             'dod' => 'date',
+            'dod_unknown' => 'boolean',
+            'death_location_unknown' => 'boolean',
             'is_living' => 'boolean',
             'use_preferred_name_everywhere' => 'boolean',
             'consented_at' => 'datetime',
@@ -105,6 +115,60 @@ class Person extends Model implements HasMedia
     public function hasConsented(): bool
     {
         return $this->consented_at !== null;
+    }
+
+    /**
+     * The core facts this person is missing — birth date/location always
+     * count, death date/location only once they're on record as deceased.
+     * A field deliberately marked "unknown" (see the data-gaps admin view)
+     * no longer counts as missing.
+     *
+     * @return array<int, string>
+     */
+    public function missingCoreDataFields(): array
+    {
+        $missing = [];
+
+        if (! $this->dob && ! $this->dob_unknown) {
+            $missing[] = 'dob';
+        }
+
+        if (! $this->birth_location_id && ! $this->birth_location_unknown) {
+            $missing[] = 'birth_location';
+        }
+
+        if (! $this->is_living) {
+            if (! $this->dod && ! $this->dod_unknown) {
+                $missing[] = 'dod';
+            }
+
+            if (! $this->death_location_id && ! $this->death_location_unknown) {
+                $missing[] = 'death_location';
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Same condition as {@see missingCoreDataFields()}, expressed as SQL so
+     * the data-gaps admin view can filter for it directly.
+     *
+     * @param  Builder<Person>  $query
+     * @return Builder<Person>
+     */
+    public function scopeMissingCoreData(Builder $query): Builder
+    {
+        return $query->where(function (Builder $outer) {
+            $outer->where(fn (Builder $q) => $q->whereNull('dob')->where('dob_unknown', false))
+                ->orWhere(fn (Builder $q) => $q->whereNull('birth_location_id')->where('birth_location_unknown', false))
+                ->orWhere(function (Builder $q) {
+                    $q->where('is_living', false)->where(function (Builder $q2) {
+                        $q2->where(fn (Builder $q3) => $q3->whereNull('dod')->where('dod_unknown', false))
+                            ->orWhere(fn (Builder $q3) => $q3->whereNull('death_location_id')->where('death_location_unknown', false));
+                    });
+                });
+        });
     }
 
     /**

@@ -44,6 +44,10 @@
                         <flux:sidebar.item icon="shield-check" :href="route('admin.members')" :current="request()->routeIs('admin.members')" wire:navigate>
                             {{ __('Manage admins') }}
                         </flux:sidebar.item>
+
+                        <flux:sidebar.item icon="exclamation-triangle" :href="route('admin.data-gaps')" :current="request()->routeIs('admin.data-gaps')" wire:navigate>
+                            {{ __('Data gaps') }}
+                        </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
             </flux:sidebar.nav>

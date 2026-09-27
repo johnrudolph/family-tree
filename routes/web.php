@@ -32,6 +32,7 @@ Route::middleware(['auth', 'verified', 'two-factor.enabled'])->group(function ()
 
     Route::livewire('admin/invites', 'pages::invites.invite-person')->name('invites.create');
     Route::livewire('admin/members', 'pages::admin.members')->name('admin.members');
+    Route::livewire('admin/data-gaps', 'pages::admin.data-gaps')->name('admin.data-gaps');
 
     Route::livewire('people', 'pages::people.index')->name('people.index');
     Route::livewire('people/create', 'pages::people.create')->name('people.create');
