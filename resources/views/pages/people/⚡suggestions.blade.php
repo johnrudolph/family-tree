@@ -51,6 +51,7 @@ new #[Title('Review suggestions')] class extends Component {
             'first_name' => 'First name',
             'middle_name' => 'Middle name',
             'last_name' => 'Last name',
+            'sex' => 'Sex',
             'preferred_name' => 'Goes by',
             'use_preferred_name_everywhere' => 'Use "goes by" name everywhere',
             'dob' => 'Date of birth',

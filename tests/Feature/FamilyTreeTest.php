@@ -148,3 +148,15 @@ test('a deceased person with no death date recorded just shows their birth year'
 
     expect($data[(string) $person->id]['data']['birthday'])->toBe('1954');
 });
+
+test('sex is passed to family-chart as "M"/"F", and unset sex renders genderless', function () {
+    $male = Person::factory()->create(['sex' => 'male']);
+    $female = Person::factory()->create(['sex' => 'female']);
+    $unset = Person::factory()->create(['sex' => null]);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $male->id]['data']['gender'])->toBe('M');
+    expect($data[(string) $female->id]['data']['gender'])->toBe('F');
+    expect($data[(string) $unset->id]['data']['gender'])->toBeNull();
+});

@@ -23,6 +23,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string $first_name
  * @property string|null $middle_name
  * @property string|null $last_name
+ * @property string|null $sex
+ * @property bool $sex_unknown
  * @property string|null $preferred_name
  * @property bool $use_preferred_name_everywhere
  * @property Carbon|null $dob
@@ -49,7 +51,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read Location|null $deathLocation
  */
 #[Fillable([
-    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'dob_unknown', 'birth_location_id', 'birth_location_unknown',
+    'first_name', 'middle_name', 'last_name', 'sex', 'sex_unknown', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'dob_unknown', 'birth_location_id', 'birth_location_unknown',
     'dod', 'dod_precision', 'dod_unknown', 'death_location_id', 'death_location_unknown', 'is_living', 'bio', 'created_by',
     'consented_at', 'address', 'phone', 'contact_email', 'social_links',
 ])]
@@ -76,6 +78,7 @@ class Person extends Model implements HasMedia
     protected function casts(): array
     {
         return [
+            'sex_unknown' => 'boolean',
             'dob' => 'date',
             'dob_unknown' => 'boolean',
             'birth_location_unknown' => 'boolean',
@@ -157,6 +160,10 @@ class Person extends Model implements HasMedia
     {
         $missing = [];
 
+        if (! $this->sex && ! $this->sex_unknown) {
+            $missing[] = 'sex';
+        }
+
         if (! $this->dob && ! $this->dob_unknown) {
             $missing[] = 'dob';
         }
@@ -188,7 +195,8 @@ class Person extends Model implements HasMedia
     public function scopeMissingCoreData(Builder $query): Builder
     {
         return $query->where(function (Builder $outer) {
-            $outer->where(fn (Builder $q) => $q->whereNull('dob')->where('dob_unknown', false))
+            $outer->where(fn (Builder $q) => $q->whereNull('sex')->where('sex_unknown', false))
+                ->orWhere(fn (Builder $q) => $q->whereNull('dob')->where('dob_unknown', false))
                 ->orWhere(fn (Builder $q) => $q->whereNull('birth_location_id')->where('birth_location_unknown', false))
                 ->orWhere(function (Builder $q) {
                     $q->where('is_living', false)->where(function (Builder $q2) {

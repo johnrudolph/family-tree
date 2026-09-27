@@ -31,6 +31,8 @@ new #[Title('Manage relationships')] class extends Component {
 
     public string $new_last_name = '';
 
+    public ?string $new_sex = null;
+
     public ?string $new_dob = null;
 
     public string $new_dob_precision = 'exact';
@@ -188,6 +190,7 @@ new #[Title('Manage relationships')] class extends Component {
             'new_first_name' => ['required_if:mode,new', 'nullable', 'string', 'max:255'],
             'new_middle_name' => ['nullable', 'string', 'max:255'],
             'new_last_name' => ['nullable', 'string', 'max:255'],
+            'new_sex' => ['nullable', 'in:male,female'],
             'new_dob_precision' => ['required', 'in:exact,year'],
             'new_dob' => ['nullable', 'date'],
             'new_dob_year' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
@@ -212,6 +215,7 @@ new #[Title('Manage relationships')] class extends Component {
                         'first_name' => $validated['new_first_name'],
                         'middle_name' => $validated['new_middle_name'] ?: null,
                         'last_name' => $validated['new_last_name'] ?: null,
+                        'sex' => $validated['new_sex'],
                         'dob' => $dob,
                         'dob_precision' => $dobPrecision,
                         'is_living' => $validated['new_is_living'],
@@ -265,7 +269,7 @@ new #[Title('Manage relationships')] class extends Component {
             return;
         }
 
-        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'new_dob', 'new_dob_precision', 'new_dob_year', 'new_is_living', 'new_dod', 'new_dod_precision', 'new_dod_year']);
+        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'new_sex', 'new_dob', 'new_dob_precision', 'new_dob_year', 'new_is_living', 'new_dod', 'new_dod_precision', 'new_dod_year']);
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents);
         $this->seedAlsoLinkSuggestions();
 
@@ -395,6 +399,7 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:input wire:model="new_first_name" :label="__('First name')" />
             <flux:input wire:model="new_middle_name" :label="__('Middle name')" />
             <flux:input wire:model="new_last_name" :label="__('Last name')" />
+            <x-sex-field model="new_sex" />
             <x-date-precision-field label="{{ __('Date of birth') }}" date-model="new_dob" precision-model="new_dob_precision" year-model="new_dob_year" />
             <flux:checkbox wire:model="new_is_living" :label="__('Living')" />
             <div x-show="! $wire.new_is_living">

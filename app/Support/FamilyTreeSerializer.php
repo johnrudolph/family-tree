@@ -55,6 +55,14 @@ class FamilyTreeSerializer
                 'url' => $person->wikiShowUrl(),
                 'living' => $person->is_living,
                 'divorced_spouse_ids' => $divorcedSpousesOf[$person->id] ?? [],
+                // family-chart reads exactly "M"/"F" to color cards and to
+                // infer the other parent's gender when positioning couples —
+                // anything else (including null) falls back to genderless.
+                'gender' => match ($person->sex) {
+                    'male' => 'M',
+                    'female' => 'F',
+                    default => null,
+                },
             ],
             'rels' => [
                 'parents' => $parentsOf[$person->id] ?? [],

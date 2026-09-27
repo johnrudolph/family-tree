@@ -19,6 +19,10 @@ new #[Title('Data gaps')] class extends Component {
 
     public ?int $editingPersonId = null;
 
+    public ?string $editSex = null;
+
+    public bool $editSexUnknown = false;
+
     public ?string $editDob = null;
 
     public string $editDobPrecision = 'exact';
@@ -76,6 +80,7 @@ new #[Title('Data gaps')] class extends Component {
     public function fieldLabel(string $field): string
     {
         return match ($field) {
+            'sex' => __('Sex'),
             'dob' => __('Date of birth'),
             'birth_location' => __('Birth location'),
             'dod' => __('Date of death'),
@@ -90,7 +95,7 @@ new #[Title('Data gaps')] class extends Component {
         Gate::authorize('update', $person);
 
         $this->editingPersonId = $personId;
-        $this->reset(['editDob', 'editDobPrecision', 'editDobYear', 'editDobUnknown', 'editBirthLocationId', 'editBirthLocationUnknown', 'editDod', 'editDodPrecision', 'editDodYear', 'editDodUnknown', 'editDeathLocationId', 'editDeathLocationUnknown']);
+        $this->reset(['editSex', 'editSexUnknown', 'editDob', 'editDobPrecision', 'editDobYear', 'editDobUnknown', 'editBirthLocationId', 'editBirthLocationUnknown', 'editDod', 'editDodPrecision', 'editDodYear', 'editDodUnknown', 'editDeathLocationId', 'editDeathLocationUnknown']);
         $this->formInstance++;
         $this->resetValidation();
 
@@ -114,6 +119,8 @@ new #[Title('Data gaps')] class extends Component {
         Gate::authorize('update', $person);
 
         $validated = $this->validate([
+            'editSex' => ['nullable', 'in:male,female'],
+            'editSexUnknown' => ['boolean'],
             'editDobPrecision' => ['required', 'in:exact,year'],
             'editDob' => ['nullable', 'date'],
             'editDobYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
@@ -130,6 +137,14 @@ new #[Title('Data gaps')] class extends Component {
 
         $gaps = $person->missingCoreDataFields();
         $data = [];
+
+        if (in_array('sex', $gaps, true)) {
+            if ($validated['editSexUnknown']) {
+                $data['sex_unknown'] = true;
+            } elseif ($validated['editSex']) {
+                $data['sex'] = $validated['editSex'];
+            }
+        }
 
         if (in_array('dob', $gaps, true)) {
             if ($validated['editDobUnknown']) {
@@ -189,7 +204,7 @@ new #[Title('Data gaps')] class extends Component {
 <section class="w-full max-w-3xl">
     <flux:heading level="1">{{ __('Data gaps') }}</flux:heading>
     <flux:subheading>
-        {{ __('Every person missing a birth date, birth place, or — once recorded as deceased — a death date or place. Click one to fill in what you know.') }}
+        {{ __('Every person missing a sex, birth date, birth place, or — once recorded as deceased — a death date or place. Click one to fill in what you know.') }}
     </flux:subheading>
 
     <div class="mt-6 flex flex-col gap-2">
@@ -220,6 +235,15 @@ new #[Title('Data gaps')] class extends Component {
         @if ($this->editingPerson)
             <form wire:submit="save" class="flex flex-col gap-4">
                 <flux:heading level="2" size="lg">{{ $this->editingPerson->fullName() }}</flux:heading>
+
+                @if (in_array('sex', $this->editingPerson->missingCoreDataFields(), true))
+                    <div class="flex flex-col gap-2">
+                        <div x-show="! $wire.editSexUnknown">
+                            <x-sex-field model="editSex" />
+                        </div>
+                        <flux:checkbox wire:model.live="editSexUnknown" :label="__('Unknown — no need to guess')" />
+                    </div>
+                @endif
 
                 @if (in_array('dob', $this->editingPerson->missingCoreDataFields(), true))
                     <div class="flex flex-col gap-2">

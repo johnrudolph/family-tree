@@ -20,6 +20,8 @@ new #[Title('Suggest an edit')] class extends Component {
 
     public string $last_name = '';
 
+    public ?string $sex = null;
+
     public string $preferred_name = '';
 
     public bool $use_preferred_name_everywhere = false;
@@ -52,6 +54,7 @@ new #[Title('Suggest an edit')] class extends Component {
         $this->first_name = $person->first_name;
         $this->middle_name = $person->middle_name ?? '';
         $this->last_name = $person->last_name ?? '';
+        $this->sex = $person->sex;
         $this->preferred_name = $person->preferred_name ?? '';
         $this->use_preferred_name_everywhere = $person->use_preferred_name_everywhere;
         $this->dob_precision = $person->dob_precision === 'year' ? 'year' : 'exact';
@@ -84,6 +87,7 @@ new #[Title('Suggest an edit')] class extends Component {
             'first_name' => ['required', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
+            'sex' => ['nullable', 'in:male,female'],
             'preferred_name' => ['nullable', 'string', 'max:255'],
             'use_preferred_name_everywhere' => ['boolean'],
             'dob_precision' => ['required', 'in:exact,year'],
@@ -105,6 +109,7 @@ new #[Title('Suggest an edit')] class extends Component {
             'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'] ?: null,
             'last_name' => $validated['last_name'] ?: null,
+            'sex' => $validated['sex'],
             'preferred_name' => $validated['preferred_name'] ?: null,
             'use_preferred_name_everywhere' => $validated['preferred_name'] && $validated['use_preferred_name_everywhere'],
             'dob' => $dob,
@@ -133,6 +138,7 @@ new #[Title('Suggest an edit')] class extends Component {
         <flux:input wire:model="first_name" :label="__('First name')" required />
         <flux:input wire:model="middle_name" :label="__('Middle name')" />
         <flux:input wire:model="last_name" :label="__('Last name')" />
+        <x-sex-field model="sex" />
 
         <flux:separator />
 

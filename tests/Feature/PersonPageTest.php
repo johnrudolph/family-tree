@@ -93,6 +93,19 @@ test('an admin can edit a person\'s core facts', function () {
     expect($person->fresh()->first_name)->toBe('Updated');
 });
 
+test('an admin can set a person\'s sex', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $person = Person::factory()->create(['sex' => null]);
+
+    Livewire::actingAs($admin)
+        ->test('pages::people.edit', ['person' => $person])
+        ->set('sex', 'female')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($person->fresh()->sex)->toBe('female');
+});
+
 test('an admin can set a year-only birth date instead of an exact one', function () {
     $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $person = Person::factory()->create(['dob' => null]);

@@ -46,6 +46,8 @@ new #[Title('Family Tree')] class extends Component {
 
     public string $relNewLastName = '';
 
+    public ?string $relNewSex = null;
+
     public ?string $relNewDob = null;
 
     public string $relNewDobPrecision = 'exact';
@@ -294,6 +296,7 @@ new #[Title('Family Tree')] class extends Component {
             'relNewFirstName' => ['required_if:relMode,new', 'nullable', 'string', 'max:255'],
             'relNewMiddleName' => ['nullable', 'string', 'max:255'],
             'relNewLastName' => ['nullable', 'string', 'max:255'],
+            'relNewSex' => ['nullable', 'in:male,female'],
             'relNewDobPrecision' => ['required', 'in:exact,year'],
             'relNewDob' => ['nullable', 'date'],
             'relNewDobYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
@@ -321,6 +324,7 @@ new #[Title('Family Tree')] class extends Component {
                         'first_name' => $validated['relNewFirstName'],
                         'middle_name' => $validated['relNewMiddleName'] ?: null,
                         'last_name' => $validated['relNewLastName'] ?: null,
+                        'sex' => $validated['relNewSex'],
                         'dob' => $dob,
                         'dob_precision' => $dobPrecision,
                         'birth_location_id' => $validated['relNewBirthLocationId'],
@@ -376,7 +380,7 @@ new #[Title('Family Tree')] class extends Component {
             return;
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewDobPrecision', 'relNewDobYear', 'relNewBirthLocationId', 'relNewIsLiving', 'relNewDod', 'relNewDodPrecision', 'relNewDodYear', 'relNewDeathLocationId']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewSex', 'relNewDob', 'relNewDobPrecision', 'relNewDobYear', 'relNewBirthLocationId', 'relNewIsLiving', 'relNewDod', 'relNewDodPrecision', 'relNewDodYear', 'relNewDeathLocationId']);
         $this->relNewLocationFormKey++;
         unset($this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents);
         $this->seedAlsoLinkSuggestions();
@@ -574,6 +578,7 @@ new #[Title('Family Tree')] class extends Component {
                         <flux:input wire:model="relNewFirstName" :placeholder="__('First name')" />
                         <flux:input wire:model="relNewMiddleName" :placeholder="__('Middle name')" />
                         <flux:input wire:model="relNewLastName" :placeholder="__('Last name')" />
+                        <x-sex-field model="relNewSex" />
                         <x-date-precision-field label="{{ __('Date of birth') }}" date-model="relNewDob" precision-model="relNewDobPrecision" year-model="relNewDobYear" />
                         <livewire:location-picker field="relBirth" :location-id="$relNewBirthLocationId" :label="__('Birth location')" wire:key="rel-birth-location-picker-{{ $relNewLocationFormKey }}" />
                         <flux:checkbox wire:model="relNewIsLiving" :label="__('Living')" />
