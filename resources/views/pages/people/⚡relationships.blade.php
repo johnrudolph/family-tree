@@ -4,6 +4,7 @@ use App\Models\Person;
 use App\Models\Relationship;
 use App\Services\PageEditorService;
 use App\Services\RelationshipService;
+use App\Support\PersonDateInput;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -32,9 +33,17 @@ new #[Title('Manage relationships')] class extends Component {
 
     public ?string $new_dob = null;
 
+    public string $new_dob_precision = 'exact';
+
+    public ?string $new_dob_year = null;
+
     public bool $new_is_living = true;
 
     public ?string $new_dod = null;
+
+    public string $new_dod_precision = 'exact';
+
+    public ?string $new_dod_year = null;
 
     public string $spouseStatus = 'married';
 
@@ -179,9 +188,13 @@ new #[Title('Manage relationships')] class extends Component {
             'new_first_name' => ['required_if:mode,new', 'nullable', 'string', 'max:255'],
             'new_middle_name' => ['nullable', 'string', 'max:255'],
             'new_last_name' => ['nullable', 'string', 'max:255'],
+            'new_dob_precision' => ['required', 'in:exact,year'],
             'new_dob' => ['nullable', 'date'],
+            'new_dob_year' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'new_is_living' => ['boolean'],
+            'new_dod_precision' => ['required', 'in:exact,year'],
             'new_dod' => ['nullable', 'date'],
+            'new_dod_year' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'spouseStatus' => ['required_if:type,spouse', 'in:married,divorced'],
         ]);
 
@@ -190,14 +203,20 @@ new #[Title('Manage relationships')] class extends Component {
         try {
             DB::transaction(function () use ($validated, $relationships) {
                 if ($this->mode === 'new') {
+                    [$dob, $dobPrecision] = PersonDateInput::resolve($validated['new_dob_precision'], $validated['new_dob'], $validated['new_dob_year']);
+                    [$dod, $dodPrecision] = $validated['new_is_living']
+                        ? [null, 'unknown']
+                        : PersonDateInput::resolve($validated['new_dod_precision'], $validated['new_dod'], $validated['new_dod_year']);
+
                     $other = Person::create([
                         'first_name' => $validated['new_first_name'],
                         'middle_name' => $validated['new_middle_name'] ?: null,
                         'last_name' => $validated['new_last_name'] ?: null,
-                        'dob' => $validated['new_dob'] ?: null,
-                        'dob_precision' => $validated['new_dob'] ? 'exact' : 'unknown',
+                        'dob' => $dob,
+                        'dob_precision' => $dobPrecision,
                         'is_living' => $validated['new_is_living'],
-                        'dod' => $validated['new_is_living'] ? null : ($validated['new_dod'] ?: null),
+                        'dod' => $dod,
+                        'dod_precision' => $dodPrecision,
                         'created_by' => Auth::id(),
                     ]);
 
@@ -246,7 +265,7 @@ new #[Title('Manage relationships')] class extends Component {
             return;
         }
 
-        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'new_dob', 'new_is_living', 'new_dod']);
+        $this->reset(['existingPersonId', 'new_first_name', 'new_middle_name', 'new_last_name', 'new_dob', 'new_dob_precision', 'new_dob_year', 'new_is_living', 'new_dod', 'new_dod_precision', 'new_dod_year']);
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents);
         $this->seedAlsoLinkSuggestions();
 
@@ -376,10 +395,10 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:input wire:model="new_first_name" :label="__('First name')" />
             <flux:input wire:model="new_middle_name" :label="__('Middle name')" />
             <flux:input wire:model="new_last_name" :label="__('Last name')" />
-            <flux:input wire:model="new_dob" type="date" :label="__('Date of birth')" />
+            <x-date-precision-field label="{{ __('Date of birth') }}" date-model="new_dob" precision-model="new_dob_precision" year-model="new_dob_year" />
             <flux:checkbox wire:model="new_is_living" :label="__('Living')" />
             <div x-show="! $wire.new_is_living">
-                <flux:input wire:model="new_dod" type="date" :label="__('Date of death')" />
+                <x-date-precision-field label="{{ __('Date of death') }}" date-model="new_dod" precision-model="new_dod_precision" year-model="new_dod_year" />
             </div>
         </div>
 

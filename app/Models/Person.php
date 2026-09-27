@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\HasWikiWorkflow;
 use App\Support\MediaUrl;
+use Carbon\CarbonInterface;
 use Database\Factories\PersonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,6 +31,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int|null $birth_location_id
  * @property bool $birth_location_unknown
  * @property Carbon|null $dod
+ * @property string $dod_precision
  * @property bool $dod_unknown
  * @property int|null $death_location_id
  * @property bool $death_location_unknown
@@ -48,7 +50,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 #[Fillable([
     'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'dob_unknown', 'birth_location_id', 'birth_location_unknown',
-    'dod', 'dod_unknown', 'death_location_id', 'death_location_unknown', 'is_living', 'bio', 'created_by',
+    'dod', 'dod_precision', 'dod_unknown', 'death_location_id', 'death_location_unknown', 'is_living', 'bio', 'created_by',
     'consented_at', 'address', 'phone', 'contact_email', 'social_links',
 ])]
 class Person extends Model implements HasMedia
@@ -115,6 +117,32 @@ class Person extends Model implements HasMedia
     public function hasConsented(): bool
     {
         return $this->consented_at !== null;
+    }
+
+    /**
+     * "March 3, 1954" for an exact dob, or just "1954" when only the year
+     * is known (stored as a Jan 1 placeholder — see dob_precision).
+     */
+    public function dobLabel(): ?string
+    {
+        return self::datePrecisionLabel($this->dob, $this->dob_precision);
+    }
+
+    /**
+     * Same as {@see dobLabel()}, for date of death.
+     */
+    public function dodLabel(): ?string
+    {
+        return self::datePrecisionLabel($this->dod, $this->dod_precision);
+    }
+
+    private static function datePrecisionLabel(?CarbonInterface $date, string $precision): ?string
+    {
+        if (! $date) {
+            return null;
+        }
+
+        return $precision === 'year' ? $date->format('Y') : $date->format('F j, Y');
     }
 
     /**

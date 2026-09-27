@@ -87,6 +87,36 @@ test('a year-only story is never matched, even if its Jan 1 placeholder date is 
         ->assertDontSee('Some Year, Sometime');
 });
 
+test('a year-only birthday is never matched, even if its Jan 1 placeholder date is today', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $viewer->person->update(['dob' => null]);
+    Person::factory()->create([
+        'first_name' => 'YearOnly',
+        'is_living' => true,
+        'dob' => now()->startOfYear(),
+        'dob_precision' => 'year',
+    ]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::on-this-day-banner')
+        ->assertDontSee('YearOnly');
+});
+
+test('a year-only death date is never matched, even if its Jan 1 placeholder date is today', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $viewer->person->update(['dob' => null]);
+    Person::factory()->create([
+        'first_name' => 'YearOnlyDeath',
+        'is_living' => false,
+        'dod' => now()->startOfYear(),
+        'dod_precision' => 'year',
+    ]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::on-this-day-banner')
+        ->assertDontSee('YearOnlyDeath');
+});
+
 test('the banner renders nothing when there is nothing to show today', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     // The factory links every user to a person with a random dob — neutralize

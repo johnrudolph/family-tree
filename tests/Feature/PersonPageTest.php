@@ -93,6 +93,39 @@ test('an admin can edit a person\'s core facts', function () {
     expect($person->fresh()->first_name)->toBe('Updated');
 });
 
+test('an admin can set a year-only birth date instead of an exact one', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $person = Person::factory()->create(['dob' => null]);
+
+    Livewire::actingAs($admin)
+        ->test('pages::people.edit', ['person' => $person])
+        ->set('dob_precision', 'year')
+        ->set('dob_year', '1901')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $person->refresh();
+    expect($person->dob->toDateString())->toBe('1901-01-01');
+    expect($person->dob_precision)->toBe('year');
+    expect($person->dobLabel())->toBe('1901');
+});
+
+test('switching a person with an exact dob back to an empty year-only field clears it, not leaves the old date', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $person = Person::factory()->create(['dob' => '1954-03-03', 'dob_precision' => 'exact']);
+
+    Livewire::actingAs($admin)
+        ->test('pages::people.edit', ['person' => $person])
+        ->set('dob_precision', 'year')
+        ->set('dob_year', null)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $person->refresh();
+    expect($person->dob)->toBeNull();
+    expect($person->dob_precision)->toBe('unknown');
+});
+
 test('a person page shows stories they are tagged in via [[Name]], not just the curated "about" list', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Drexler']);

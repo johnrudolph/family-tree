@@ -57,7 +57,7 @@ class TimelineSerializer
         return Person::query()->whereNotNull('dod')->with('deathLocation')->get()->map(fn (Person $person): array => [
             'type' => 'death',
             'date' => $person->dod->toDateString(),
-            'date_precision' => 'exact',
+            'date_precision' => $person->dod_precision,
             'end_date' => null,
             'end_date_precision' => null,
             'title' => __(':name dies', ['name' => $person->fullName()]).($person->deathLocation ? ' '.__('in :city', ['city' => $person->deathLocation->shortLabel()]) : ''),

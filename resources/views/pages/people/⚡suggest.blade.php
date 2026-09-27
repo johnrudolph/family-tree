@@ -2,6 +2,7 @@
 
 use App\Models\Person;
 use App\Services\SuggestionService;
+use App\Support\PersonDateInput;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Locked;
@@ -25,9 +26,17 @@ new #[Title('Suggest an edit')] class extends Component {
 
     public ?string $dob = null;
 
+    public string $dob_precision = 'exact';
+
+    public ?string $dob_year = null;
+
     public ?int $birth_location_id = null;
 
     public ?string $dod = null;
+
+    public string $dod_precision = 'exact';
+
+    public ?string $dod_year = null;
 
     public ?int $death_location_id = null;
 
@@ -45,9 +54,13 @@ new #[Title('Suggest an edit')] class extends Component {
         $this->last_name = $person->last_name ?? '';
         $this->preferred_name = $person->preferred_name ?? '';
         $this->use_preferred_name_everywhere = $person->use_preferred_name_everywhere;
-        $this->dob = $person->dob?->toDateString();
+        $this->dob_precision = $person->dob_precision === 'year' ? 'year' : 'exact';
+        $this->dob = $this->dob_precision === 'exact' ? $person->dob?->toDateString() : null;
+        $this->dob_year = $this->dob_precision === 'year' ? $person->dob?->format('Y') : null;
         $this->birth_location_id = $person->birth_location_id;
-        $this->dod = $person->dod?->toDateString();
+        $this->dod_precision = $person->dod_precision === 'year' ? 'year' : 'exact';
+        $this->dod = $this->dod_precision === 'exact' ? $person->dod?->toDateString() : null;
+        $this->dod_year = $this->dod_precision === 'year' ? $person->dod?->format('Y') : null;
         $this->death_location_id = $person->death_location_id;
         $this->is_living = $person->is_living;
         $this->bio = $person->bio ?? '';
@@ -73,20 +86,34 @@ new #[Title('Suggest an edit')] class extends Component {
             'last_name' => ['nullable', 'string', 'max:255'],
             'preferred_name' => ['nullable', 'string', 'max:255'],
             'use_preferred_name_everywhere' => ['boolean'],
+            'dob_precision' => ['required', 'in:exact,year'],
             'dob' => ['nullable', 'date'],
+            'dob_year' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'birth_location_id' => ['nullable', 'integer', 'exists:locations,id'],
+            'dod_precision' => ['required', 'in:exact,year'],
             'dod' => ['nullable', 'date'],
+            'dod_year' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'death_location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'is_living' => ['boolean'],
             'bio' => ['nullable', 'string', 'max:20000'],
         ]);
 
+        [$dob, $dobPrecision] = PersonDateInput::resolve($validated['dob_precision'], $validated['dob'], $validated['dob_year']);
+        [$dod, $dodPrecision] = PersonDateInput::resolve($validated['dod_precision'], $validated['dod'], $validated['dod_year']);
+
         $payload = [
-            ...$validated,
+            'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'] ?: null,
             'last_name' => $validated['last_name'] ?: null,
             'preferred_name' => $validated['preferred_name'] ?: null,
             'use_preferred_name_everywhere' => $validated['preferred_name'] && $validated['use_preferred_name_everywhere'],
+            'dob' => $dob,
+            'dob_precision' => $dobPrecision,
+            'birth_location_id' => $validated['birth_location_id'],
+            'dod' => $dod,
+            'dod_precision' => $dodPrecision,
+            'death_location_id' => $validated['death_location_id'],
+            'is_living' => $validated['is_living'],
         ];
 
         app(SuggestionService::class)->submit($this->person, Auth::user(), $payload);
@@ -116,11 +143,11 @@ new #[Title('Suggest an edit')] class extends Component {
 
         <flux:separator />
 
-        <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />
+        <x-date-precision-field label="{{ __('Date of birth') }}" date-model="dob" precision-model="dob_precision" year-model="dob_year" />
         <livewire:location-picker field="birth" :location-id="$birth_location_id" :label="__('Birth location')" wire:key="birth-location-picker" />
         <flux:checkbox wire:model="is_living" :label="__('Living')" />
         <div x-show="! $wire.is_living" class="flex flex-col gap-6">
-            <flux:input wire:model="dod" type="date" :label="__('Date of death')" />
+            <x-date-precision-field label="{{ __('Date of death') }}" date-model="dod" precision-model="dod_precision" year-model="dod_year" />
             <livewire:location-picker field="death" :location-id="$death_location_id" :label="__('Death location')" wire:key="death-location-picker" />
         </div>
         <flux:editor wire:model="bio" :label="__('Bio')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-56" />

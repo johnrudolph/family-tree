@@ -10,6 +10,7 @@ use App\Services\RelationshipService;
 use App\Services\RevisionService;
 use App\Support\FamilyTreeSerializer;
 use App\Support\MediaUrl;
+use App\Support\PersonDateInput;
 use App\Support\StoryBodyParser;
 use Flux\Flux;
 use Illuminate\Database\QueryException;
@@ -45,11 +46,19 @@ new class extends Component {
 
     public ?string $relNewDob = null;
 
+    public string $relNewDobPrecision = 'exact';
+
+    public ?string $relNewDobYear = null;
+
     public ?int $relNewBirthLocationId = null;
 
     public bool $relNewIsLiving = true;
 
     public ?string $relNewDod = null;
+
+    public string $relNewDodPrecision = 'exact';
+
+    public ?string $relNewDodYear = null;
 
     public ?int $relNewDeathLocationId = null;
 
@@ -288,10 +297,14 @@ new class extends Component {
             'relNewFirstName' => ['required_if:relMode,new', 'nullable', 'string', 'max:255'],
             'relNewMiddleName' => ['nullable', 'string', 'max:255'],
             'relNewLastName' => ['nullable', 'string', 'max:255'],
+            'relNewDobPrecision' => ['required', 'in:exact,year'],
             'relNewDob' => ['nullable', 'date'],
+            'relNewDobYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'relNewBirthLocationId' => ['nullable', 'integer', 'exists:locations,id'],
             'relNewIsLiving' => ['boolean'],
+            'relNewDodPrecision' => ['required', 'in:exact,year'],
             'relNewDod' => ['nullable', 'date'],
+            'relNewDodYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'relNewDeathLocationId' => ['nullable', 'integer', 'exists:locations,id'],
             'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced'],
         ]);
@@ -301,15 +314,21 @@ new class extends Component {
         try {
             DB::transaction(function () use ($validated, $relationships) {
                 if ($this->relMode === 'new') {
+                    [$dob, $dobPrecision] = PersonDateInput::resolve($validated['relNewDobPrecision'], $validated['relNewDob'], $validated['relNewDobYear']);
+                    [$dod, $dodPrecision] = $validated['relNewIsLiving']
+                        ? [null, 'unknown']
+                        : PersonDateInput::resolve($validated['relNewDodPrecision'], $validated['relNewDod'], $validated['relNewDodYear']);
+
                     $other = Person::create([
                         'first_name' => $validated['relNewFirstName'],
                         'middle_name' => $validated['relNewMiddleName'] ?: null,
                         'last_name' => $validated['relNewLastName'] ?: null,
-                        'dob' => $validated['relNewDob'] ?: null,
-                        'dob_precision' => $validated['relNewDob'] ? 'exact' : 'unknown',
+                        'dob' => $dob,
+                        'dob_precision' => $dobPrecision,
                         'birth_location_id' => $validated['relNewBirthLocationId'],
                         'is_living' => $validated['relNewIsLiving'],
-                        'dod' => $validated['relNewIsLiving'] ? null : ($validated['relNewDod'] ?: null),
+                        'dod' => $dod,
+                        'dod_precision' => $dodPrecision,
                         'death_location_id' => $validated['relNewIsLiving'] ? null : $validated['relNewDeathLocationId'],
                         'created_by' => Auth::id(),
                     ]);
@@ -359,7 +378,7 @@ new class extends Component {
             return;
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewBirthLocationId', 'relNewIsLiving', 'relNewDod', 'relNewDeathLocationId']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewDobPrecision', 'relNewDobYear', 'relNewBirthLocationId', 'relNewIsLiving', 'relNewDod', 'relNewDodPrecision', 'relNewDodYear', 'relNewDeathLocationId']);
         $this->relNewLocationFormKey++;
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents, $this->familyTreeData);
         $this->seedAlsoLinkSuggestions();
@@ -468,7 +487,7 @@ new class extends Component {
             <flux:text class="text-zinc-500">
                 {{ $person->is_living ? __('Living') : __('Deceased') }}
                 @if ($person->dob)
-                    &middot; {{ __('Born') }} {{ $person->dob->format('F j, Y') }}
+                    &middot; {{ __('Born') }} {{ $person->dobLabel() }}
                     @if ($person->birthLocation)
                         {{ __('in') }} {{ $person->birthLocation->shortLabel() }}
                     @endif
@@ -476,7 +495,7 @@ new class extends Component {
                     &middot; {{ __('Born in') }} {{ $person->birthLocation->shortLabel() }}
                 @endif
                 @if (! $person->is_living && $person->dod)
-                    &middot; {{ __('Died') }} {{ $person->dod->format('F j, Y') }}
+                    &middot; {{ __('Died') }} {{ $person->dodLabel() }}
                     @if ($person->deathLocation)
                         {{ __('in') }} {{ $person->deathLocation->shortLabel() }}
                     @endif
@@ -837,11 +856,11 @@ new class extends Component {
                             <flux:input wire:model="relNewFirstName" :placeholder="__('First name')" />
                             <flux:input wire:model="relNewMiddleName" :placeholder="__('Middle name')" />
                             <flux:input wire:model="relNewLastName" :placeholder="__('Last name')" />
-                            <flux:input wire:model="relNewDob" type="date" :placeholder="__('Date of birth')" />
+                            <x-date-precision-field label="{{ __('Date of birth') }}" date-model="relNewDob" precision-model="relNewDobPrecision" year-model="relNewDobYear" />
                             <livewire:location-picker field="relBirth" :location-id="$relNewBirthLocationId" :label="__('Birth location')" wire:key="rel-birth-location-picker-{{ $relNewLocationFormKey }}" />
                             <flux:checkbox wire:model="relNewIsLiving" :label="__('Living')" />
                             <div x-show="! $wire.relNewIsLiving">
-                                <flux:input wire:model="relNewDod" type="date" :placeholder="__('Date of death')" />
+                                <x-date-precision-field label="{{ __('Date of death') }}" date-model="relNewDod" precision-model="relNewDodPrecision" year-model="relNewDodYear" />
                                 <livewire:location-picker field="relDeath" :location-id="$relNewDeathLocationId" :label="__('Death location')" wire:key="rel-death-location-picker-{{ $relNewLocationFormKey }}" />
                             </div>
                         </div>

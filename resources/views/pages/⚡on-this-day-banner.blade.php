@@ -11,7 +11,7 @@ new class extends Component {
     {
         return Person::query()
             ->where('is_living', true)
-            ->whereNotNull('dob')
+            ->where('dob_precision', 'exact')
             ->whereMonth('dob', now()->month)
             ->whereDay('dob', now()->day)
             ->orderBy('first_name')
@@ -28,7 +28,7 @@ new class extends Component {
     {
         return Person::query()
             ->where('is_living', false)
-            ->whereNotNull('dob')
+            ->where('dob_precision', 'exact')
             ->whereMonth('dob', now()->month)
             ->whereDay('dob', now()->day)
             ->orderBy('dob')
@@ -39,7 +39,7 @@ new class extends Component {
     public function diedOnThisDay()
     {
         return Person::query()
-            ->whereNotNull('dod')
+            ->where('dod_precision', 'exact')
             ->whereMonth('dod', now()->month)
             ->whereDay('dod', now()->day)
             ->orderBy('dod')

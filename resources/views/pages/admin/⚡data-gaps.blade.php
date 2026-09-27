@@ -2,6 +2,7 @@
 
 use App\Models\Person;
 use App\Services\RevisionService;
+use App\Support\PersonDateInput;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -20,6 +21,10 @@ new #[Title('Data gaps')] class extends Component {
 
     public ?string $editDob = null;
 
+    public string $editDobPrecision = 'exact';
+
+    public ?string $editDobYear = null;
+
     public bool $editDobUnknown = false;
 
     public ?int $editBirthLocationId = null;
@@ -27,6 +32,10 @@ new #[Title('Data gaps')] class extends Component {
     public bool $editBirthLocationUnknown = false;
 
     public ?string $editDod = null;
+
+    public string $editDodPrecision = 'exact';
+
+    public ?string $editDodYear = null;
 
     public bool $editDodUnknown = false;
 
@@ -81,7 +90,7 @@ new #[Title('Data gaps')] class extends Component {
         Gate::authorize('update', $person);
 
         $this->editingPersonId = $personId;
-        $this->reset(['editDob', 'editDobUnknown', 'editBirthLocationId', 'editBirthLocationUnknown', 'editDod', 'editDodUnknown', 'editDeathLocationId', 'editDeathLocationUnknown']);
+        $this->reset(['editDob', 'editDobPrecision', 'editDobYear', 'editDobUnknown', 'editBirthLocationId', 'editBirthLocationUnknown', 'editDod', 'editDodPrecision', 'editDodYear', 'editDodUnknown', 'editDeathLocationId', 'editDeathLocationUnknown']);
         $this->formInstance++;
         $this->resetValidation();
 
@@ -105,11 +114,15 @@ new #[Title('Data gaps')] class extends Component {
         Gate::authorize('update', $person);
 
         $validated = $this->validate([
+            'editDobPrecision' => ['required', 'in:exact,year'],
             'editDob' => ['nullable', 'date'],
+            'editDobYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'editDobUnknown' => ['boolean'],
             'editBirthLocationId' => ['nullable', 'integer', 'exists:locations,id'],
             'editBirthLocationUnknown' => ['boolean'],
+            'editDodPrecision' => ['required', 'in:exact,year'],
             'editDod' => ['nullable', 'date'],
+            'editDodYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'editDodUnknown' => ['boolean'],
             'editDeathLocationId' => ['nullable', 'integer', 'exists:locations,id'],
             'editDeathLocationUnknown' => ['boolean'],
@@ -121,9 +134,13 @@ new #[Title('Data gaps')] class extends Component {
         if (in_array('dob', $gaps, true)) {
             if ($validated['editDobUnknown']) {
                 $data['dob_unknown'] = true;
-            } elseif ($validated['editDob']) {
-                $data['dob'] = $validated['editDob'];
-                $data['dob_precision'] = 'exact';
+            } else {
+                [$dob, $dobPrecision] = PersonDateInput::resolve($validated['editDobPrecision'], $validated['editDob'], $validated['editDobYear']);
+
+                if ($dob) {
+                    $data['dob'] = $dob;
+                    $data['dob_precision'] = $dobPrecision;
+                }
             }
         }
 
@@ -138,8 +155,13 @@ new #[Title('Data gaps')] class extends Component {
         if (in_array('dod', $gaps, true)) {
             if ($validated['editDodUnknown']) {
                 $data['dod_unknown'] = true;
-            } elseif ($validated['editDod']) {
-                $data['dod'] = $validated['editDod'];
+            } else {
+                [$dod, $dodPrecision] = PersonDateInput::resolve($validated['editDodPrecision'], $validated['editDod'], $validated['editDodYear']);
+
+                if ($dod) {
+                    $data['dod'] = $dod;
+                    $data['dod_precision'] = $dodPrecision;
+                }
             }
         }
 
@@ -202,7 +224,7 @@ new #[Title('Data gaps')] class extends Component {
                 @if (in_array('dob', $this->editingPerson->missingCoreDataFields(), true))
                     <div class="flex flex-col gap-2">
                         <div x-show="! $wire.editDobUnknown">
-                            <flux:input wire:model="editDob" type="date" :label="__('Date of birth')" />
+                            <x-date-precision-field label="{{ __('Date of birth') }}" date-model="editDob" precision-model="editDobPrecision" year-model="editDobYear" />
                         </div>
                         <flux:checkbox wire:model.live="editDobUnknown" :label="__('Unknown — no need to guess')" />
                     </div>
@@ -220,7 +242,7 @@ new #[Title('Data gaps')] class extends Component {
                 @if (in_array('dod', $this->editingPerson->missingCoreDataFields(), true))
                     <div class="flex flex-col gap-2">
                         <div x-show="! $wire.editDodUnknown">
-                            <flux:input wire:model="editDod" type="date" :label="__('Date of death')" />
+                            <x-date-precision-field label="{{ __('Date of death') }}" date-model="editDod" precision-model="editDodPrecision" year-model="editDodYear" />
                         </div>
                         <flux:checkbox wire:model.live="editDodUnknown" :label="__('Unknown — no need to guess')" />
                     </div>

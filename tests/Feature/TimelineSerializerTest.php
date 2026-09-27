@@ -46,6 +46,14 @@ test('a deceased person with a death city produces a death event', function () {
     expect($event['title'])->toBe('Jane Drexler dies in Austin, TX');
 });
 
+test('a death event carries the death date\'s own precision, not a hardcoded one', function () {
+    $person = Person::factory()->create(['is_living' => false, 'dod' => '2020-01-01', 'dod_precision' => 'year']);
+
+    $event = collect(TimelineSerializer::events())->first(fn ($e) => $e['person_id'] === $person->id && $e['type'] === 'death');
+
+    expect($event['date_precision'])->toBe('year');
+});
+
 test('a story without an end date is a point event, one with an end date is a span', function () {
     $dot = Story::factory()->create(['title' => 'A Single Day', 'start_date' => '1990-06-01']);
     $span = Story::factory()->create([
