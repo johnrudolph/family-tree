@@ -19,6 +19,17 @@ test('a member can view a person page', function () {
         ->assertSee($person->fullName());
 });
 
+test('the browser tab title is the person\'s name', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Drexler']);
+
+    $this->actingAs($viewer)
+        ->get(route('people.show', $person))
+        ->assertOk()
+        ->assertSee('<title>', false)
+        ->assertSee('Jane Drexler - '.config('app.name'), false);
+});
+
 test('the person page shows the viewer\'s relationship to the person, but not to themself', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $parent = Person::factory()->create();

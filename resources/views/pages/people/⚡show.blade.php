@@ -449,6 +449,11 @@ new class extends Component {
 
         $this->redirect(route('people.index'), navigate: true);
     }
+
+    public function render()
+    {
+        return $this->view()->title($this->person->fullName());
+    }
 }; ?>
 
 <section class="w-full max-w-3xl">
@@ -714,7 +719,7 @@ new class extends Component {
     </div>
 
     @if ($this->canDelete)
-        <div class="mt-6 rounded-lg border border-red-200 p-4 dark:border-red-900">
+        <div class="mt-6">
             <flux:heading level="2" size="sm" class="text-red-700 dark:text-red-400">{{ __('Danger zone') }}</flux:heading>
             <flux:text class="mt-1 text-zinc-500">{{ __('Only admins can see this.') }}</flux:text>
 
