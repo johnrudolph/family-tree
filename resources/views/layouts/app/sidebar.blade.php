@@ -24,6 +24,10 @@
                         {{ __('Timeline') }}
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="map" :href="route('map.index')" :current="request()->routeIs('map.*')" wire:navigate>
+                        {{ __('Map') }}
+                    </flux:sidebar.item>
+
                     <flux:sidebar.item icon="users" :href="route('people.index')" :current="request()->routeIs('people.*')" wire:navigate>
                         {{ __('People') }}
                     </flux:sidebar.item>
@@ -104,7 +108,7 @@
             </flux:dropdown>
         </flux:header>
 
-        <livewire:pages::birthday-banner />
+        <livewire:pages::on-this-day-banner />
 
         {{ $slot }}
 

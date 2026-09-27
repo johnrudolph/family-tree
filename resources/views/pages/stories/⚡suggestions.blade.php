@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Location;
 use App\Models\Story;
 use App\Services\SuggestionService;
 use App\Support\SuggestionDiffer;
@@ -31,6 +32,7 @@ new #[Title('Review suggestions')] class extends Component {
         return match ($field) {
             'title' => 'Title',
             'body' => 'Story',
+            'location_id' => 'Location',
             'start_date' => 'Start date',
             'start_date_precision' => 'Start date precision',
             'end_date' => 'End date',
@@ -46,11 +48,24 @@ new #[Title('Review suggestions')] class extends Component {
         return collect($suggestion->payload)
             ->map(fn ($new, $field) => [
                 'label' => $this->fieldLabel($field),
-                'html' => SuggestionDiffer::fieldDiffHtml($this->story->{$field}, $new),
+                'html' => SuggestionDiffer::fieldDiffHtml($this->diffValue($field, $this->story->{$field}), $this->diffValue($field, $new)),
             ])
             ->filter(fn ($diff) => $diff['html'] !== '')
             ->values()
             ->all();
+    }
+
+    /**
+     * Location is stored as a raw foreign key — resolve it to its place
+     * name so reviewers see an address diff, not two meaningless ids.
+     */
+    private function diffValue(string $field, mixed $value): mixed
+    {
+        if ($field === 'location_id' && $value !== null) {
+            return Location::find($value)?->formatted_address;
+        }
+
+        return $value;
     }
 
     public function editSuggestion(int $suggestionId): void

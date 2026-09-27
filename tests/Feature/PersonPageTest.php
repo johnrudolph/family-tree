@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Location;
 use App\Models\Person;
 use App\Models\Relationship;
 use App\Models\Story;
@@ -91,20 +92,22 @@ test('a person page shows stories they are tagged in via [[Name]], not just the 
         ->assertSee('Tagged Only Story');
 });
 
-test('an admin can set birth and death cities and they show on the person page', function () {
+test('an admin can set birth and death locations and they show on the person page', function () {
     $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $person = Person::factory()->create(['is_living' => false]);
+    $birthLocation = Location::factory()->create(['city' => 'Portland', 'region' => 'OR']);
+    $deathLocation = Location::factory()->create(['city' => 'Austin', 'region' => 'TX']);
 
     Livewire::actingAs($admin)
         ->test('pages::people.edit', ['person' => $person])
-        ->set('birth_city', 'Portland, OR')
-        ->set('death_city', 'Austin, TX')
+        ->set('birth_location_id', $birthLocation->id)
+        ->set('death_location_id', $deathLocation->id)
         ->call('save')
         ->assertHasNoErrors();
 
     $person->refresh();
-    expect($person->birth_city)->toBe('Portland, OR');
-    expect($person->death_city)->toBe('Austin, TX');
+    expect($person->birth_location_id)->toBe($birthLocation->id);
+    expect($person->death_location_id)->toBe($deathLocation->id);
 
     $this->actingAs($admin)
         ->get(route('people.show', $person))
@@ -276,4 +279,27 @@ test('a new person created inline from the person page can be marked deceased wi
     $departed = Person::query()->where('first_name', 'Departed')->firstOrFail();
     expect($departed->is_living)->toBeFalse();
     expect($departed->dod?->toDateString())->toBe('2020-03-15');
+});
+
+test('a new person created inline from the person page can get a birth and death location right away', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+    $birthLocation = Location::factory()->create();
+    $deathLocation = Location::factory()->create();
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.show', ['person' => $person])
+        ->set('relType', 'child')
+        ->set('relMode', 'new')
+        ->set('relNewFirstName', 'Located')
+        ->set('relNewBirthLocationId', $birthLocation->id)
+        ->set('relNewIsLiving', false)
+        ->set('relNewDeathLocationId', $deathLocation->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $located = Person::query()->where('first_name', 'Located')->firstOrFail();
+    expect($located->birth_location_id)->toBe($birthLocation->id);
+    expect($located->death_location_id)->toBe($deathLocation->id);
 });

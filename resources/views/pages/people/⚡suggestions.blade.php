@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Location;
 use App\Models\Person;
 use App\Services\SuggestionService;
 use App\Support\SuggestionDiffer;
@@ -53,9 +54,9 @@ new #[Title('Review suggestions')] class extends Component {
             'preferred_name' => 'Goes by',
             'use_preferred_name_everywhere' => 'Use "goes by" name everywhere',
             'dob' => 'Date of birth',
-            'birth_city' => 'Birth city',
+            'birth_location_id' => 'Birth location',
             'dod' => 'Date of death',
-            'death_city' => 'Death city',
+            'death_location_id' => 'Death location',
             'is_living' => 'Living',
             'bio' => 'Bio',
             default => $field,
@@ -69,11 +70,24 @@ new #[Title('Review suggestions')] class extends Component {
         return collect($suggestion->payload)
             ->map(fn ($new, $field) => [
                 'label' => $this->fieldLabel($field),
-                'html' => SuggestionDiffer::fieldDiffHtml($this->person->{$field}, $new),
+                'html' => SuggestionDiffer::fieldDiffHtml($this->diffValue($field, $this->person->{$field}), $this->diffValue($field, $new)),
             ])
             ->filter(fn ($diff) => $diff['html'] !== '')
             ->values()
             ->all();
+    }
+
+    /**
+     * Location fields are stored as raw foreign keys — resolve them to their
+     * place name so reviewers see an address diff, not two meaningless ids.
+     */
+    private function diffValue(string $field, mixed $value): mixed
+    {
+        if (in_array($field, ['birth_location_id', 'death_location_id'], true) && $value !== null) {
+            return Location::find($value)?->formatted_address;
+        }
+
+        return $value;
     }
 
     public function merge(int $suggestionId): void

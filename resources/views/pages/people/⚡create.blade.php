@@ -4,6 +4,7 @@ use App\Models\Person;
 use App\Services\PageEditorService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -20,17 +21,27 @@ new #[Title('Add a person')] class extends Component {
 
     public ?string $dob = null;
 
-    public ?string $birth_city = null;
+    public ?int $birth_location_id = null;
 
     public ?string $dod = null;
 
-    public ?string $death_city = null;
+    public ?int $death_location_id = null;
 
     public bool $is_living = true;
 
     public function mount(): void
     {
         Gate::authorize('create', Person::class);
+    }
+
+    #[On('location-selected')]
+    public function onLocationSelected(string $field, ?int $locationId): void
+    {
+        match ($field) {
+            'birth' => $this->birth_location_id = $locationId,
+            'death' => $this->death_location_id = $locationId,
+            default => null,
+        };
     }
 
     public function save(): void
@@ -44,9 +55,9 @@ new #[Title('Add a person')] class extends Component {
             'preferred_name' => ['nullable', 'string', 'max:255'],
             'use_preferred_name_everywhere' => ['boolean'],
             'dob' => ['nullable', 'date'],
-            'birth_city' => ['nullable', 'string', 'max:255'],
+            'birth_location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'dod' => ['nullable', 'date'],
-            'death_city' => ['nullable', 'string', 'max:255'],
+            'death_location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'is_living' => ['boolean'],
         ]);
 
@@ -87,11 +98,11 @@ new #[Title('Add a person')] class extends Component {
         <flux:separator />
 
         <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />
-        <flux:input wire:model="birth_city" :label="__('Birth city')" />
+        <livewire:location-picker field="birth" :location-id="$birth_location_id" :label="__('Birth location')" wire:key="birth-location-picker" />
         <flux:checkbox wire:model="is_living" :label="__('Living')" />
         <div x-show="! $wire.is_living" class="flex flex-col gap-6">
             <flux:input wire:model="dod" type="date" :label="__('Date of death (optional)')" />
-            <flux:input wire:model="death_city" :label="__('Death city')" />
+            <livewire:location-picker field="death" :location-id="$death_location_id" :label="__('Death location')" wire:key="death-location-picker" />
         </div>
 
         <div class="flex gap-2">

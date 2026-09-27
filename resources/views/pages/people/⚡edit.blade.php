@@ -7,6 +7,7 @@ use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -26,11 +27,11 @@ new #[Title('Edit person')] class extends Component {
 
     public ?string $dob = null;
 
-    public ?string $birth_city = null;
+    public ?int $birth_location_id = null;
 
     public ?string $dod = null;
 
-    public ?string $death_city = null;
+    public ?int $death_location_id = null;
 
     public bool $is_living = true;
 
@@ -47,11 +48,21 @@ new #[Title('Edit person')] class extends Component {
         $this->preferred_name = $person->preferred_name ?? '';
         $this->use_preferred_name_everywhere = $person->use_preferred_name_everywhere;
         $this->dob = $person->dob?->toDateString();
-        $this->birth_city = $person->birth_city;
+        $this->birth_location_id = $person->birth_location_id;
         $this->dod = $person->dod?->toDateString();
-        $this->death_city = $person->death_city;
+        $this->death_location_id = $person->death_location_id;
         $this->is_living = $person->is_living;
         $this->bio = $person->bio ?? '';
+    }
+
+    #[On('location-selected')]
+    public function onLocationSelected(string $field, ?int $locationId): void
+    {
+        match ($field) {
+            'birth' => $this->birth_location_id = $locationId,
+            'death' => $this->death_location_id = $locationId,
+            default => null,
+        };
     }
 
     public function save(): void
@@ -65,9 +76,9 @@ new #[Title('Edit person')] class extends Component {
             'preferred_name' => ['nullable', 'string', 'max:255'],
             'use_preferred_name_everywhere' => ['boolean'],
             'dob' => ['nullable', 'date'],
-            'birth_city' => ['nullable', 'string', 'max:255'],
+            'birth_location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'dod' => ['nullable', 'date'],
-            'death_city' => ['nullable', 'string', 'max:255'],
+            'death_location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'is_living' => ['boolean'],
             'bio' => ['nullable', 'string', 'max:20000'],
         ]);
@@ -110,11 +121,11 @@ new #[Title('Edit person')] class extends Component {
         <flux:separator />
 
         <flux:input wire:model="dob" type="date" :label="__('Date of birth')" />
-        <flux:input wire:model="birth_city" :label="__('Birth city')" />
+        <livewire:location-picker field="birth" :location-id="$birth_location_id" :label="__('Birth location')" wire:key="birth-location-picker" />
         <flux:checkbox wire:model="is_living" :label="__('Living')" />
         <div x-show="! $wire.is_living" class="flex flex-col gap-6">
             <flux:input wire:model="dod" type="date" :label="__('Date of death')" />
-            <flux:input wire:model="death_city" :label="__('Death city')" />
+            <livewire:location-picker field="death" :location-id="$death_location_id" :label="__('Death location')" wire:key="death-location-picker" />
         </div>
         <flux:editor wire:model="bio" :label="__('Bio')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-56" />
 

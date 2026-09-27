@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Location;
 use App\Models\Person;
 use App\Models\Story;
 use App\Support\TimelineSerializer;
@@ -11,7 +12,7 @@ test('a person with a dob and birth city produces a birth event', function () {
         'last_name' => 'Drexler',
         'dob' => '1954-03-03',
         'dob_precision' => 'exact',
-        'birth_city' => 'Portland, OR',
+        'birth_location_id' => Location::factory()->create(['city' => 'Portland', 'region' => 'OR'])->id,
     ]);
 
     $event = collect(TimelineSerializer::events())->firstWhere('person_id', $person->id);
@@ -36,7 +37,7 @@ test('a deceased person with a death city produces a death event', function () {
         'last_name' => 'Drexler',
         'is_living' => false,
         'dod' => '2020-01-15',
-        'death_city' => 'Austin, TX',
+        'death_location_id' => Location::factory()->create(['city' => 'Austin', 'region' => 'TX'])->id,
     ]);
 
     $event = collect(TimelineSerializer::events())->first(fn ($e) => $e['person_id'] === $person->id && $e['type'] === 'death');

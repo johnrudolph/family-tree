@@ -25,9 +25,9 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property bool $use_preferred_name_everywhere
  * @property Carbon|null $dob
  * @property string $dob_precision
- * @property string|null $birth_city
+ * @property int|null $birth_location_id
  * @property Carbon|null $dod
- * @property string|null $death_city
+ * @property int|null $death_location_id
  * @property bool $is_living
  * @property string|null $bio
  * @property Carbon|null $consented_at
@@ -38,9 +38,11 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int $created_by
  * @property-read User|null $user
  * @property-read User $creator
+ * @property-read Location|null $birthLocation
+ * @property-read Location|null $deathLocation
  */
 #[Fillable([
-    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'birth_city', 'dod', 'death_city', 'is_living', 'bio', 'created_by',
+    'first_name', 'middle_name', 'last_name', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'birth_location_id', 'dod', 'death_location_id', 'is_living', 'bio', 'created_by',
     'consented_at', 'address', 'phone', 'contact_email', 'social_links',
 ])]
 class Person extends Model implements HasMedia
@@ -280,5 +282,21 @@ class Person extends Model implements HasMedia
     public function stories(): BelongsToMany
     {
         return $this->belongsToMany(Story::class, 'story_person');
+    }
+
+    /**
+     * @return BelongsTo<Location, $this>
+     */
+    public function birthLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'birth_location_id');
+    }
+
+    /**
+     * @return BelongsTo<Location, $this>
+     */
+    public function deathLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'death_location_id');
     }
 }

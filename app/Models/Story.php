@@ -25,11 +25,13 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string $start_date_precision
  * @property Carbon|null $end_date
  * @property string|null $end_date_precision
+ * @property int|null $location_id
  * @property int $created_by
  * @property-read User $creator
  * @property-read Collection<int, Person> $people
+ * @property-read Location|null $location
  */
-#[Fillable(['title', 'slug', 'body', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'created_by'])]
+#[Fillable(['title', 'slug', 'body', 'location_id', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'created_by'])]
 class Story extends Model implements HasMedia
 {
     /** @use HasFactory<StoryFactory> */
@@ -121,6 +123,14 @@ class Story extends Model implements HasMedia
     public function people(): BelongsToMany
     {
         return $this->belongsToMany(Person::class, 'story_person');
+    }
+
+    /**
+     * @return BelongsTo<Location, $this>
+     */
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
     }
 
     public function wikiTitle(): string

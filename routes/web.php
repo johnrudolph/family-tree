@@ -28,6 +28,8 @@ Route::middleware(['auth', 'verified', 'two-factor.enabled'])->group(function ()
 
     Route::livewire('timeline', 'pages::timeline.index')->name('timeline.index');
 
+    Route::livewire('map', 'pages::map.index')->name('map.index');
+
     Route::livewire('admin/invites', 'pages::invites.invite-person')->name('invites.create');
     Route::livewire('admin/members', 'pages::admin.members')->name('admin.members');
 

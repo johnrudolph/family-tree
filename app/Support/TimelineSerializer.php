@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Location;
 use App\Models\Person;
 use App\Models\Story;
 
@@ -30,13 +31,13 @@ class TimelineSerializer
      */
     private static function birthEvents(): array
     {
-        return Person::query()->whereNotNull('dob')->get()->map(fn (Person $person): array => [
+        return Person::query()->whereNotNull('dob')->with('birthLocation')->get()->map(fn (Person $person): array => [
             'type' => 'birth',
             'date' => $person->dob->toDateString(),
             'date_precision' => $person->dob_precision,
             'end_date' => null,
             'end_date_precision' => null,
-            'title' => __(':name is born', ['name' => $person->fullName()]).($person->birth_city ? ' '.__('in :city', ['city' => $person->birth_city]) : ''),
+            'title' => __(':name is born', ['name' => $person->fullName()]).($person->birthLocation ? ' '.__('in :city', ['city' => $person->birthLocation->shortLabel()]) : ''),
             'person_id' => $person->id,
             'story_id' => null,
             'avatar_url' => $person->photoUrl(),
@@ -44,6 +45,7 @@ class TimelineSerializer
             'gallery_urls' => [],
             'body_html' => null,
             'url' => route('people.show', $person),
+            'location' => self::locationPayload($person->birthLocation),
         ])->all();
     }
 
@@ -52,13 +54,13 @@ class TimelineSerializer
      */
     private static function deathEvents(): array
     {
-        return Person::query()->whereNotNull('dod')->get()->map(fn (Person $person): array => [
+        return Person::query()->whereNotNull('dod')->with('deathLocation')->get()->map(fn (Person $person): array => [
             'type' => 'death',
             'date' => $person->dod->toDateString(),
             'date_precision' => 'exact',
             'end_date' => null,
             'end_date_precision' => null,
-            'title' => __(':name dies', ['name' => $person->fullName()]).($person->death_city ? ' '.__('in :city', ['city' => $person->death_city]) : ''),
+            'title' => __(':name dies', ['name' => $person->fullName()]).($person->deathLocation ? ' '.__('in :city', ['city' => $person->deathLocation->shortLabel()]) : ''),
             'person_id' => $person->id,
             'story_id' => null,
             'avatar_url' => $person->photoUrl(),
@@ -66,6 +68,7 @@ class TimelineSerializer
             'gallery_urls' => [],
             'body_html' => null,
             'url' => route('people.show', $person),
+            'location' => self::locationPayload($person->deathLocation),
         ])->all();
     }
 
@@ -74,7 +77,7 @@ class TimelineSerializer
      */
     private static function storyEvents(): array
     {
-        return Story::query()->get()->map(function (Story $story): array {
+        return Story::query()->with('location')->get()->map(function (Story $story): array {
             $featured = $story->featuredImage();
 
             return [
@@ -91,7 +94,25 @@ class TimelineSerializer
                 'gallery_urls' => $story->galleryMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all(),
                 'body_html' => StoryBodyParser::render($story->body ?? ''),
                 'url' => route('stories.show', $story),
+                'location' => self::locationPayload($story->location),
             ];
         })->all();
+    }
+
+    /**
+     * @return array{latitude: float, longitude: float, precision: string, label: string}|null
+     */
+    private static function locationPayload(?Location $location): ?array
+    {
+        if (! $location || ! $location->hasCoordinates()) {
+            return null;
+        }
+
+        return [
+            'latitude' => $location->latitude,
+            'longitude' => $location->longitude,
+            'precision' => $location->precision,
+            'label' => $location->shortLabel(),
+        ];
     }
 }

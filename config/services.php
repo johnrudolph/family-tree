@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'nominatim' => [
+        // Nominatim's usage policy requires a User-Agent that identifies the
+        // app and gives a way to contact its operator — override this in
+        // .env with a real contact (e.g. "Family Tree (you@example.com)").
+        'user_agent' => env('NOMINATIM_USER_AGENT', config('app.name').' ('.config('app.url').')'),
+    ],
+
 ];

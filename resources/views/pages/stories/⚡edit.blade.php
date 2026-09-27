@@ -9,6 +9,7 @@ use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -22,6 +23,8 @@ new #[Title('Edit story')] class extends Component {
     public string $title = '';
 
     public string $body = '';
+
+    public ?int $location_id = null;
 
     public string $start_date_precision = 'exact';
 
@@ -50,6 +53,7 @@ new #[Title('Edit story')] class extends Component {
         $this->story = $story;
         $this->title = $story->title;
         $this->body = $story->body ?? '';
+        $this->location_id = $story->location_id;
         $this->start_date_precision = $story->start_date_precision;
         $this->start_date = $story->start_date_precision === 'exact' ? $story->start_date->toDateString() : null;
         $this->start_year = $story->start_date_precision === 'year' ? $story->start_date->format('Y') : null;
@@ -63,6 +67,12 @@ new #[Title('Edit story')] class extends Component {
     public function people()
     {
         return Person::query()->orderBy('first_name')->get();
+    }
+
+    #[On('location-selected')]
+    public function onLocationSelected(string $field, ?int $locationId): void
+    {
+        $this->location_id = $locationId;
     }
 
     public function featureImage(int $mediaId): void
@@ -86,6 +96,7 @@ new #[Title('Edit story')] class extends Component {
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:70'],
             'body' => ['nullable', 'string', 'max:50000'],
+            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
             'start_date_precision' => ['required', 'in:exact,year'],
             'start_date' => ['required_if:start_date_precision,exact', 'nullable', 'date'],
             'start_year' => ['required_if:start_date_precision,year', 'nullable', 'integer', 'min:1000', 'max:'.$currentYear],
@@ -101,6 +112,7 @@ new #[Title('Edit story')] class extends Component {
         $data = [
             'title' => $validated['title'],
             'body' => RichTextSanitizer::clean($validated['body']),
+            'location_id' => $validated['location_id'],
             'start_date' => $validated['start_date_precision'] === 'year' ? "{$validated['start_year']}-01-01" : $validated['start_date'],
             'start_date_precision' => $validated['start_date_precision'],
             'end_date' => $validated['has_end_date'] ? ($validated['end_date_precision'] === 'year' ? "{$validated['end_year']}-01-01" : $validated['end_date']) : null,
@@ -132,6 +144,8 @@ new #[Title('Edit story')] class extends Component {
         <div wire:ignore x-data x-init="initStoryTagging($el, @js($this->people()->map(fn ($p) => ['id' => $p->id, 'name' => $p->fullName()])))">
             <flux:editor wire:model="body" :label="__('Story')" :description="__('Type [[ to tag a person by name — they\'ll get a link, and this story will show up on their page.')" toolbar="heading | bold italic underline strike | bullet ordered blockquote | link" class="**:data-[slot=content]:min-h-64" />
         </div>
+
+        <livewire:location-picker field="story" :location-id="$location_id" :label="__('Where did this happen?')" wire:key="story-location-picker" />
 
         <flux:separator />
 

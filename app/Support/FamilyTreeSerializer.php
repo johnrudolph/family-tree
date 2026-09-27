@@ -42,7 +42,7 @@ class FamilyTreeSerializer
                 'last name' => $person->use_preferred_name_everywhere && $person->preferred_name
                     ? ''
                     : ($person->last_name ?? ''),
-                'birthday' => $person->dob?->format('Y'),
+                'birthday' => self::lifespanLabel($person),
                 'dob_sort' => $person->dob?->format('Y-m-d'),
                 'avatar' => $person->hasConsented() ? $person->photoUrl() : null,
                 'has_account' => $person->hasAccount(),
@@ -55,6 +55,27 @@ class FamilyTreeSerializer
                 'children' => $childrenOf[$person->id] ?? [],
             ],
         ])->values()->all();
+    }
+
+    /**
+     * The card's second line: birth year alone while living (or death year
+     * unknown), "1954–2020" once both are known, or just "d. 2020" for a
+     * recorded death with no birth year on file.
+     */
+    private static function lifespanLabel(Person $person): ?string
+    {
+        $born = $person->dob?->format('Y');
+        $died = ! $person->is_living ? $person->dod?->format('Y') : null;
+
+        if ($born && $died) {
+            return "{$born}–{$died}";
+        }
+
+        if ($died) {
+            return __('d. :year', ['year' => $died]);
+        }
+
+        return $born;
     }
 
     /**

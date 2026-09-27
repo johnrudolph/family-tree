@@ -101,3 +101,35 @@ test('the tree data flags whether each person has a linked user account', functi
     expect($data[(string) $withAccount->id]['data']['has_account'])->toBeTrue();
     expect($data[(string) $without->id]['data']['has_account'])->toBeFalse();
 });
+
+test('a living person\'s card shows only their birth year', function () {
+    $person = Person::factory()->create(['dob' => '1954-03-03', 'is_living' => true]);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['birthday'])->toBe('1954');
+});
+
+test('a deceased person with both dates known shows a birth–death year range', function () {
+    $person = Person::factory()->create(['dob' => '1954-03-03', 'is_living' => false, 'dod' => '2020-01-15']);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['birthday'])->toBe('1954–2020');
+});
+
+test('a deceased person with only a death year known still shows it', function () {
+    $person = Person::factory()->create(['dob' => null, 'is_living' => false, 'dod' => '2020-01-15']);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['birthday'])->toBe('d. 2020');
+});
+
+test('a deceased person with no death date recorded just shows their birth year', function () {
+    $person = Person::factory()->create(['dob' => '1954-03-03', 'is_living' => false, 'dod' => null]);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['birthday'])->toBe('1954');
+});

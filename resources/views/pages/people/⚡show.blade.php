@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component {
@@ -43,9 +44,13 @@ new class extends Component {
 
     public ?string $relNewDob = null;
 
+    public ?int $relNewBirthLocationId = null;
+
     public bool $relNewIsLiving = true;
 
     public ?string $relNewDod = null;
+
+    public ?int $relNewDeathLocationId = null;
 
     public string $relSpouseStatus = 'married';
 
@@ -57,6 +62,14 @@ new class extends Component {
 
     /** @var array<int, int> parent ids to also link to the new sibling as parent */
     public array $relAlsoSiblingParentIds = [];
+
+    /**
+     * Bumped after every successful "add relationship" submit so the new-
+     * person location pickers (nested Livewire components with their own
+     * internal state) remount fresh instead of keeping a stale selection
+     * chip from the person that was just created.
+     */
+    public int $relNewLocationFormKey = 0;
 
     public ?int $newEditorUserId = null;
 
@@ -247,6 +260,16 @@ new class extends Component {
         $this->{$property} = array_values(array_diff($this->{$property}, [$id]));
     }
 
+    #[On('location-selected')]
+    public function onLocationSelected(string $field, ?int $locationId): void
+    {
+        match ($field) {
+            'relBirth' => $this->relNewBirthLocationId = $locationId,
+            'relDeath' => $this->relNewDeathLocationId = $locationId,
+            default => null,
+        };
+    }
+
     public function addRelationship(): void
     {
         Gate::authorize('update', $this->person);
@@ -259,8 +282,10 @@ new class extends Component {
             'relNewMiddleName' => ['nullable', 'string', 'max:255'],
             'relNewLastName' => ['nullable', 'string', 'max:255'],
             'relNewDob' => ['nullable', 'date'],
+            'relNewBirthLocationId' => ['nullable', 'integer', 'exists:locations,id'],
             'relNewIsLiving' => ['boolean'],
             'relNewDod' => ['nullable', 'date'],
+            'relNewDeathLocationId' => ['nullable', 'integer', 'exists:locations,id'],
             'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced,separated'],
         ]);
 
@@ -275,8 +300,10 @@ new class extends Component {
                         'last_name' => $validated['relNewLastName'] ?: null,
                         'dob' => $validated['relNewDob'] ?: null,
                         'dob_precision' => $validated['relNewDob'] ? 'exact' : 'unknown',
+                        'birth_location_id' => $validated['relNewBirthLocationId'],
                         'is_living' => $validated['relNewIsLiving'],
                         'dod' => $validated['relNewIsLiving'] ? null : ($validated['relNewDod'] ?: null),
+                        'death_location_id' => $validated['relNewIsLiving'] ? null : $validated['relNewDeathLocationId'],
                         'created_by' => Auth::id(),
                     ]);
 
@@ -325,7 +352,8 @@ new class extends Component {
             return;
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewIsLiving', 'relNewDod']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewDob', 'relNewBirthLocationId', 'relNewIsLiving', 'relNewDod', 'relNewDeathLocationId']);
+        $this->relNewLocationFormKey++;
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents, $this->familyTreeData);
         $this->seedAlsoLinkSuggestions();
 
@@ -408,19 +436,19 @@ new class extends Component {
                 {{ $person->is_living ? __('Living') : __('Deceased') }}
                 @if ($person->dob)
                     &middot; {{ __('Born') }} {{ $person->dob->format('F j, Y') }}
-                    @if ($person->birth_city)
-                        {{ __('in') }} {{ $person->birth_city }}
+                    @if ($person->birthLocation)
+                        {{ __('in') }} {{ $person->birthLocation->shortLabel() }}
                     @endif
-                @elseif ($person->birth_city)
-                    &middot; {{ __('Born in') }} {{ $person->birth_city }}
+                @elseif ($person->birthLocation)
+                    &middot; {{ __('Born in') }} {{ $person->birthLocation->shortLabel() }}
                 @endif
                 @if (! $person->is_living && $person->dod)
                     &middot; {{ __('Died') }} {{ $person->dod->format('F j, Y') }}
-                    @if ($person->death_city)
-                        {{ __('in') }} {{ $person->death_city }}
+                    @if ($person->deathLocation)
+                        {{ __('in') }} {{ $person->deathLocation->shortLabel() }}
                     @endif
-                @elseif (! $person->is_living && $person->death_city)
-                    &middot; {{ __('Died in') }} {{ $person->death_city }}
+                @elseif (! $person->is_living && $person->deathLocation)
+                    &middot; {{ __('Died in') }} {{ $person->deathLocation->shortLabel() }}
                 @endif
             </flux:text>
             <div class="mt-1">
@@ -734,9 +762,11 @@ new class extends Component {
                             <flux:input wire:model="relNewMiddleName" :placeholder="__('Middle name')" />
                             <flux:input wire:model="relNewLastName" :placeholder="__('Last name')" />
                             <flux:input wire:model="relNewDob" type="date" :placeholder="__('Date of birth')" />
+                            <livewire:location-picker field="relBirth" :location-id="$relNewBirthLocationId" :label="__('Birth location')" wire:key="rel-birth-location-picker-{{ $relNewLocationFormKey }}" />
                             <flux:checkbox wire:model="relNewIsLiving" :label="__('Living')" />
                             <div x-show="! $wire.relNewIsLiving">
                                 <flux:input wire:model="relNewDod" type="date" :placeholder="__('Date of death')" />
+                                <livewire:location-picker field="relDeath" :location-id="$relNewDeathLocationId" :label="__('Death location')" wire:key="rel-death-location-picker-{{ $relNewLocationFormKey }}" />
                             </div>
                         </div>
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Location;
 use App\Models\Person;
 use App\Models\Relationship;
 use App\Models\Story;
@@ -236,6 +237,30 @@ test('a new person created inline from the tree panel can be marked deceased wit
     $departed = Person::query()->where('first_name', 'Departed')->firstOrFail();
     expect($departed->is_living)->toBeFalse();
     expect($departed->dod?->toDateString())->toBe('2020-03-15');
+});
+
+test('a new person created inline from the tree panel can get a birth and death location right away', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+    $birthLocation = Location::factory()->create();
+    $deathLocation = Location::factory()->create();
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $person->id)
+        ->set('relType', 'child')
+        ->set('relMode', 'new')
+        ->set('relNewFirstName', 'Located')
+        ->set('relNewBirthLocationId', $birthLocation->id)
+        ->set('relNewIsLiving', false)
+        ->set('relNewDeathLocationId', $deathLocation->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $located = Person::query()->where('first_name', 'Located')->firstOrFail();
+    expect($located->birth_location_id)->toBe($birthLocation->id);
+    expect($located->death_location_id)->toBe($deathLocation->id);
 });
 
 test('adding a sibling from the tree panel creates a real, removable relationship shown in the panel', function () {
