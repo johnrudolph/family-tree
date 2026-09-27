@@ -211,14 +211,13 @@ test('a user cannot manage enrichment fields for someone else', function () {
         ->assertForbidden();
 });
 
-test('a person without a linked account shows a no-account badge and explanation', function () {
+test('a person without a linked account shows a no-account badge', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();
 
     Livewire::actingAs($viewer)
         ->test('pages::people.show', ['person' => $person])
-        ->assertSee('No account')
-        ->assertSee('Only the family member themself can add profile pictures and contact information');
+        ->assertSee('No account');
 });
 
 test('a person with a linked account who edits their own page shows account and editor badges', function () {

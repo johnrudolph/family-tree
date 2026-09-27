@@ -551,12 +551,6 @@ new class extends Component {
                 {{ __('Only your name, dob, and relationships are shown by default. You can choose to add a photo, contact info, and social links — nobody else can add these for you.') }}
             </flux:text>
         </div>
-    @elseif (! $this->isSelf && ! $person->hasAccount())
-        <div class="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <flux:text class="text-zinc-600 dark:text-zinc-400">
-                {{ __('Only the family member themself can add profile pictures and contact information — that\'s why it\'s sparse here.') }}
-            </flux:text>
-        </div>
     @endif
 
     <div class="mt-8 flex flex-col gap-8">
