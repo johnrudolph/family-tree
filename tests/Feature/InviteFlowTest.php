@@ -7,24 +7,59 @@ use App\Notifications\PersonInvited;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 
-test('admins can invite a new person by creating them and sending an invite', function () {
+test('admins can invite a living person already on the tree who has no account yet', function () {
     Notification::fake();
 
     $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $person = Person::factory()->create(['first_name' => 'Ada', 'last_name' => 'Lovelace', 'is_living' => true]);
 
     Livewire::actingAs($admin)
         ->test('pages::invites.invite-person')
-        ->set('createNewPerson', true)
-        ->set('first_name', 'Ada')
-        ->set('last_name', 'Lovelace')
+        ->set('existingPersonId', $person->id)
         ->set('email', 'ada@example.com')
         ->call('sendInvite')
         ->assertHasNoErrors();
 
     $invite = Invite::query()->where('email', 'ada@example.com')->firstOrFail();
 
-    expect($invite->person->fullName())->toBe('Ada Lovelace');
+    expect($invite->person_id)->toBe($person->id);
     Notification::assertSentOnDemand(PersonInvited::class);
+});
+
+test('a deceased person is not invitable', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $deceased = Person::factory()->create(['is_living' => false]);
+
+    $ids = Livewire::actingAs($admin)
+        ->test('pages::invites.invite-person')
+        ->instance()
+        ->invitablePeople()
+        ->pluck('id');
+
+    expect($ids)->not->toContain($deceased->id);
+});
+
+test('a person who already has an account is not invitable', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $existingUser = User::factory()->create();
+
+    $ids = Livewire::actingAs($admin)
+        ->test('pages::invites.invite-person')
+        ->instance()
+        ->invitablePeople()
+        ->pluck('id');
+
+    expect($ids)->not->toContain($existingUser->person_id);
+});
+
+test('inviting without selecting a person fails validation', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test('pages::invites.invite-person')
+        ->set('email', 'nobody@example.com')
+        ->call('sendInvite')
+        ->assertHasErrors(['existingPersonId']);
 });
 
 test('non-admins cannot access the invite page', function () {

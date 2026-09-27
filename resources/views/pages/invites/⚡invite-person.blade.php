@@ -3,7 +3,6 @@
 use App\Models\Invite;
 use App\Models\Person;
 use App\Notifications\PersonInvited;
-use App\Services\PageEditorService;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -13,13 +12,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Invite a member')] class extends Component {
-    public bool $createNewPerson = true;
-
     public ?int $existingPersonId = null;
-
-    public string $first_name = '';
-
-    public string $last_name = '';
 
     public string $email = '';
 
@@ -28,10 +21,16 @@ new #[Title('Invite a member')] class extends Component {
         abort_unless(Auth::user()->is_admin, 403);
     }
 
+    /**
+     * Only living people with no linked account yet — you can't have an
+     * account before you exist on the tree, and someone already accounted
+     * for doesn't need a second invite.
+     */
     #[Computed]
     public function invitablePeople()
     {
         return Person::query()
+            ->where('is_living', true)
             ->whereDoesntHave('user')
             ->orderBy('first_name')
             ->get();
@@ -52,25 +51,13 @@ new #[Title('Invite a member')] class extends Component {
         abort_unless(Auth::user()->is_admin, 403);
 
         $validated = $this->validate([
+            'existingPersonId' => ['required', 'exists:people,id'],
             'email' => ['required', 'email'],
-            'createNewPerson' => ['boolean'],
-            'first_name' => ['required_if:createNewPerson,true', 'nullable', 'string', 'max:255'],
-            'last_name' => ['nullable', 'string', 'max:255'],
-            'existingPersonId' => ['required_if:createNewPerson,false', 'nullable', 'exists:people,id'],
         ]);
 
-        if ($this->createNewPerson) {
-            $person = Person::create([
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'] ?: null,
-                'is_living' => true,
-                'created_by' => Auth::id(),
-            ]);
-
-            app(PageEditorService::class)->grantOwner($person, Auth::user());
-        } else {
-            $person = Person::findOrFail($validated['existingPersonId']);
-        }
+        $person = Person::findOrFail($validated['existingPersonId']);
+        abort_if($person->hasAccount(), 422);
+        abort_unless($person->is_living, 422);
 
         $invite = Invite::create([
             'person_id' => $person->id,
@@ -82,7 +69,7 @@ new #[Title('Invite a member')] class extends Component {
 
         Notification::route('mail', $invite->email)->notify(new PersonInvited($invite));
 
-        $this->reset(['first_name', 'last_name', 'email', 'existingPersonId']);
+        $this->reset(['existingPersonId', 'email']);
         unset($this->invitablePeople, $this->pendingInvites);
 
         Flux::toast(variant: 'success', text: "Invite sent to {$invite->email}.");
@@ -91,25 +78,14 @@ new #[Title('Invite a member')] class extends Component {
 
 <section class="w-full">
     <flux:heading level="1">{{ __('Invite a family member') }}</flux:heading>
-    <flux:subheading>{{ __('Every account is tied to a specific person on the tree — invite them by name, not by email alone.') }}</flux:subheading>
+    <flux:subheading>{{ __('Every account is tied to a specific person already on the tree — pick who you\'re inviting, then send it to their email.') }}</flux:subheading>
 
     <form wire:submit="sendInvite" class="my-6 flex max-w-lg flex-col gap-6">
-        <flux:radio.group wire:model="createNewPerson" label="{{ __('Who are you inviting?') }}">
-            <flux:radio value="1" label="{{ __('A new person, not yet on the tree') }}" />
-            <flux:radio value="" label="{{ __('An existing person who doesn\'t have an account yet') }}" />
-        </flux:radio.group>
-
-        <div x-show="$wire.createNewPerson">
-            <flux:input wire:model="first_name" :label="__('First name')" required />
-            <flux:input wire:model="last_name" :label="__('Last name')" />
-        </div>
-        <div x-show="! $wire.createNewPerson">
-            <flux:select variant="combobox" wire:model="existingPersonId" :label="__('Person')" :placeholder="__('Search people…')" clearable>
-                @foreach ($this->invitablePeople as $person)
-                    <flux:select.option value="{{ $person->id }}">{{ $person->fullName() }}</flux:select.option>
-                @endforeach
-            </flux:select>
-        </div>
+        <flux:select variant="combobox" wire:model="existingPersonId" :label="__('Person')" :placeholder="__('Search people…')" clearable>
+            @foreach ($this->invitablePeople as $person)
+                <flux:select.option value="{{ $person->id }}">{{ $person->fullName() }}</flux:select.option>
+            @endforeach
+        </flux:select>
 
         <flux:input wire:model="email" type="email" :label="__('Their email address')" required />
 
