@@ -182,7 +182,7 @@ new #[Title('Manage relationships')] class extends Component {
             'new_dob' => ['nullable', 'date'],
             'new_is_living' => ['boolean'],
             'new_dod' => ['nullable', 'date'],
-            'spouseStatus' => ['required_if:type,spouse', 'in:married,divorced,separated'],
+            'spouseStatus' => ['required_if:type,spouse', 'in:married,divorced'],
         ]);
 
         $relationships = app(RelationshipService::class);
@@ -317,7 +317,6 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:select wire:model="spouseStatus" :label="__('Status')">
                 <flux:select.option value="married">{{ __('Married') }}</flux:select.option>
                 <flux:select.option value="divorced">{{ __('Divorced') }}</flux:select.option>
-                <flux:select.option value="separated">{{ __('Separated') }}</flux:select.option>
             </flux:select>
 
             <x-relationship-pills

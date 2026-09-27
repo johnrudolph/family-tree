@@ -62,8 +62,25 @@
     --female-color: #4a2f34;
 }
 
+/* family-chart hardcodes every connecting line (parent/child and spouse)
+   to a white stroke, which vanishes on this app's light page background —
+   with no visible line at all, two spouses positioned side by side (e.g.
+   an ex and a current spouse of the same person) can misread as connected
+   to each other instead of each connecting to the person between them.
+   Give both themes a stroke that's actually visible. */
+.f3 .links_view .link {
+    stroke: var(--color-zinc-400, #a3a3a3) !important;
+}
+
 .dark .f3 .links_view .link {
     stroke: var(--color-zinc-500, #71717a) !important;
+}
+
+/* Divorced spouses still need a connecting line (it explains the
+   relationship, and children still hang off it), but a solid line reads
+   as a current marriage — dash it so the distinction is visible at a glance. */
+.f3 .links_view .link.f3-divorced {
+    stroke-dasharray: 6 4;
 }
 
 @theme {

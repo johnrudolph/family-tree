@@ -31,6 +31,21 @@ test('the serializer produces family-chart compatible parent/child/spouse rels',
     expect($data[(string) $spouse->id]['rels']['spouses'])->toBe([(string) $parent->id]);
 });
 
+test('a divorced spouse is flagged on both sides so the tree can draw a dashed line', function () {
+    $person = Person::factory()->create();
+    $ex = Person::factory()->create();
+    $current = Person::factory()->create();
+
+    Relationship::factory()->create(['person_a_id' => $person->id, 'person_b_id' => $ex->id, 'status' => 'divorced']);
+    Relationship::factory()->create(['person_a_id' => $person->id, 'person_b_id' => $current->id, 'status' => 'married']);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['divorced_spouse_ids'])->toBe([(string) $ex->id]);
+    expect($data[(string) $ex->id]['data']['divorced_spouse_ids'])->toBe([(string) $person->id]);
+    expect($data[(string) $current->id]['data']['divorced_spouse_ids'])->toBe([]);
+});
+
 test('the tree shows a goes-by name only when the use-everywhere toggle is on', function () {
     $withToggle = Person::factory()->create(['first_name' => 'Jonathan', 'last_name' => 'Smith', 'preferred_name' => 'Johnny', 'use_preferred_name_everywhere' => true]);
     $without = Person::factory()->create(['first_name' => 'Robert', 'last_name' => 'Jones', 'preferred_name' => 'Bob']);

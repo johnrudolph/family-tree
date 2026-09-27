@@ -22,14 +22,20 @@ class FamilyTreeSerializer
         $parentsOf = [];
         $childrenOf = [];
         $spousesOf = [];
+        $divorcedSpousesOf = [];
 
-        Relationship::query()->get()->each(function (Relationship $relationship) use (&$parentsOf, &$childrenOf, &$spousesOf) {
+        Relationship::query()->get()->each(function (Relationship $relationship) use (&$parentsOf, &$childrenOf, &$spousesOf, &$divorcedSpousesOf) {
             if ($relationship->type === 'parent_child') {
                 $parentsOf[$relationship->person_b_id][] = (string) $relationship->person_a_id;
                 $childrenOf[$relationship->person_a_id][] = (string) $relationship->person_b_id;
             } elseif ($relationship->type === 'spouse') {
                 $spousesOf[$relationship->person_a_id][] = (string) $relationship->person_b_id;
                 $spousesOf[$relationship->person_b_id][] = (string) $relationship->person_a_id;
+
+                if ($relationship->status === 'divorced') {
+                    $divorcedSpousesOf[$relationship->person_a_id][] = (string) $relationship->person_b_id;
+                    $divorcedSpousesOf[$relationship->person_b_id][] = (string) $relationship->person_a_id;
+                }
             }
         });
 
@@ -48,6 +54,7 @@ class FamilyTreeSerializer
                 'has_account' => $person->hasAccount(),
                 'url' => $person->wikiShowUrl(),
                 'living' => $person->is_living,
+                'divorced_spouse_ids' => $divorcedSpousesOf[$person->id] ?? [],
             ],
             'rels' => [
                 'parents' => $parentsOf[$person->id] ?? [],

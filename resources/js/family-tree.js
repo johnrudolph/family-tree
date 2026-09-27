@@ -3,6 +3,25 @@ import { select } from 'd3';
 import 'family-chart/styles/family-chart.css';
 
 let chart = null;
+let chartContainer = null;
+
+/**
+ * family-chart draws every spouse connector as a plain solid line — dash the
+ * ones between a divorced pair so a past marriage doesn't read as a current
+ * one. Re-run after every updateTree(): class toggling is cheap, and this
+ * is simpler than trying to hook into family-chart's own link-drawing code.
+ */
+function applyDivorcedLineStyling(container) {
+    if (!container) return;
+
+    container.querySelectorAll('.links_view path.link').forEach((el) => {
+        const d = el.__data__;
+        if (!d?.spouse) return;
+
+        const divorcedIds = d.source?.data?.data?.divorced_spouse_ids ?? [];
+        el.classList.toggle('f3-divorced', divorcedIds.includes(d.target?.data?.id));
+    });
+}
 
 /**
  * Mount an interactive family tree into `container`. Clicking a card
@@ -65,8 +84,11 @@ export function initFamilyTree(container, data, { mainId } = {}) {
     });
 
     chart.updateTree({ initial: true });
+    applyDivorcedLineStyling(container);
 
     setupTrackpadPanning(container);
+
+    chartContainer = container;
 
     return chart;
 }
@@ -105,6 +127,7 @@ export function initPersonFamilyWidget(container, data, mainId) {
     });
 
     widget.updateTree({ initial: true });
+    applyDivorcedLineStyling(container);
 
     setupTrackpadPanning(container);
 
@@ -122,6 +145,7 @@ export function updatePersonFamilyWidget(container, data) {
 
     widget.updateData(data);
     widget.updateTree();
+    applyDivorcedLineStyling(container);
 }
 
 /**
@@ -186,6 +210,7 @@ export function familyTreeCenterOn(id) {
     if (!chart) return;
     chart.updateMainId(String(id));
     chart.updateTree({ tree_position: 'main_to_middle' });
+    applyDivorcedLineStyling(chartContainer);
 }
 
 /** Refresh the tree's underlying data, e.g. after adding a relationship from the panel. */
@@ -193,6 +218,7 @@ export function familyTreeUpdateData(data) {
     if (!chart) return;
     chart.updateData(data);
     chart.updateTree();
+    applyDivorcedLineStyling(chartContainer);
 }
 
 window.initFamilyTree = initFamilyTree;

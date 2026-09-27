@@ -286,7 +286,7 @@ new class extends Component {
             'relNewIsLiving' => ['boolean'],
             'relNewDod' => ['nullable', 'date'],
             'relNewDeathLocationId' => ['nullable', 'integer', 'exists:locations,id'],
-            'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced,separated'],
+            'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced'],
         ]);
 
         $relationships = app(RelationshipService::class);
@@ -701,7 +701,6 @@ new class extends Component {
                             <flux:select wire:model="relSpouseStatus">
                                 <flux:select.option value="married">{{ __('Married') }}</flux:select.option>
                                 <flux:select.option value="divorced">{{ __('Divorced') }}</flux:select.option>
-                                <flux:select.option value="separated">{{ __('Separated') }}</flux:select.option>
                             </flux:select>
 
                             <x-relationship-pills

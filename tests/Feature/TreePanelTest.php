@@ -263,6 +263,35 @@ test('a new person created inline from the tree panel can get a birth and death 
     expect($located->death_location_id)->toBe($deathLocation->id);
 });
 
+test('a spouse can be added as divorced, and "separated" is no longer a valid status', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $me = Person::factory()->create();
+    $ex = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($me, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $me->id)
+        ->set('relType', 'spouse')
+        ->set('relMode', 'existing')
+        ->set('relExistingPersonId', $ex->id)
+        ->set('relSpouseStatus', 'divorced')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    expect(Relationship::query()->where('type', 'spouse')->first()->status)->toBe('divorced');
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $me->id)
+        ->set('relType', 'spouse')
+        ->set('relMode', 'existing')
+        ->set('relExistingPersonId', $ex->id)
+        ->set('relSpouseStatus', 'separated')
+        ->call('addRelationship')
+        ->assertHasErrors(['relSpouseStatus']);
+});
+
 test('adding a sibling from the tree panel creates a real, removable relationship shown in the panel', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $me = Person::factory()->create();
