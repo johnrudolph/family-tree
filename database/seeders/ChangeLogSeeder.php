@@ -71,6 +71,8 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-28 18:50:00', 'Fixed the sidebar not reaching the bottom of the page on short pages.'],
             ['2026-09-28 18:55:00', 'Put the dashboard\'s activity, stories, and members lists into cards.'],
             ['2026-09-28 19:00:00', 'Redesigned the Stories page as a full-width grid showing each story\'s photo, date, and location.'],
+            ['2026-09-28 19:10:00', 'Fixed the family tree\'s "Fit to view" button not working and sitting outside the tree.'],
+            ['2026-09-28 19:14:00', 'The birthday and "on this day" banner now only shows on the dashboard, not every page.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

@@ -102,6 +102,8 @@ new #[Title('Dashboard')] class extends Component {
 }; ?>
 
 <div class="flex w-full flex-col gap-8">
+    <livewire:pages::on-this-day-banner />
+
     <div class="flex items-center gap-4">
         @if ($this->me)
             <x-person-avatar :person="$this->me" size="xl" />

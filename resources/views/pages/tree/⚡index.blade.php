@@ -435,14 +435,15 @@ new #[Title('Family Tree')] class extends Component {
         class="isolate relative h-[60vh] w-full rounded-lg border border-zinc-200 dark:border-zinc-700 lg:h-full lg:min-w-0 lg:flex-1"
         x-init="initFamilyTree($refs.chart, @js($this->treeData), { mainId: @js($this->mainId) })"
     >
-        <flux:button
-            x-on:click="window.familyTreeFitToView()"
-            size="sm"
-            icon="arrows-pointing-out"
-            class="absolute top-3 right-3 z-10"
-        >
-            {{ __('Fit to view') }}
-        </flux:button>
+        <div class="absolute top-3 right-3 z-10">
+            <flux:button
+                x-on:click="window.familyTreeFitToView()"
+                size="sm"
+                icon="arrows-pointing-out"
+            >
+                {{ __('Fit to view') }}
+            </flux:button>
+        </div>
 
         <div x-ref="chart" class="h-full w-full" id="family-tree-chart"></div>
     </div>

@@ -87,8 +87,8 @@ new class extends Component {
 
 <div>
     @if ($this->hasAnything)
-        <div class="border-b border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-900 dark:bg-amber-950">
-            <div class="mx-auto flex max-w-3xl flex-col items-center gap-1 text-center">
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950">
+            <div class="flex flex-col items-center gap-1 text-center">
                 @if ($this->livingBirthdays->isNotEmpty())
                     <flux:text class="text-amber-900 dark:text-amber-200">
                         🎂

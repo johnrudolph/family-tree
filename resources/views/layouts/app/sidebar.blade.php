@@ -4,18 +4,6 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        {{--
-            The banner lives outside the sidebar/header/main trio below so it
-            can span the full page width at every screen size. Flux turns
-            whichever element directly wraps <flux:main> into the app's grid
-            container (sidebar/header/main as named grid areas) — if the
-            banner were inside that wrapper, it would only ever be as wide as
-            the "main" column (or worse, get auto-placed into whatever grid
-            cell the responsive layout leaves open, which is what broke it at
-            the mobile breakpoint once the sidebar's column freed up there).
-        --}}
-        <livewire:pages::on-this-day-banner />
-
         <div class="min-h-dvh">
         <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
