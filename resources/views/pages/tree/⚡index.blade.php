@@ -104,12 +104,11 @@ new #[Title('Family Tree')] class extends Component {
             return $this->requestedPersonId;
         }
 
-        // Otherwise, default to the widest possible view rather than one
-        // scoped tightly around the viewer's own lineage — family-chart only
-        // ever renders what's reachable from one main_id, so this picks the
-        // root of the largest connected family group in the whole dataset
-        // (not necessarily the viewer's own) to show as much as one chart can.
-        return FamilyTreeSerializer::widestRootPersonId();
+        // Otherwise, center on the viewer themself — everyone on the tree
+        // has a linked person. Fall back to the widest connected family
+        // group only for a viewer with no linked person (e.g. an admin
+        // account created before they joined the tree).
+        return Auth::user()->person_id ?? FamilyTreeSerializer::widestRootPersonId();
     }
 
     /**
@@ -433,9 +432,18 @@ new #[Title('Family Tree')] class extends Component {
 >
     <div
         wire:ignore
-        class="min-w-0 flex-1 rounded-lg border border-zinc-200 dark:border-zinc-700"
+        class="relative min-w-0 flex-1 rounded-lg border border-zinc-200 dark:border-zinc-700"
         x-init="initFamilyTree($refs.chart, @js($this->treeData), { mainId: @js($this->mainId) })"
     >
+        <flux:button
+            x-on:click="window.familyTreeFitToView()"
+            size="sm"
+            icon="arrows-pointing-out"
+            class="absolute top-3 right-3 z-10"
+        >
+            {{ __('Fit to view') }}
+        </flux:button>
+
         <div x-ref="chart" class="h-full w-full" id="family-tree-chart"></div>
     </div>
 

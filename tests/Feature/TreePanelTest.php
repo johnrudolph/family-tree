@@ -69,7 +69,7 @@ test('an invalid person query param is ignored, falling back to the viewer', fun
         ->assertSet('selectedPersonId', $viewer->person->id);
 });
 
-test('the tree defaults to centering on the root ancestor of the viewer\'s branch', function () {
+test('the tree defaults to centering on the viewer themself, even when they have recorded ancestors', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $grandparent = Person::factory()->create();
     $parent = Person::factory()->create();
@@ -78,7 +78,7 @@ test('the tree defaults to centering on the root ancestor of the viewer\'s branc
 
     $mainId = Livewire::actingAs($viewer)->test('pages::tree.index')->instance()->mainId();
 
-    expect($mainId)->toBe($grandparent->id);
+    expect($mainId)->toBe($viewer->person->id);
 });
 
 test('the tree centers on the viewer themself when they have no recorded parents', function () {
@@ -89,7 +89,7 @@ test('the tree centers on the viewer themself when they have no recorded parents
     expect($mainId)->toBe($viewer->person->id);
 });
 
-test('the tree defaults to the widest connected family group, even if it isn\'t the viewer\'s own branch', function () {
+test('the tree centers on the viewer even when a larger unrelated family group exists', function () {
     $viewer = User::factory()->withTwoFactor()->create();
 
     // A much larger, unrelated family group the viewer isn't part of.
@@ -102,6 +102,19 @@ test('the tree defaults to the widest connected family group, even if it isn\'t 
     Relationship::factory()->parentChild()->create(['person_a_id' => $bigChild1->id, 'person_b_id' => $bigGrandchild->id]);
 
     $mainId = Livewire::actingAs($viewer)->test('pages::tree.index')->instance()->mainId();
+
+    expect($mainId)->toBe($viewer->person->id);
+});
+
+test('the tree falls back to the widest connected family group for a viewer with no linked person', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $admin->update(['person_id' => null]);
+
+    $bigRoot = Person::factory()->create();
+    $bigChild = Person::factory()->create();
+    Relationship::factory()->parentChild()->create(['person_a_id' => $bigRoot->id, 'person_b_id' => $bigChild->id]);
+
+    $mainId = Livewire::actingAs($admin)->test('pages::tree.index')->instance()->mainId();
 
     expect($mainId)->toBe($bigRoot->id);
 });

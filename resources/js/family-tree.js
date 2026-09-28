@@ -87,6 +87,7 @@ export function initFamilyTree(container, data, { mainId } = {}) {
     applyDivorcedLineStyling(container);
 
     setupTrackpadPanning(container);
+    clampZoomExtent(container);
 
     chartContainer = container;
 
@@ -130,6 +131,7 @@ export function initPersonFamilyWidget(container, data, mainId) {
     applyDivorcedLineStyling(container);
 
     setupTrackpadPanning(container);
+    clampZoomExtent(container);
 
     // Stashed on the element so a later relationship change can refresh this
     // exact instance — see updatePersonFamilyWidget().
@@ -162,6 +164,19 @@ function configureCardAppearance(chartInstance) {
         .setOnCardUpdate(function (d) {
             this.querySelector('.card-inner')?.classList.toggle('has-account', !!d.data.data.has_account);
         });
+}
+
+/**
+ * family-chart's zoom has no lower bound by default — a handful of
+ * trackpad pinch ticks can scale the tree down past visibility (each tick
+ * multiplies, not adds, so it compounds fast), making the whole chart
+ * disappear with no indication anything is still there. Floor it well
+ * below any realistic "fit the whole tree" scale (see familyTreeFitToView)
+ * so zooming out always leaves *something* on screen to zoom back in on.
+ */
+function clampZoomExtent(container) {
+    const zoom = container.querySelector('#f3Canvas')?.__zoomObj;
+    zoom?.scaleExtent([0.02, 8]);
 }
 
 /**
@@ -213,6 +228,19 @@ export function familyTreeCenterOn(id) {
     applyDivorcedLineStyling(chartContainer);
 }
 
+/**
+ * Zoom/pan so every currently-loaded ancestor and descendant — the whole
+ * lineage reachable from whoever's selected, not just their immediate
+ * family — fits on screen at once. Selecting a card zooms in tight around
+ * them (familyTreeCenterOn); this is the escape hatch back out to "show me
+ * everything that's loaded" without having to hunt for it by hand.
+ */
+export function familyTreeFitToView() {
+    if (!chart) return;
+    chart.updateTree({ tree_position: 'fit' });
+    applyDivorcedLineStyling(chartContainer);
+}
+
 /** Refresh the tree's underlying data, e.g. after adding a relationship from the panel. */
 export function familyTreeUpdateData(data) {
     if (!chart) return;
@@ -223,6 +251,7 @@ export function familyTreeUpdateData(data) {
 
 window.initFamilyTree = initFamilyTree;
 window.familyTreeCenterOn = familyTreeCenterOn;
+window.familyTreeFitToView = familyTreeFitToView;
 window.familyTreeUpdateData = familyTreeUpdateData;
 window.initPersonFamilyWidget = initPersonFamilyWidget;
 window.updatePersonFamilyWidget = updatePersonFamilyWidget;
