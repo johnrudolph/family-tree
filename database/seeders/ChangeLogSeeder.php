@@ -67,6 +67,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-28 17:00:00', 'Cleaned up the family tree, timeline, map, and person pages on mobile.'],
             ['2026-09-28 17:48:09', 'Added this Change Log page.'],
             ['2026-09-28 19:00:00', 'The manage admins page now groups people into super admins, admins, and everyone else.'],
+            ['2026-09-28 20:00:00', 'Redesigned the dashboard with recent activity, recently added stories, recently joined members, and prompts to finish your own profile.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {
