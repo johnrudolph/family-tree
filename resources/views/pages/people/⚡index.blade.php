@@ -100,9 +100,9 @@ new #[Title('People')] class extends Component {
                 <x-person-avatar :person="$person" />
                 <div class="min-w-0">
                     <flux:text class="truncate font-medium text-zinc-800 dark:text-zinc-100">{{ $person->fullName() }}</flux:text>
-                    <flux:text class="text-xs text-zinc-500">
-                        {{ $person->is_living ? __('Living') : __('Deceased') }}
-                    </flux:text>
+                    @if (! $person->is_living)
+                        <flux:badge size="sm" color="zinc">{{ __('Deceased') }}</flux:badge>
+                    @endif
                 </div>
             </a>
         @endforeach

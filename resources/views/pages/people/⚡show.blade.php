@@ -26,12 +26,6 @@ new class extends Component {
     #[Locked]
     public Person $person;
 
-    public bool $showEditors = false;
-
-    public bool $showHistory = false;
-
-    public bool $showManageRelationships = false;
-
     public string $relType = 'parent';
 
     public string $relMode = 'existing';
@@ -492,31 +486,31 @@ new class extends Component {
 }; ?>
 
 <section class="w-full max-w-3xl">
-    <div class="flex items-start gap-4">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
         <x-person-avatar :person="$person" size="xl" />
 
         <div class="min-w-0 flex-1">
             <flux:heading level="1">{{ $person->fullName() }}</flux:heading>
             @if ($this->relationshipToViewer)
-                <flux:text class="text-xs text-zinc-400 dark:text-zinc-500">{{ ucfirst($this->relationshipToViewer) }}</flux:text>
+                <flux:text class="block text-xs break-words text-zinc-400 dark:text-zinc-500">{{ ucfirst($this->relationshipToViewer) }}</flux:text>
             @endif
+            @php($bornShown = $person->dob || $person->birthLocation)
             <flux:text class="text-zinc-500">
-                {{ $person->is_living ? __('Living') : __('Deceased') }}
                 @if ($person->dob)
-                    &middot; {{ __('Born') }} {{ $person->dobLabel() }}
+                    {{ __('Born') }} {{ $person->dobLabel() }}
                     @if ($person->birthLocation)
                         {{ __('in') }} {{ $person->birthLocation->shortLabel() }}
                     @endif
                 @elseif ($person->birthLocation)
-                    &middot; {{ __('Born in') }} {{ $person->birthLocation->shortLabel() }}
+                    {{ __('Born in') }} {{ $person->birthLocation->shortLabel() }}
                 @endif
                 @if (! $person->is_living && $person->dod)
-                    &middot; {{ __('Died') }} {{ $person->dodLabel() }}
+                    {{ $bornShown ? '· ' : '' }}{{ __('Died') }} {{ $person->dodLabel() }}
                     @if ($person->deathLocation)
                         {{ __('in') }} {{ $person->deathLocation->shortLabel() }}
                     @endif
                 @elseif (! $person->is_living && $person->deathLocation)
-                    &middot; {{ __('Died in') }} {{ $person->deathLocation->shortLabel() }}
+                    {{ $bornShown ? '· ' : '' }}{{ __('Died in') }} {{ $person->deathLocation->shortLabel() }}
                 @endif
             </flux:text>
             <div class="mt-1">
@@ -524,7 +518,7 @@ new class extends Component {
             </div>
         </div>
 
-        <div class="flex flex-wrap justify-end gap-2">
+        <div class="flex flex-wrap gap-2 sm:justify-end">
             @if ($this->isSelf && ! $person->hasConsented())
                 <flux:button :href="route('people.enrich', $person)" wire:navigate size="sm" variant="primary">
                     {{ __('Add my details') }}
@@ -651,98 +645,83 @@ new class extends Component {
                 </flux:modal.trigger>
             @endif
 
-            <button type="button" wire:click="$toggle('showManageRelationships')" class="mt-3 flex w-full items-center justify-between text-left">
-                <flux:heading level="2" size="sm">{{ __('Manage relationships') }}</flux:heading>
-                <flux:icon.chevron-down class="size-4 text-zinc-400 {{ $showManageRelationships ? 'rotate-180' : '' }}" />
-            </button>
+            <flux:heading level="2" size="sm" class="mt-3">{{ __('Manage relationships') }}</flux:heading>
 
-            @if ($showManageRelationships)
-                <div class="mt-2 space-y-2">
-                    @forelse ($this->relationshipRows as $row)
-                        <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-2 dark:border-zinc-700" wire:key="rel-{{ $row['id'] }}">
-                            <div class="flex min-w-0 items-center gap-2">
-                                <flux:badge size="sm">{{ $row['label'] }}</flux:badge>
-                                <a href="{{ route('people.show', $row['other']) }}" wire:navigate class="truncate text-sm hover:underline">
-                                    {{ $row['other']->fullName() }}
-                                </a>
-                            </div>
-                            @if ($this->canEdit)
-                                <flux:button wire:click="removeRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="x-mark" />
-                            @endif
+            <div class="mt-2 space-y-2">
+                @forelse ($this->relationshipRows as $row)
+                    <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-2 dark:border-zinc-700" wire:key="rel-{{ $row['id'] }}">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <flux:badge size="sm">{{ $row['label'] }}</flux:badge>
+                            <a href="{{ route('people.show', $row['other']) }}" wire:navigate class="truncate text-sm hover:underline">
+                                {{ $row['other']->fullName() }}
+                            </a>
                         </div>
-                    @empty
-                        <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
-                    @endforelse
+                        @if ($this->canEdit)
+                            <flux:button wire:click="removeRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="x-mark" />
+                        @endif
+                    </div>
+                @empty
+                    <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
+                @endforelse
 
-                    @foreach ($this->derivedOnlySiblings as $sibling)
-                        <div class="flex items-center justify-between rounded-lg border border-dashed border-zinc-300 p-2 dark:border-zinc-600" wire:key="sibling-{{ $sibling->id }}">
-                            <div class="flex min-w-0 items-center gap-2">
-                                <flux:badge size="sm">{{ __('Sibling') }}</flux:badge>
-                                <a href="{{ route('people.show', $sibling) }}" wire:navigate class="truncate text-sm hover:underline">{{ $sibling->fullName() }}</a>
-                            </div>
-                            <flux:text class="shrink-0 text-xs text-zinc-500">{{ __('via shared parent') }}</flux:text>
+                @foreach ($this->derivedOnlySiblings as $sibling)
+                    <div class="flex items-center justify-between rounded-lg border border-dashed border-zinc-300 p-2 dark:border-zinc-600" wire:key="sibling-{{ $sibling->id }}">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <flux:badge size="sm">{{ __('Sibling') }}</flux:badge>
+                            <a href="{{ route('people.show', $sibling) }}" wire:navigate class="truncate text-sm hover:underline">{{ $sibling->fullName() }}</a>
                         </div>
-                    @endforeach
-                </div>
-            @endif
+                        <flux:text class="shrink-0 text-xs text-zinc-500">{{ __('via shared parent') }}</flux:text>
+                    </div>
+                @endforeach
+            </div>
         </div>
 
         @if ($this->canEdit)
             <div>
-                <button type="button" wire:click="$toggle('showEditors')" class="flex w-full items-center justify-between text-left">
-                    <flux:heading level="2">{{ __('Editors') }} ({{ $this->editors->count() }})</flux:heading>
-                    <flux:icon.chevron-down class="size-4 text-zinc-400 {{ $showEditors ? 'rotate-180' : '' }}" />
-                </button>
+                <flux:heading level="2">{{ __('Editors') }} ({{ $this->editors->count() }})</flux:heading>
 
-                @if ($showEditors)
-                    <div class="mt-3 space-y-2">
-                        @foreach ($this->editors as $editor)
-                            <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" wire:key="editor-{{ $editor->id }}">
-                                <div>
-                                    <flux:text>{{ $editor->user->name }}</flux:text>
-                                    <flux:text class="text-xs text-zinc-500">{{ $editor->role === 'owner' ? __('Owner') : __('Co-editor') }}</flux:text>
-                                </div>
-                                <flux:button wire:click="removeEditor({{ $editor->user_id }})" size="sm" variant="ghost" icon="x-mark" />
+                <div class="mt-3 space-y-2">
+                    @foreach ($this->editors as $editor)
+                        <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" wire:key="editor-{{ $editor->id }}">
+                            <div>
+                                <flux:text>{{ $editor->user->name }}</flux:text>
+                                <flux:text class="text-xs text-zinc-500">{{ $editor->role === 'owner' ? __('Owner') : __('Co-editor') }}</flux:text>
                             </div>
-                        @endforeach
-                    </div>
+                            <flux:button wire:click="removeEditor({{ $editor->user_id }})" size="sm" variant="ghost" icon="x-mark" />
+                        </div>
+                    @endforeach
+                </div>
 
-                    <form wire:submit="addEditor" class="mt-3 flex items-end gap-2">
-                        <flux:select variant="combobox" wire:model="newEditorUserId" :label="__('Add a co-editor')" :placeholder="__('Search members…')" clearable class="flex-1">
-                            @foreach ($this->candidateUsers as $candidate)
-                                <flux:select.option value="{{ $candidate->id }}">{{ $candidate->name }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-                        <flux:button type="submit" size="sm">{{ __('Add') }}</flux:button>
-                    </form>
-                @endif
+                <form wire:submit="addEditor" class="mt-3 flex items-end gap-2">
+                    <flux:select variant="combobox" wire:model="newEditorUserId" :label="__('Add a co-editor')" :placeholder="__('Search members…')" clearable class="flex-1">
+                        @foreach ($this->candidateUsers as $candidate)
+                            <flux:select.option value="{{ $candidate->id }}">{{ $candidate->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:button type="submit" size="sm">{{ __('Add') }}</flux:button>
+                </form>
             </div>
 
             <div>
-                <button type="button" wire:click="$toggle('showHistory')" class="flex w-full items-center justify-between text-left">
-                    <flux:heading level="2">{{ __('History') }}</flux:heading>
-                    <flux:icon.chevron-down class="size-4 text-zinc-400 {{ $showHistory ? 'rotate-180' : '' }}" />
-                </button>
+                <flux:heading level="2">{{ __('History') }}</flux:heading>
 
-                @if ($showHistory)
-                    <div class="mt-3 space-y-2">
-                        @forelse ($person->revisions as $revision)
-                            <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" wire:key="revision-{{ $revision->id }}">
-                                <div>
-                                    <flux:text>{{ $revision->user->name }}</flux:text>
-                                    <flux:text class="text-xs text-zinc-500">{{ $revision->created_at->format('F j, Y g:ia') }}</flux:text>
-                                </div>
-                                @if (! $loop->first)
-                                    <flux:button wire:click="rollback({{ $revision->id }})" size="sm">{{ __('Roll back to this version') }}</flux:button>
-                                @else
-                                    <flux:badge>{{ __('Current') }}</flux:badge>
-                                @endif
+                <div class="mt-3 space-y-2">
+                    @forelse ($person->revisions as $revision)
+                        <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-3 dark:border-zinc-700" wire:key="revision-{{ $revision->id }}">
+                            <div>
+                                <flux:text>{{ $revision->user->name }}</flux:text>
+                                <flux:text class="text-xs text-zinc-500">{{ $revision->created_at->format('F j, Y g:ia') }}</flux:text>
                             </div>
-                        @empty
-                            <flux:text class="text-zinc-500">{{ __('No revisions yet.') }}</flux:text>
-                        @endforelse
-                    </div>
-                @endif
+                            @if (! $loop->first)
+                                <flux:button wire:click="rollback({{ $revision->id }})" size="sm">{{ __('Roll back to this version') }}</flux:button>
+                            @else
+                                <flux:badge>{{ __('Current') }}</flux:badge>
+                            @endif
+                        </div>
+                    @empty
+                        <flux:text class="text-zinc-500">{{ __('No revisions yet.') }}</flux:text>
+                    @endforelse
+                </div>
             </div>
         @endif
     </div>

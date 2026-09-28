@@ -56,14 +56,14 @@ new #[Title('Timeline')] class extends Component {
 }; ?>
 
 <section class="flex w-full flex-col">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <flux:heading level="1">{{ __('Timeline') }}</flux:heading>
 
-        <div class="flex items-center gap-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             @include('partials.direct-relatives-toggle')
 
             <div class="flex items-center gap-2">
-                <flux:icon.magnifying-glass-minus class="size-4 text-zinc-400" />
+                <flux:icon.magnifying-glass-minus class="size-4 shrink-0 text-zinc-400" />
                 <input
                     type="range"
                     data-timeline-zoom-meter
@@ -71,9 +71,9 @@ new #[Title('Timeline')] class extends Component {
                     max="400"
                     value="1"
                     step="1"
-                    class="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                    class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-zinc-200 accent-blue-500 sm:w-40 dark:bg-zinc-700"
                 />
-                <flux:icon.magnifying-glass-plus class="size-4 text-zinc-400" />
+                <flux:icon.magnifying-glass-plus class="size-4 shrink-0 text-zinc-400" />
             </div>
         </div>
     </div>
@@ -83,9 +83,9 @@ new #[Title('Timeline')] class extends Component {
         wire:key="timeline-{{ $directRelativesOnly ? 'mine' : 'all' }}"
         x-data
         x-init="initTimeline($el, @js($this->events))"
-        class="relative mt-4 h-[70vh] w-full overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"
+        class="relative isolate mt-4 h-[70vh] w-full touch-none overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"
     >
-        <svg class="timeline-svg absolute inset-0 block">
+        <svg class="timeline-svg absolute inset-0 block touch-none">
             <line class="timeline-baseline stroke-zinc-300 dark:stroke-zinc-600" stroke-width="2" />
             <line class="timeline-today stroke-blue-400" stroke-width="1" stroke-dasharray="4 3" />
             <g class="timeline-gridlines"></g>

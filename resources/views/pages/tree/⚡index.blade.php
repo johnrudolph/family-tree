@@ -423,7 +423,7 @@ new #[Title('Family Tree')] class extends Component {
 }; ?>
 
 <section
-    class="flex h-[80vh] w-full gap-4"
+    class="flex w-full flex-col gap-4 lg:h-[80vh] lg:flex-row"
     x-data
     x-on:tree-center-on.window="window.familyTreeCenterOn($event.detail.id)"
     x-on:tree-data-updated.window="window.familyTreeUpdateData($event.detail.data)"
@@ -432,7 +432,7 @@ new #[Title('Family Tree')] class extends Component {
 >
     <div
         wire:ignore
-        class="relative min-w-0 flex-1 rounded-lg border border-zinc-200 dark:border-zinc-700"
+        class="isolate relative h-[60vh] w-full rounded-lg border border-zinc-200 dark:border-zinc-700 lg:h-full lg:min-w-0 lg:flex-1"
         x-init="initFamilyTree($refs.chart, @js($this->treeData), { mainId: @js($this->mainId) })"
     >
         <flux:button
@@ -447,7 +447,7 @@ new #[Title('Family Tree')] class extends Component {
         <div x-ref="chart" class="h-full w-full" id="family-tree-chart"></div>
     </div>
 
-    <div class="w-80 shrink-0 overflow-y-auto rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+    <div class="w-full rounded-lg border border-zinc-200 p-4 dark:border-zinc-700 lg:h-full lg:w-80 lg:shrink-0 lg:overflow-y-auto">
         <flux:heading level="1" size="sm">{{ __('Family Tree') }}</flux:heading>
 
         <flux:command class="mt-3 max-h-64">
@@ -469,11 +469,8 @@ new #[Title('Family Tree')] class extends Component {
                 <div class="min-w-0">
                     <flux:text class="truncate font-medium">{{ $this->selectedPerson->fullName() }}</flux:text>
                     @if ($this->selectedPersonRelationshipToViewer)
-                        <flux:text class="block text-xs text-zinc-400 dark:text-zinc-500">{{ ucfirst($this->selectedPersonRelationshipToViewer) }}</flux:text>
+                        <flux:text class="block text-xs break-words text-zinc-400 dark:text-zinc-500">{{ ucfirst($this->selectedPersonRelationshipToViewer) }}</flux:text>
                     @endif
-                    <flux:text class="text-xs text-zinc-500">
-                        {{ $this->selectedPerson->is_living ? __('Living') : __('Deceased') }}
-                    </flux:text>
                 </div>
             </div>
 

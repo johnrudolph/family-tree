@@ -6,7 +6,11 @@
         @if ($person->isEditorOfOwnPage())
             <flux:badge size="sm" color="blue">{{ __('Editor') }}</flux:badge>
         @endif
-    @else
+    @elseif ($person->is_living)
         <flux:badge size="sm" color="zinc">{{ __('No account') }}</flux:badge>
+    @endif
+
+    @if (! $person->is_living)
+        <flux:badge size="sm" color="zinc">{{ __('Deceased') }}</flux:badge>
     @endif
 </div>

@@ -56,7 +56,7 @@ new #[Title('Map')] class extends Component {
 }; ?>
 
 <section class="flex w-full flex-col">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <flux:heading level="1">{{ __('Map') }}</flux:heading>
             <flux:subheading>
@@ -72,6 +72,6 @@ new #[Title('Map')] class extends Component {
         wire:key="map-{{ $directRelativesOnly ? 'mine' : 'all' }}"
         x-data
         x-init="initMap($el, @js($this->points))"
-        class="relative mt-4 h-[75vh] w-full overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700"
+        class="isolate relative mt-4 h-[75vh] w-full overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700"
     ></div>
 </section>
