@@ -73,6 +73,20 @@ test('the manage-admins page shows a super admin badge instead of a demote butto
         ->assertSee('Super admin');
 });
 
+test('the manage-admins page groups members into super admins, admins, and everyone else', function () {
+    $superAdmin = User::factory()->withTwoFactor()->create(['email' => User::SUPER_ADMIN_EMAIL, 'name' => 'Super Person']);
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true, 'name' => 'Admin Person']);
+    $regular = User::factory()->withTwoFactor()->create(['is_admin' => false, 'name' => 'Regular Person']);
+
+    $component = Livewire::actingAs($admin)->test('pages::admin.members');
+
+    expect($component->instance()->superAdmins->pluck('id'))->toContain($superAdmin->id);
+    expect($component->instance()->admins->pluck('id'))->toContain($admin->id);
+    expect($component->instance()->admins->pluck('id'))->not->toContain($superAdmin->id);
+    expect($component->instance()->everyoneElse->pluck('id'))->toContain($regular->id);
+    expect($component->instance()->everyoneElse->pluck('id'))->not->toContain($admin->id, $superAdmin->id);
+});
+
 test('a non-admin cannot access the manage-admins page', function () {
     $user = User::factory()->withTwoFactor()->create(['is_admin' => false]);
 
