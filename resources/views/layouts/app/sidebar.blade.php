@@ -112,8 +112,6 @@
             </flux:dropdown>
         </flux:header>
 
-        <livewire:pages::on-this-day-banner />
-
         {{ $slot }}
 
         <livewire:pages::global-search />
