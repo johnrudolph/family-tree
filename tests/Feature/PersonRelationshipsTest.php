@@ -4,6 +4,7 @@ use App\Models\Person;
 use App\Models\Relationship;
 use App\Models\User;
 use App\Services\PageEditorService;
+use App\Services\RelationshipService;
 use Livewire\Livewire;
 
 test('an editor can add a parent relationship to an existing person', function () {
@@ -21,6 +22,49 @@ test('an editor can add a parent relationship to an existing person', function (
         ->assertHasNoErrors();
 
     expect($child->fresh()->parents()->pluck('id'))->toContain($parent->id);
+});
+
+test('adding a second parent automatically marries them to the existing parent', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $child = Person::factory()->create();
+    $firstParent = Person::factory()->create();
+    $secondParent = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($child, $editor);
+    app(RelationshipService::class)->addParentChild($firstParent, $child);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $child])
+        ->set('type', 'parent')
+        ->set('mode', 'existing')
+        ->set('existingPersonId', $secondParent->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $spouseLink = Relationship::query()->where('type', 'spouse')->first();
+
+    expect($spouseLink)->not->toBeNull();
+    expect($spouseLink->status)->toBe('married');
+    expect([$spouseLink->person_a_id, $spouseLink->person_b_id])->toEqualCanonicalizing([$firstParent->id, $secondParent->id]);
+});
+
+test('the "mark as married" suggestion can be declined by removing the pill', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $child = Person::factory()->create();
+    $firstParent = Person::factory()->create();
+    $secondParent = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($child, $editor);
+    app(RelationshipService::class)->addParentChild($firstParent, $child);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $child])
+        ->set('type', 'parent')
+        ->set('mode', 'existing')
+        ->set('existingPersonId', $secondParent->id)
+        ->call('removeSuggestion', 'alsoMarriedToParentIds', $firstParent->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    expect(Relationship::query()->where('type', 'spouse')->exists())->toBeFalse();
 });
 
 test('an editor can add a spouse by creating a brand new person inline', function () {

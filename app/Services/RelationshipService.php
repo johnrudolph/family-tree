@@ -70,6 +70,28 @@ class RelationshipService
     }
 
     /**
+     * Mark two people as spouses if they aren't already linked one way or the
+     * other — used for the "we'll mark them as married unless you say
+     * otherwise" suggestion when adding a second parent to a child, so
+     * re-selecting an already-linked couple is a no-op, not a duplicate-key
+     * error.
+     */
+    public function linkSpouseIfMissing(Person $a, Person $b, string $status = 'married'): void
+    {
+        $exists = Relationship::query()
+            ->where('type', 'spouse')
+            ->where(function ($query) use ($a, $b) {
+                $query->where(['person_a_id' => $a->id, 'person_b_id' => $b->id])
+                    ->orWhere(['person_a_id' => $b->id, 'person_b_id' => $a->id]);
+            })
+            ->exists();
+
+        if (! $exists) {
+            $this->addSpouse($a, $b, $status);
+        }
+    }
+
+    /**
      * A person's existing children — offered as "also mark as their child" pills
      * when adding a new spouse, so a step-parent doesn't need a second trip.
      *

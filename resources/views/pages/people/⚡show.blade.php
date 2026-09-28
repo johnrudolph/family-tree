@@ -75,6 +75,9 @@ new class extends Component {
     /** @var array<int, int> parent ids to also link to the new sibling as parent */
     public array $relAlsoSiblingParentIds = [];
 
+    /** @var array<int, int> existing parent ids to also marry the new parent to */
+    public array $relAlsoMarriedToParentIds = [];
+
     /**
      * Bumped after every successful "add relationship" submit so the new-
      * person location pickers (nested Livewire components with their own
@@ -88,6 +91,7 @@ new class extends Component {
     public function mount(Person $person): void
     {
         $this->person = $person;
+        $this->seedAlsoLinkSuggestions();
     }
 
     #[Computed]
@@ -264,6 +268,10 @@ new class extends Component {
         $this->relAlsoSiblingParentIds = $this->relType === 'sibling'
             ? $this->existingParents->pluck('id')->all()
             : [];
+
+        $this->relAlsoMarriedToParentIds = $this->relType === 'parent'
+            ? $this->existingParents->pluck('id')->all()
+            : [];
     }
 
     /**
@@ -273,7 +281,7 @@ new class extends Component {
      */
     public function removeSuggestion(string $property, int $id): void
     {
-        abort_unless(in_array($property, ['relAlsoParentOfChildIds', 'relAlsoCoParentIds', 'relAlsoSiblingParentIds'], true), 403);
+        abort_unless(in_array($property, ['relAlsoParentOfChildIds', 'relAlsoCoParentIds', 'relAlsoSiblingParentIds', 'relAlsoMarriedToParentIds'], true), 403);
 
         $this->{$property} = array_values(array_diff($this->{$property}, [$id]));
     }
@@ -373,6 +381,10 @@ new class extends Component {
                 } elseif ($this->relType === 'sibling') {
                     foreach (Person::query()->whereIn('id', $this->relAlsoSiblingParentIds)->get() as $parent) {
                         $relationships->linkParentChildIfMissing($parent, $other);
+                    }
+                } elseif ($this->relType === 'parent') {
+                    foreach (Person::query()->whereIn('id', $this->relAlsoMarriedToParentIds)->get() as $existingParent) {
+                        $relationships->linkSpouseIfMissing($other, $existingParent);
                     }
                 }
             });
@@ -790,6 +802,16 @@ new class extends Component {
                             <flux:radio value="spouse" label="{{ __('Spouse') }}" />
                             <flux:radio value="sibling" label="{{ __('Sibling') }}" />
                         </flux:radio.group>
+
+                        <div x-show="$wire.relType === 'parent'">
+                            <x-relationship-pills
+                                :label="__('Mark as married to')"
+                                :hint="__('We\'ll assume they\'re married to the other parent unless you remove them here.')"
+                                property="relAlsoMarriedToParentIds"
+                                :candidates="$this->existingParents"
+                                :selected-ids="$relAlsoMarriedToParentIds"
+                            />
+                        </div>
 
                         <div x-show="$wire.relType === 'spouse'">
                             <flux:select wire:model="relSpouseStatus">

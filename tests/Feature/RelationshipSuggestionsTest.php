@@ -26,6 +26,51 @@ test('adding a spouse defaults to also marking them as parent of existing childr
     expect($child->fresh()->parents()->pluck('id'))->toContain($dad->id);
 });
 
+test('adding a second parent from the tree panel defaults to marking them married to the first', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $child = Person::factory()->create();
+    $mom = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($child, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $child->id]);
+
+    Livewire::actingAs($editor)
+        ->test('pages::tree.index')
+        ->call('selectPerson', $child->id)
+        ->set('relType', 'parent')
+        ->assertSet('relAlsoMarriedToParentIds', [$mom->id])
+        ->set('relMode', 'new')
+        ->set('relNewFirstName', 'Dad')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $dad = Person::query()->where('first_name', 'Dad')->firstOrFail();
+    $spouseLink = Relationship::query()->where('type', 'spouse')->first();
+
+    expect($spouseLink)->not->toBeNull();
+    expect($spouseLink->status)->toBe('married');
+    expect([$spouseLink->person_a_id, $spouseLink->person_b_id])->toEqualCanonicalizing([$mom->id, $dad->id]);
+});
+
+test('a second parent already married to the first is not linked again', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $child = Person::factory()->create();
+    $mom = Person::factory()->create();
+    $dad = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($child, $editor);
+    Relationship::factory()->parentChild()->create(['person_a_id' => $mom->id, 'person_b_id' => $child->id]);
+    Relationship::factory()->create(['person_a_id' => $mom->id, 'person_b_id' => $dad->id, 'status' => 'married']);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.relationships', ['person' => $child])
+        ->set('type', 'parent')
+        ->set('mode', 'existing')
+        ->set('existingPersonId', $dad->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    expect(Relationship::query()->where('type', 'spouse')->count())->toBe(1);
+});
+
 test('unchecking a step-child pill leaves that child unlinked', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $mom = Person::factory()->create();

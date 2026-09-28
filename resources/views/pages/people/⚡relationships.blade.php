@@ -58,11 +58,15 @@ new #[Title('Manage relationships')] class extends Component {
     /** @var array<int, int> parent ids to also link to the new sibling as parent */
     public array $alsoSiblingParentIds = [];
 
+    /** @var array<int, int> existing parent ids to also marry the new parent to */
+    public array $alsoMarriedToParentIds = [];
+
     public function mount(Person $person): void
     {
         Gate::authorize('update', $person);
 
         $this->person = $person;
+        $this->seedAlsoLinkSuggestions();
     }
 
     #[Computed]
@@ -165,6 +169,10 @@ new #[Title('Manage relationships')] class extends Component {
         $this->alsoSiblingParentIds = $this->type === 'sibling'
             ? $this->existingParents->pluck('id')->all()
             : [];
+
+        $this->alsoMarriedToParentIds = $this->type === 'parent'
+            ? $this->existingParents->pluck('id')->all()
+            : [];
     }
 
     /**
@@ -174,7 +182,7 @@ new #[Title('Manage relationships')] class extends Component {
      */
     public function removeSuggestion(string $property, int $id): void
     {
-        abort_unless(in_array($property, ['alsoParentOfChildIds', 'alsoCoParentIds', 'alsoSiblingParentIds'], true), 403);
+        abort_unless(in_array($property, ['alsoParentOfChildIds', 'alsoCoParentIds', 'alsoSiblingParentIds', 'alsoMarriedToParentIds'], true), 403);
 
         $this->{$property} = array_values(array_diff($this->{$property}, [$id]));
     }
@@ -261,6 +269,10 @@ new #[Title('Manage relationships')] class extends Component {
                     foreach (Person::query()->whereIn('id', $this->alsoSiblingParentIds)->get() as $parent) {
                         $relationships->linkParentChildIfMissing($parent, $other);
                     }
+                } elseif ($this->type === 'parent') {
+                    foreach (Person::query()->whereIn('id', $this->alsoMarriedToParentIds)->get() as $existingParent) {
+                        $relationships->linkSpouseIfMissing($other, $existingParent);
+                    }
                 }
             });
         } catch (QueryException) {
@@ -335,6 +347,16 @@ new #[Title('Manage relationships')] class extends Component {
             <flux:radio value="spouse" label="{{ __('Spouse of').' '.$person->fullName() }}" />
             <flux:radio value="sibling" label="{{ __('Sibling of').' '.$person->fullName() }}" />
         </flux:radio.group>
+
+        <div x-show="$wire.type === 'parent'">
+            <x-relationship-pills
+                :label="__('Mark as married to')"
+                :hint="__('We\'ll assume they\'re married to the other parent unless you remove them here.')"
+                property="alsoMarriedToParentIds"
+                :candidates="$this->existingParents"
+                :selected-ids="$alsoMarriedToParentIds"
+            />
+        </div>
 
         <div x-show="$wire.type === 'spouse'">
             <flux:select wire:model="spouseStatus" :label="__('Status')">
