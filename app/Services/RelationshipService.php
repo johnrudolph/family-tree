@@ -153,4 +153,55 @@ class RelationshipService
             ->orderBy('first_name')
             ->get();
     }
+
+    /**
+     * A person's "direct relatives", for the People/Timeline/Map "only show
+     * my direct relatives" filter: everyone connected by blood (ancestors,
+     * descendants, and siblings, at any distance), plus each blood
+     * relative's own directly-married spouse — but not that spouse's own
+     * family. That boundary is the point: it keeps an uncle's wife, but
+     * drops her parents and siblings, who aren't this person's relatives at
+     * all, just in-laws of an in-law.
+     *
+     * @return Collection<int, int>
+     */
+    public function directRelativeIds(Person $person): Collection
+    {
+        $bloodAdjacency = [];
+        $spouseAdjacency = [];
+
+        Relationship::query()->get(['person_a_id', 'person_b_id', 'type'])->each(function (Relationship $relationship) use (&$bloodAdjacency, &$spouseAdjacency) {
+            if ($relationship->type === 'parent_child' || $relationship->type === 'sibling') {
+                $bloodAdjacency[$relationship->person_a_id][] = $relationship->person_b_id;
+                $bloodAdjacency[$relationship->person_b_id][] = $relationship->person_a_id;
+            } elseif ($relationship->type === 'spouse') {
+                $spouseAdjacency[$relationship->person_a_id][] = $relationship->person_b_id;
+                $spouseAdjacency[$relationship->person_b_id][] = $relationship->person_a_id;
+            }
+        });
+
+        $bloodIds = [$person->id => true];
+        $queue = [$person->id];
+
+        while ($queue !== []) {
+            $currentId = array_pop($queue);
+
+            foreach ($bloodAdjacency[$currentId] ?? [] as $neighborId) {
+                if (! isset($bloodIds[$neighborId])) {
+                    $bloodIds[$neighborId] = true;
+                    $queue[] = $neighborId;
+                }
+            }
+        }
+
+        $allIds = $bloodIds;
+
+        foreach (array_keys($bloodIds) as $bloodId) {
+            foreach ($spouseAdjacency[$bloodId] ?? [] as $spouseId) {
+                $allIds[$spouseId] = true;
+            }
+        }
+
+        return collect(array_keys($allIds));
+    }
 }

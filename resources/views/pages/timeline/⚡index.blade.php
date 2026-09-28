@@ -1,15 +1,57 @@
 <?php
 
+use App\Services\RelationshipService;
 use App\Support\TimelineSerializer;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Timeline')] class extends Component {
+    public bool $directRelativesOnly = false;
+
+    public function mount(): void
+    {
+        $this->directRelativesOnly = (bool) session('direct_relatives_only', false);
+    }
+
+    public function updatedDirectRelativesOnly(): void
+    {
+        session(['direct_relatives_only' => $this->directRelativesOnly]);
+    }
+
+    /**
+     * Whether the "only show my direct relatives" toggle can be shown at
+     * all — meaningless for a viewer with no linked person on the tree.
+     */
+    #[Computed]
+    public function canFilterToDirectRelatives(): bool
+    {
+        return Auth::user()->person_id !== null;
+    }
+
+    /**
+     * Null when the filter is off (or unavailable), meaning "don't
+     * filter" — so callers can pass this straight into whereIn()/when().
+     *
+     * @return Collection<int, int>|null
+     */
+    private function directRelativeIdsOrNull(): ?Collection
+    {
+        if (! $this->directRelativesOnly) {
+            return null;
+        }
+
+        $viewer = Auth::user()->person;
+
+        return $viewer ? app(RelationshipService::class)->directRelativeIds($viewer) : null;
+    }
+
     #[Computed]
     public function events(): array
     {
-        return TimelineSerializer::events();
+        return TimelineSerializer::events($this->directRelativeIdsOrNull());
     }
 }; ?>
 
@@ -17,23 +59,28 @@ new #[Title('Timeline')] class extends Component {
     <div class="flex items-center justify-between">
         <flux:heading level="1">{{ __('Timeline') }}</flux:heading>
 
-        <div class="flex items-center gap-2">
-            <flux:icon.magnifying-glass-minus class="size-4 text-zinc-400" />
-            <input
-                type="range"
-                data-timeline-zoom-meter
-                min="1"
-                max="400"
-                value="1"
-                step="1"
-                class="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
-            />
-            <flux:icon.magnifying-glass-plus class="size-4 text-zinc-400" />
+        <div class="flex items-center gap-4">
+            @include('partials.direct-relatives-toggle')
+
+            <div class="flex items-center gap-2">
+                <flux:icon.magnifying-glass-minus class="size-4 text-zinc-400" />
+                <input
+                    type="range"
+                    data-timeline-zoom-meter
+                    min="1"
+                    max="400"
+                    value="1"
+                    step="1"
+                    class="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-blue-500 dark:bg-zinc-700"
+                />
+                <flux:icon.magnifying-glass-plus class="size-4 text-zinc-400" />
+            </div>
         </div>
     </div>
 
     <div
         wire:ignore
+        wire:key="timeline-{{ $directRelativesOnly ? 'mine' : 'all' }}"
         x-data
         x-init="initTimeline($el, @js($this->events))"
         class="relative mt-4 h-[70vh] w-full overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"

@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\Person;
+use App\Services\RelationshipService;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -11,9 +14,49 @@ new #[Title('People')] class extends Component {
 
     public string $search = '';
 
+    public bool $directRelativesOnly = false;
+
+    public function mount(): void
+    {
+        $this->directRelativesOnly = (bool) session('direct_relatives_only', false);
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedDirectRelativesOnly(): void
+    {
+        session(['direct_relatives_only' => $this->directRelativesOnly]);
+        $this->resetPage();
+    }
+
+    /**
+     * Whether the "only show my direct relatives" toggle can be shown at
+     * all — meaningless for a viewer with no linked person on the tree.
+     */
+    #[Computed]
+    public function canFilterToDirectRelatives(): bool
+    {
+        return Auth::user()->person_id !== null;
+    }
+
+    /**
+     * Null when the filter is off (or unavailable), meaning "don't
+     * filter" — so callers can pass this straight into whereIn()/when().
+     *
+     * @return Collection<int, int>|null
+     */
+    private function directRelativeIdsOrNull(): ?Collection
+    {
+        if (! $this->directRelativesOnly) {
+            return null;
+        }
+
+        $viewer = Auth::user()->person;
+
+        return $viewer ? app(RelationshipService::class)->directRelativeIds($viewer) : null;
     }
 
     #[Computed]
@@ -21,6 +64,7 @@ new #[Title('People')] class extends Component {
     {
         return Person::query()
             ->with('media')
+            ->when($this->directRelativeIdsOrNull(), fn ($query, $ids) => $query->whereIn('id', $ids))
             ->when($this->search, fn ($query) => $query
                 ->where('first_name', 'like', "%{$this->search}%")
                 ->orWhere('last_name', 'like', "%{$this->search}%"))
@@ -44,7 +88,10 @@ new #[Title('People')] class extends Component {
         @endif
     </div>
 
-    <flux:input x-ref="searchInput" wire:model.live.debounce.300ms="search" :placeholder="__('Search by name… (⌘F)')" class="mt-4 max-w-sm" />
+    <div class="mt-4 flex flex-wrap items-center gap-4">
+        <flux:input x-ref="searchInput" wire:model.live.debounce.300ms="search" :placeholder="__('Search by name… (⌘F)')" class="max-w-sm" />
+        @include('partials.direct-relatives-toggle')
+    </div>
 
     <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ($this->people as $person)

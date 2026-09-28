@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Collection;
+
 class MapSerializer
 {
     /**
@@ -9,11 +11,12 @@ class MapSerializer
      * top of TimelineSerializer so the title/date/url/photo logic for each
      * event type only lives in one place.
      *
+     * @param  Collection<int, int>|null  $personIds  see TimelineSerializer::events()
      * @return array<int, array<string, mixed>>
      */
-    public static function points(): array
+    public static function points(?Collection $personIds = null): array
     {
-        return collect(TimelineSerializer::events())
+        return collect(TimelineSerializer::events($personIds))
             ->filter(fn (array $event) => $event['location'] !== null)
             ->map(fn (array $event) => [
                 'type' => $event['type'],

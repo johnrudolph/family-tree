@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Location;
 use App\Models\Person;
 use App\Models\Story;
+use Illuminate\Support\Collection;
 
 class TimelineSerializer
 {
@@ -15,11 +16,14 @@ class TimelineSerializer
      * decides how to label and place imprecise dates, this just assembles
      * the data.
      *
+     * @param  Collection<int, int>|null  $personIds  when given, only events
+     *                                                for these people (and stories at least one of them is tagged in) —
+     *                                                used by the "only show my direct relatives" filter.
      * @return array<int, array<string, mixed>>
      */
-    public static function events(): array
+    public static function events(?Collection $personIds = null): array
     {
-        $events = [...self::birthEvents(), ...self::deathEvents(), ...self::storyEvents()];
+        $events = [...self::birthEvents($personIds), ...self::deathEvents($personIds), ...self::storyEvents($personIds)];
 
         usort($events, fn (array $a, array $b) => $a['date'] <=> $b['date']);
 
@@ -27,76 +31,93 @@ class TimelineSerializer
     }
 
     /**
+     * @param  Collection<int, int>|null  $personIds
      * @return array<int, array<string, mixed>>
      */
-    private static function birthEvents(): array
+    private static function birthEvents(?Collection $personIds): array
     {
-        return Person::query()->whereNotNull('dob')->with('birthLocation')->get()->map(fn (Person $person): array => [
-            'type' => 'birth',
-            'date' => $person->dob->toDateString(),
-            'date_precision' => $person->dob_precision,
-            'end_date' => null,
-            'end_date_precision' => null,
-            'title' => __(':name is born', ['name' => $person->fullName()]).($person->birthLocation ? ' '.__('in :city', ['city' => $person->birthLocation->shortLabel()]) : ''),
-            'person_id' => $person->id,
-            'story_id' => null,
-            'avatar_url' => $person->photoUrl(),
-            'featured_image_url' => null,
-            'gallery_urls' => [],
-            'body_html' => null,
-            'url' => route('people.show', $person),
-            'location' => self::locationPayload($person->birthLocation),
-        ])->all();
+        return Person::query()
+            ->whereNotNull('dob')
+            ->with('birthLocation')
+            ->when($personIds, fn ($query, $ids) => $query->whereIn('id', $ids))
+            ->get()
+            ->map(fn (Person $person): array => [
+                'type' => 'birth',
+                'date' => $person->dob->toDateString(),
+                'date_precision' => $person->dob_precision,
+                'end_date' => null,
+                'end_date_precision' => null,
+                'title' => __(':name is born', ['name' => $person->fullName()]).($person->birthLocation ? ' '.__('in :city', ['city' => $person->birthLocation->shortLabel()]) : ''),
+                'person_id' => $person->id,
+                'story_id' => null,
+                'avatar_url' => $person->photoUrl(),
+                'featured_image_url' => null,
+                'gallery_urls' => [],
+                'body_html' => null,
+                'url' => route('people.show', $person),
+                'location' => self::locationPayload($person->birthLocation),
+            ])->all();
     }
 
     /**
+     * @param  Collection<int, int>|null  $personIds
      * @return array<int, array<string, mixed>>
      */
-    private static function deathEvents(): array
+    private static function deathEvents(?Collection $personIds): array
     {
-        return Person::query()->whereNotNull('dod')->with('deathLocation')->get()->map(fn (Person $person): array => [
-            'type' => 'death',
-            'date' => $person->dod->toDateString(),
-            'date_precision' => $person->dod_precision,
-            'end_date' => null,
-            'end_date_precision' => null,
-            'title' => __(':name dies', ['name' => $person->fullName()]).($person->deathLocation ? ' '.__('in :city', ['city' => $person->deathLocation->shortLabel()]) : ''),
-            'person_id' => $person->id,
-            'story_id' => null,
-            'avatar_url' => $person->photoUrl(),
-            'featured_image_url' => null,
-            'gallery_urls' => [],
-            'body_html' => null,
-            'url' => route('people.show', $person),
-            'location' => self::locationPayload($person->deathLocation),
-        ])->all();
+        return Person::query()
+            ->whereNotNull('dod')
+            ->with('deathLocation')
+            ->when($personIds, fn ($query, $ids) => $query->whereIn('id', $ids))
+            ->get()
+            ->map(fn (Person $person): array => [
+                'type' => 'death',
+                'date' => $person->dod->toDateString(),
+                'date_precision' => $person->dod_precision,
+                'end_date' => null,
+                'end_date_precision' => null,
+                'title' => __(':name dies', ['name' => $person->fullName()]).($person->deathLocation ? ' '.__('in :city', ['city' => $person->deathLocation->shortLabel()]) : ''),
+                'person_id' => $person->id,
+                'story_id' => null,
+                'avatar_url' => $person->photoUrl(),
+                'featured_image_url' => null,
+                'gallery_urls' => [],
+                'body_html' => null,
+                'url' => route('people.show', $person),
+                'location' => self::locationPayload($person->deathLocation),
+            ])->all();
     }
 
     /**
+     * @param  Collection<int, int>|null  $personIds
      * @return array<int, array<string, mixed>>
      */
-    private static function storyEvents(): array
+    private static function storyEvents(?Collection $personIds): array
     {
-        return Story::query()->with('location')->get()->map(function (Story $story): array {
-            $featured = $story->featuredImage();
+        return Story::query()
+            ->with('location')
+            ->when($personIds, fn ($query, $ids) => $query->whereHas('people', fn ($q) => $q->whereIn('people.id', $ids)))
+            ->get()
+            ->map(function (Story $story): array {
+                $featured = $story->featuredImage();
 
-            return [
-                'type' => 'story',
-                'date' => $story->start_date->toDateString(),
-                'date_precision' => $story->start_date_precision,
-                'end_date' => $story->end_date?->toDateString(),
-                'end_date_precision' => $story->end_date_precision,
-                'title' => $story->title,
-                'person_id' => null,
-                'story_id' => $story->id,
-                'avatar_url' => null,
-                'featured_image_url' => $featured ? MediaUrl::of($featured) : null,
-                'gallery_urls' => $story->galleryMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all(),
-                'body_html' => StoryBodyParser::render($story->body ?? ''),
-                'url' => route('stories.show', $story),
-                'location' => self::locationPayload($story->location),
-            ];
-        })->all();
+                return [
+                    'type' => 'story',
+                    'date' => $story->start_date->toDateString(),
+                    'date_precision' => $story->start_date_precision,
+                    'end_date' => $story->end_date?->toDateString(),
+                    'end_date_precision' => $story->end_date_precision,
+                    'title' => $story->title,
+                    'person_id' => null,
+                    'story_id' => $story->id,
+                    'avatar_url' => null,
+                    'featured_image_url' => $featured ? MediaUrl::of($featured) : null,
+                    'gallery_urls' => $story->galleryMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all(),
+                    'body_html' => StoryBodyParser::render($story->body ?? ''),
+                    'url' => route('stories.show', $story),
+                    'location' => self::locationPayload($story->location),
+                ];
+            })->all();
     }
 
     /**
