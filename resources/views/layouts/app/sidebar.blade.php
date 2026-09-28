@@ -49,6 +49,10 @@
                         {{ __('Stories') }}
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="star" :href="route('changelog.index')" :current="request()->routeIs('changelog.*')" wire:navigate>
+                        {{ __('Change Log') }}
+                    </flux:sidebar.item>
+
                     @if (auth()->user()->is_admin)
                         <flux:sidebar.item icon="user-plus" :href="route('invites.create')" :current="request()->routeIs('invites.create')" wire:navigate>
                             {{ __('Invite a member') }}

@@ -30,6 +30,8 @@ Route::middleware(['auth', 'verified', 'two-factor.enabled'])->group(function ()
 
     Route::livewire('map', 'pages::map.index')->name('map.index');
 
+    Route::livewire('changelog', 'pages::changelog.index')->name('changelog.index');
+
     Route::livewire('admin/invites', 'pages::invites.invite-person')->name('invites.create');
     Route::livewire('admin/members', 'pages::admin.members')->name('admin.members');
     Route::livewire('admin/data-gaps', 'pages::admin.data-gaps')->name('admin.data-gaps');
