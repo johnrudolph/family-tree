@@ -69,6 +69,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-28 19:00:00', 'The manage admins page now groups people into super admins, admins, and everyone else.'],
             ['2026-09-28 20:00:00', 'Redesigned the dashboard with recent activity, recently added stories, recently joined members, and prompts to finish your own profile.'],
             ['2026-09-28 21:00:00', 'Fixed the sidebar not reaching the bottom of the page on short pages.'],
+            ['2026-09-28 22:00:00', 'Put the dashboard\'s activity, stories, and members lists into cards.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

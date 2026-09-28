@@ -155,8 +155,8 @@ new #[Title('Dashboard')] class extends Component {
         </div>
     @endif
 
-    <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="rounded-xl border border-zinc-200 p-5 dark:border-zinc-700">
             <flux:heading level="2" size="sm">{{ __('Recent activity') }}</flux:heading>
 
             <div class="mt-3 space-y-3">
@@ -175,8 +175,8 @@ new #[Title('Dashboard')] class extends Component {
             </div>
         </div>
 
-        <div class="flex flex-col gap-8">
-            <div>
+        <div class="flex flex-col gap-6">
+            <div class="rounded-xl border border-zinc-200 p-5 dark:border-zinc-700">
                 <flux:heading level="2" size="sm">{{ __('Recently added stories') }}</flux:heading>
 
                 <div class="mt-3 space-y-2">
@@ -193,7 +193,7 @@ new #[Title('Dashboard')] class extends Component {
                 </div>
             </div>
 
-            <div>
+            <div class="rounded-xl border border-zinc-200 p-5 dark:border-zinc-700">
                 <flux:heading level="2" size="sm">{{ __('Recently joined') }}</flux:heading>
 
                 <div class="mt-3 space-y-2">
