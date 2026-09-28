@@ -70,6 +70,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-28 20:00:00', 'Redesigned the dashboard with recent activity, recently added stories, recently joined members, and prompts to finish your own profile.'],
             ['2026-09-28 21:00:00', 'Fixed the sidebar not reaching the bottom of the page on short pages.'],
             ['2026-09-28 22:00:00', 'Put the dashboard\'s activity, stories, and members lists into cards.'],
+            ['2026-09-28 23:00:00', 'Redesigned the Stories page as a full-width grid showing each story\'s photo, date, and location.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {
