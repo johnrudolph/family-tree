@@ -74,6 +74,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-28 19:10:00', 'Fixed the family tree\'s "Fit to view" button not working and sitting outside the tree.'],
             ['2026-09-28 19:14:00', 'The birthday and "on this day" banner now only shows on the dashboard, not every page.'],
             ['2026-09-29 12:00:00', 'Stories can now include an audio recording, like an oral history, with a simple player. Stories with audio show a small speaker icon.'],
+            ['2026-09-29 13:00:00', 'Editors and admins can now delete a story, with a confirmation step. Its photos and audio are deleted too.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {
