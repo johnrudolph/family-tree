@@ -80,6 +80,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-29 16:00:00', 'Fixed uploading a story\'s audio recording timing out.'],
             ['2026-09-29 17:00:00', 'Moved the delete story option from the story page to its edit page.'],
             ['2026-09-29 18:00:00', 'Fixed .m4a voice memo recordings being rejected as story audio.'],
+            ['2026-09-29 19:00:00', 'Fixed the story page\'s buttons and audio player controls overflowing on narrow phone screens.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

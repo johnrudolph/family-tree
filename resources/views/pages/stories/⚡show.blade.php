@@ -45,14 +45,14 @@ new class extends Component {
 }; ?>
 
 <section class="w-full max-w-2xl">
-    <div class="flex items-start justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <flux:heading level="1" class="flex items-center gap-2">
             {{ $story->title }}
             @if ($this->audioUrl)
                 <flux:icon.volume-2 class="size-5 shrink-0 text-zinc-400" />
             @endif
         </flux:heading>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
             @if ($this->canEdit)
                 <flux:button :href="route('stories.edit', $story)" wire:navigate size="sm">{{ __('Edit') }}</flux:button>
                 <flux:button :href="route('stories.editors', $story)" wire:navigate size="sm">{{ __('Editors') }}</flux:button>
@@ -97,7 +97,7 @@ new class extends Component {
             x-init="initAudioPlayer($el, @js($this->audioUrl))"
         >
             <div data-audio-waveform></div>
-            <div class="mt-3 flex items-center gap-3">
+            <div class="mt-3 flex flex-wrap items-center gap-3">
                 <button
                     type="button"
                     data-audio-play
@@ -111,7 +111,7 @@ new class extends Component {
                     <span data-audio-current>0:00</span> / <span data-audio-duration>0:00</span>
                 </flux:text>
 
-                <div class="ml-auto flex items-center gap-3">
+                <div class="flex items-center gap-3 sm:ml-auto">
                     <select data-audio-speed class="rounded-md border-zinc-200 bg-transparent text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
                         <option value="0.75">0.75x</option>
                         <option value="1" selected>1x</option>

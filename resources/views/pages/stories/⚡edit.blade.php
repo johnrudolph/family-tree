@@ -258,10 +258,10 @@ new #[Title('Edit story')] class extends Component {
         <flux:separator />
 
         @if ($story->hasAudio())
-            <div class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                <div class="flex items-center gap-2">
-                    <flux:icon.volume-2 class="size-5 text-zinc-400" />
-                    <flux:text class="text-sm">{{ $story->audioMedia()->file_name }}</flux:text>
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                <div class="flex min-w-0 items-center gap-2">
+                    <flux:icon.volume-2 class="size-5 shrink-0 text-zinc-400" />
+                    <flux:text class="truncate text-sm">{{ $story->audioMedia()->file_name }}</flux:text>
                 </div>
                 <flux:button type="button" wire:click="removeAudio" wire:confirm="{{ __('Remove this audio?') }}" size="sm" variant="danger">{{ __('Remove') }}</flux:button>
             </div>
