@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';
+@plugin '@tailwindcss/typography';
 
 @source '../views';
 @source '../js';
@@ -120,6 +121,23 @@
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
     }
+}
+
+/* Story/bio rich text: match the blue link color and hover-only underline
+   used everywhere else in the app (including [[Person]] tag links), rather
+   than the typography plugin's default near-black, always-underlined look. */
+.prose :where(a):not(:where([class~="not-prose"] *)) {
+    color: var(--color-blue-600);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.dark .prose :where(a):not(:where([class~="not-prose"] *)) {
+    color: var(--color-blue-400);
+}
+
+.prose :where(a):not(:where([class~="not-prose"] *)):hover {
+    text-decoration: underline;
 }
 
 [data-flux-field]:not(ui-radio, ui-checkbox) {

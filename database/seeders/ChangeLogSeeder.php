@@ -76,6 +76,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-29 12:00:00', 'Stories can now include an audio recording, like an oral history, with a simple player. Stories with audio show a small speaker icon.'],
             ['2026-09-29 13:00:00', 'Editors and admins can now delete a story, with a confirmation step. Its photos and audio are deleted too.'],
             ['2026-09-29 14:00:00', 'The "on this day" card is now a normal dashboard card instead of a big banner.'],
+            ['2026-09-29 15:00:00', 'Fixed story and bio text so links show up blue, paragraphs have proper spacing, and headings, lists, and bold or italic text look right.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {
