@@ -130,12 +130,19 @@ return [
 
     'temporary_file_upload' => [
         'disk' => env('LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK'), // Example: 'local', 's3'             | Default: 'default'
-        // Default (12MB) is below the 20MB cap our own upload forms validate
-        // against for story/profile photos — raised so a single phone photo
-        // can't fail here before it even reaches our own validation.
-        'rules' => ['required', 'file', 'max:20480'],
+        // Default (12MB) is below the 100MB cap story audio recordings
+        // validate against (see stories.create/edit) — raised so this global
+        // endpoint can't reject a valid upload before our own component
+        // validation ever runs.
+        'rules' => ['required', 'file', 'max:102400'],
         'directory' => null,                                  // Example: 'tmp'                     | Default: 'livewire-tmp'
         'middleware' => null,                                 // Example: 'throttle:5,1'            | Default: 'throttle:60,1'
+        // Force chunking well below any single upload's size (audio can run
+        // to 100MB) so a large recording is never sent as one giant request
+        // that a reverse proxy/gateway could time out waiting on — each
+        // chunk is a small, fast request instead.
+        'chunking' => true,
+        'chunk_size' => 1024 * 1024, // 1MB
         'preview_mimes' => [                                  // Supported file types for temporary pre-signed file URLs...
             'png', 'gif', 'bmp', 'svg', 'wav', 'mp4',
             'mov', 'avi', 'wmv', 'mp3', 'm4a',
