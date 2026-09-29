@@ -19,6 +19,16 @@ function fakeWavFile(string $name): UploadedFile
     return UploadedFile::fake()->createWithContent($name, $header);
 }
 
+test('the audio collection accepts the mime type m4a files are actually sniffed as', function () {
+    // macOS/iPhone voice memos export as .m4a, but the real file-content
+    // sniff (not the extension) tags them audio/x-m4a rather than the more
+    // common audio/mp4 — both need to be accepted or a real recording gets
+    // rejected by Media Library after passing our own validation.
+    $story = Story::factory()->create();
+
+    expect($story->getMediaCollection('audio')->acceptsMimeTypes)->toContain('audio/x-m4a');
+});
+
 test('any member can create a story and tag people in it', function () {
     $user = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();

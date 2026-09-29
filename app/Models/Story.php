@@ -53,7 +53,7 @@ class Story extends Model implements HasMedia
         $this->addMediaCollection('gallery');
         $this->addMediaCollection('audio')
             ->singleFile()
-            ->acceptsMimeTypes(['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/aac']);
+            ->acceptsMimeTypes(['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/aac']);
     }
 
     public function audioMedia(): ?Media
