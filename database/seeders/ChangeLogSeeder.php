@@ -78,6 +78,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-29 14:00:00', 'The "on this day" card is now a normal dashboard card instead of a big banner.'],
             ['2026-09-29 15:00:00', 'Fixed story and bio text so links show up blue, paragraphs have proper spacing, and headings, lists, and bold or italic text look right.'],
             ['2026-09-29 16:00:00', 'Fixed uploading a story\'s audio recording timing out.'],
+            ['2026-09-29 17:00:00', 'Moved the delete story option from the story page to its edit page.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

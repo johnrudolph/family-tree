@@ -60,13 +60,13 @@ test('deleting a story removes its gallery photos and audio', function () {
     expect(Media::query()->count())->toBe(0);
 });
 
-test('an editor can delete a story from its page by typing the title to confirm', function () {
+test('an editor can delete a story from its edit page by typing the title to confirm', function () {
     $editor = User::factory()->withTwoFactor()->create();
     $story = Story::factory()->create(['title' => 'The Move to Ohio']);
     app(PageEditorService::class)->grantOwner($story, $editor);
 
     Livewire::actingAs($editor)
-        ->test('pages::stories.show', ['story' => $story])
+        ->test('pages::stories.edit', ['story' => $story])
         ->set('deleteConfirmationName', 'The Move to Ohio')
         ->call('deleteStory')
         ->assertHasNoErrors()
@@ -81,7 +81,7 @@ test('typing the wrong title blocks story deletion', function () {
     app(PageEditorService::class)->grantOwner($story, $editor);
 
     Livewire::actingAs($editor)
-        ->test('pages::stories.show', ['story' => $story])
+        ->test('pages::stories.edit', ['story' => $story])
         ->set('deleteConfirmationName', 'The Move to Ohi')
         ->call('deleteStory')
         ->assertHasErrors(['deleteConfirmationName']);
@@ -89,24 +89,22 @@ test('typing the wrong title blocks story deletion', function () {
     expect(Story::query()->find($story->id))->not->toBeNull();
 });
 
-test('a non-editor, non-admin cannot delete a story', function () {
+test('a non-editor, non-admin cannot reach the edit page to delete a story', function () {
     $user = User::factory()->withTwoFactor()->create(['is_admin' => false]);
     $story = Story::factory()->create(['title' => 'The Move to Ohio']);
 
     Livewire::actingAs($user)
-        ->test('pages::stories.show', ['story' => $story])
-        ->set('deleteConfirmationName', 'The Move to Ohio')
-        ->call('deleteStory')
+        ->test('pages::stories.edit', ['story' => $story])
         ->assertForbidden();
 
     expect(Story::query()->find($story->id))->not->toBeNull();
 });
 
-test('a non-editor does not see the delete option on a story page', function () {
-    $member = User::factory()->withTwoFactor()->create(['is_admin' => false]);
+test('the story page itself has no delete option', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $story = Story::factory()->create();
 
-    $this->actingAs($member)
+    $this->actingAs($admin)
         ->get(route('stories.show', $story))
         ->assertOk()
         ->assertDontSee('Delete story');

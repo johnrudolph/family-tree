@@ -3,11 +3,13 @@
 use App\Models\Person;
 use App\Models\Story;
 use App\Services\RevisionService;
+use App\Services\StoryDeletionService;
 use App\Support\MediaUrl;
 use App\Support\RichTextSanitizer;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
@@ -48,6 +50,8 @@ new #[Title('Edit story')] class extends Component {
 
     /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
     public $audio = null;
+
+    public string $deleteConfirmationName = '';
 
     public function mount(Story $story): void
     {
@@ -97,6 +101,31 @@ new #[Title('Edit story')] class extends Component {
         $this->story->clearMediaCollection('audio');
 
         Flux::toast(variant: 'success', text: __('Audio removed.'));
+    }
+
+    #[Computed]
+    public function canDelete(): bool
+    {
+        return Gate::allows('delete', $this->story);
+    }
+
+    public function deleteStory(): void
+    {
+        Gate::authorize('delete', $this->story);
+
+        $this->validate([
+            'deleteConfirmationName' => ['required', function ($attribute, $value, $fail) {
+                if ($value !== $this->story->title) {
+                    $fail(__('That doesn\'t match — type the title exactly to confirm.'));
+                }
+            }],
+        ]);
+
+        app(StoryDeletionService::class)->delete($this->story);
+
+        Flux::toast(variant: 'success', text: __('Story deleted.'));
+
+        $this->redirect(route('stories.index'), navigate: true);
     }
 
     public function save(): void
@@ -247,4 +276,46 @@ new #[Title('Edit story')] class extends Component {
             <flux:button :href="route('stories.show', $story)" wire:navigate variant="ghost">{{ __('Cancel') }}</flux:button>
         </div>
     </form>
+
+    @if ($this->canDelete)
+        <flux:separator class="mt-10" />
+
+        <div class="mt-10 rounded-xl border border-zinc-200 p-5 dark:border-zinc-700">
+            <flux:heading level="2" size="sm">{{ __('Danger zone') }}</flux:heading>
+
+            <flux:modal.trigger name="delete-story">
+                <flux:button variant="danger" size="sm" class="mt-3">{{ __('Delete story') }}</flux:button>
+            </flux:modal.trigger>
+        </div>
+
+        <flux:modal name="delete-story" class="w-96" @close="$set('deleteConfirmationName', '')">
+            <form wire:submit="deleteStory" class="flex flex-col gap-4">
+                <div>
+                    <flux:heading size="lg">{{ __('Delete :title?', ['title' => $story->title]) }}</flux:heading>
+                    <flux:subheading class="mt-2">
+                        {{ __('This can\'t be undone. Its photos and audio, tags to people, edit history, and pending suggestions are all deleted too.') }}
+                    </flux:subheading>
+                </div>
+
+                <flux:input
+                    wire:model="deleteConfirmationName"
+                    :label="__('Type :title to confirm', ['title' => $story->title])"
+                />
+
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                    </flux:modal.close>
+
+                    <flux:button
+                        variant="danger"
+                        type="submit"
+                        x-bind:disabled="$wire.deleteConfirmationName !== @js($story->title)"
+                    >
+                        {{ __('Delete story') }}
+                    </flux:button>
+                </div>
+            </form>
+        </flux:modal>
+    @endif
 </section>
