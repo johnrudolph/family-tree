@@ -604,7 +604,12 @@ new class extends Component {
                                 </div>
                             @endif
                             <div class="min-w-0">
-                                <flux:text class="block truncate font-medium text-zinc-800 dark:text-zinc-100">{{ $story->title }}</flux:text>
+                                <flux:text class="flex items-center gap-1.5 truncate font-medium text-zinc-800 dark:text-zinc-100">
+                                    <span class="truncate">{{ $story->title }}</span>
+                                    @if ($story->hasAudio())
+                                        <flux:icon.volume-2 class="size-3.5 shrink-0 text-zinc-400" />
+                                    @endif
+                                </flux:text>
                                 <flux:text class="text-xs text-zinc-500">
                                     {{ $story->start_date_precision === 'year' ? $story->start_date->format('Y') : $story->start_date->format('F j, Y') }}
                                     @if ($story->end_date)

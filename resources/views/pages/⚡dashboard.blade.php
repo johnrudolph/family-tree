@@ -91,7 +91,7 @@ new #[Title('Dashboard')] class extends Component {
     #[Computed]
     public function recentStories()
     {
-        return Story::query()->with('creator')->latest()->limit(5)->get();
+        return Story::query()->with(['creator', 'media'])->latest()->limit(5)->get();
     }
 
     #[Computed]
@@ -184,8 +184,11 @@ new #[Title('Dashboard')] class extends Component {
                 <div class="mt-3 space-y-2">
                     @forelse ($this->recentStories as $story)
                         <div class="flex items-baseline justify-between gap-3">
-                            <a href="{{ route('stories.show', $story) }}" wire:navigate class="truncate text-sm text-blue-600 hover:underline dark:text-blue-400">
-                                {{ $story->title }}
+                            <a href="{{ route('stories.show', $story) }}" wire:navigate class="flex min-w-0 items-center gap-1.5 truncate text-sm text-blue-600 hover:underline dark:text-blue-400">
+                                <span class="truncate">{{ $story->title }}</span>
+                                @if ($story->hasAudio())
+                                    <flux:icon.volume-2 class="size-3.5 shrink-0 text-zinc-400" />
+                                @endif
                             </a>
                             <flux:text class="shrink-0 text-xs whitespace-nowrap text-zinc-500">{{ $story->created_at->diffForHumans() }}</flux:text>
                         </div>

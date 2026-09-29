@@ -46,6 +46,9 @@ new #[Title('Edit story')] class extends Component {
     /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
     public array $newPhotos = [];
 
+    /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
+    public $audio = null;
+
     public function mount(Story $story): void
     {
         Gate::authorize('update', $story);
@@ -87,6 +90,15 @@ new #[Title('Edit story')] class extends Component {
         Flux::toast(variant: 'success', text: __('Featured image updated.'));
     }
 
+    public function removeAudio(): void
+    {
+        Gate::authorize('update', $this->story);
+
+        $this->story->clearMediaCollection('audio');
+
+        Flux::toast(variant: 'success', text: __('Audio removed.'));
+    }
+
     public function save(): void
     {
         Gate::authorize('update', $this->story);
@@ -107,6 +119,7 @@ new #[Title('Edit story')] class extends Component {
             'person_ids' => ['array'],
             'person_ids.*' => ['exists:people,id'],
             'newPhotos.*' => ['image', 'max:20480'],
+            'audio' => ['nullable', 'file', 'mimes:mp3,mp4,m4a,wav,ogg,webm,aac', 'max:102400'],
         ]);
 
         $data = [
@@ -126,6 +139,12 @@ new #[Title('Edit story')] class extends Component {
             $this->story->addMedia($photo->getRealPath())
                 ->usingFileName($photo->getClientOriginalName())
                 ->toMediaCollection('gallery');
+        }
+
+        if ($this->audio) {
+            $this->story->addMedia($this->audio->getRealPath())
+                ->usingFileName($this->audio->getClientOriginalName())
+                ->toMediaCollection('audio');
         }
 
         app(RevisionService::class)->record($this->story, Auth::user(), $data);
@@ -206,6 +225,22 @@ new #[Title('Edit story')] class extends Component {
         <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
             <flux:input type="file" wire:model="newPhotos" multiple accept="image/*" :label="__('Add photos')" />
         </div>
+
+        <flux:separator />
+
+        @if ($story->hasAudio())
+            <div class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                <div class="flex items-center gap-2">
+                    <flux:icon.volume-2 class="size-5 text-zinc-400" />
+                    <flux:text class="text-sm">{{ $story->audioMedia()->file_name }}</flux:text>
+                </div>
+                <flux:button type="button" wire:click="removeAudio" wire:confirm="{{ __('Remove this audio?') }}" size="sm" variant="danger">{{ __('Remove') }}</flux:button>
+            </div>
+        @else
+            <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Audio upload failed — the file may be too large or an unsupported format.')), { variant: 'danger', duration: 8000 })">
+                <flux:input type="file" wire:model="audio" accept="audio/*" :label="__('Audio (optional)')" :description="__('An oral history recording — someone speaking about this story. Shown with a small player.')" />
+            </div>
+        @endif
 
         <div class="flex gap-2">
             <flux:button type="submit" variant="primary">{{ __('Save') }}</flux:button>

@@ -8,6 +8,17 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
+function fakeWavFile(string $name): UploadedFile
+{
+    // A minimal but valid WAV header (44 bytes, no audio data) so
+    // Media Library's real mime-type sniffing recognizes it as audio —
+    // UploadedFile::fake()->create() produces empty files that sniff as
+    // application/x-empty and get rejected by the collection's mime filter.
+    $header = 'RIFF'.pack('V', 36).'WAVE'.'fmt '.pack('V', 16).pack('v', 1).pack('v', 1).pack('V', 8000).pack('V', 8000).pack('v', 1).pack('v', 8).'data'.pack('V', 0);
+
+    return UploadedFile::fake()->createWithContent($name, $header);
+}
+
 test('any member can create a story and tag people in it', function () {
     $user = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();
@@ -113,6 +124,46 @@ test('an editor can feature a gallery image, and only one image is featured at a
     expect($first->fresh()->getCustomProperty('featured'))->toBeFalsy();
     expect($second->fresh()->getCustomProperty('featured'))->toBeTrue();
     expect($story->fresh()->featuredImage()->id)->toBe($second->id);
+});
+
+test('a story can be created with an audio recording', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($user)
+        ->test('pages::stories.create')
+        ->set('title', 'Grandma Tells It')
+        ->set('start_date', '1998-05-01')
+        ->set('audio', fakeWavFile('grandma.wav'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $story = Story::query()->where('title', 'Grandma Tells It')->firstOrFail();
+    expect($story->hasAudio())->toBeTrue();
+});
+
+test('an editor can add and remove audio on an existing story', function () {
+    Storage::fake('public');
+
+    $editor = User::factory()->withTwoFactor()->create();
+    $story = Story::factory()->create();
+    app(PageEditorService::class)->grantOwner($story, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::stories.edit', ['story' => $story])
+        ->set('audio', fakeWavFile('interview.wav'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($story->fresh()->hasAudio())->toBeTrue();
+
+    Livewire::actingAs($editor)
+        ->test('pages::stories.edit', ['story' => $story])
+        ->call('removeAudio')
+        ->assertHasNoErrors();
+
+    expect($story->fresh()->hasAudio())->toBeFalse();
 });
 
 test('a non-creator, non-admin cannot edit a story', function () {

@@ -40,6 +40,9 @@ new #[Title('New story')] class extends Component {
     /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
     public array $photos = [];
 
+    /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
+    public $audio = null;
+
     public function mount(): void
     {
         Gate::authorize('create', Story::class);
@@ -76,6 +79,7 @@ new #[Title('New story')] class extends Component {
             'person_ids' => ['array'],
             'person_ids.*' => ['exists:people,id'],
             'photos.*' => ['image', 'max:20480'],
+            'audio' => ['nullable', 'file', 'mimes:mp3,mp4,m4a,wav,ogg,webm,aac', 'max:102400'],
         ]);
 
         $story = Story::create([
@@ -95,6 +99,12 @@ new #[Title('New story')] class extends Component {
             $story->addMedia($photo->getRealPath())
                 ->usingFileName($photo->getClientOriginalName())
                 ->toMediaCollection('gallery');
+        }
+
+        if ($this->audio) {
+            $story->addMedia($this->audio->getRealPath())
+                ->usingFileName($this->audio->getClientOriginalName())
+                ->toMediaCollection('audio');
         }
 
         app(PageEditorService::class)->grantOwner($story, Auth::user());
@@ -159,6 +169,10 @@ new #[Title('New story')] class extends Component {
                 @endforeach
             </div>
         @endif
+
+        <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Audio upload failed — the file may be too large or an unsupported format.')), { variant: 'danger', duration: 8000 })">
+            <flux:input type="file" wire:model="audio" accept="audio/*" :label="__('Audio (optional)')" :description="__('An oral history recording — someone speaking about this story. Shown with a small player.')" />
+        </div>
 
         <div class="flex gap-2">
             <flux:button type="submit" variant="primary">{{ __('Publish') }}</flux:button>

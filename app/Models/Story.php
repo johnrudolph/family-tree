@@ -51,6 +51,19 @@ class Story extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('gallery');
+        $this->addMediaCollection('audio')
+            ->singleFile()
+            ->acceptsMimeTypes(['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/aac']);
+    }
+
+    public function audioMedia(): ?Media
+    {
+        return $this->getFirstMedia('audio');
+    }
+
+    public function hasAudio(): bool
+    {
+        return $this->audioMedia() !== null;
     }
 
     /**

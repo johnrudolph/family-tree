@@ -37,7 +37,12 @@ new #[Title('Stories')] class extends Component {
                 @endif
 
                 <div class="p-4">
-                    <flux:heading level="3">{{ $story->title }}</flux:heading>
+                    <flux:heading level="3" class="flex items-center gap-1.5">
+                        {{ $story->title }}
+                        @if ($story->hasAudio())
+                            <flux:icon.volume-2 class="size-4 shrink-0 text-zinc-400" />
+                        @endif
+                    </flux:heading>
                     <flux:text class="text-xs text-zinc-500">
                         {{ $story->start_date_precision === 'year' ? $story->start_date->format('Y') : $story->start_date->format('F j, Y') }}
                         @if ($story->end_date)
