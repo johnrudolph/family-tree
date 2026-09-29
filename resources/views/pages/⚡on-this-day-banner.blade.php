@@ -87,10 +87,12 @@ new class extends Component {
 
 <div>
     @if ($this->hasAnything)
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950">
-            <div class="flex flex-col items-center gap-1 text-center">
+        <div class="rounded-xl border border-zinc-200 p-5 dark:border-zinc-700">
+            <flux:heading level="2" size="sm">{{ __('On this day') }}</flux:heading>
+
+            <div class="mt-3 flex flex-col gap-2">
                 @if ($this->livingBirthdays->isNotEmpty())
-                    <flux:text class="text-amber-900 dark:text-amber-200">
+                    <flux:text class="text-sm">
                         🎂
                         {{ __('Happy birthday') }}
                         {!! $this->livingBirthdayNamesHtml !!}!
@@ -98,21 +100,21 @@ new class extends Component {
                 @endif
 
                 @foreach ($this->bornOnThisDay as $person)
-                    <flux:text class="text-amber-900 dark:text-amber-200" wire:key="born-{{ $person->id }}">
+                    <flux:text class="text-sm" wire:key="born-{{ $person->id }}">
                         🎈 {{ __('Born on this day in :year:', ['year' => $person->dob->format('Y')]) }}
                         <a href="{{ route('people.show', $person) }}" wire:navigate class="underline">{{ $person->fullName() }}</a>
                     </flux:text>
                 @endforeach
 
                 @foreach ($this->diedOnThisDay as $person)
-                    <flux:text class="text-amber-900 dark:text-amber-200" wire:key="died-{{ $person->id }}">
+                    <flux:text class="text-sm" wire:key="died-{{ $person->id }}">
                         🕊️ {{ __('On this day in :year, we lost', ['year' => $person->dod->format('Y')]) }}
                         <a href="{{ route('people.show', $person) }}" wire:navigate class="underline">{{ $person->fullName() }}</a>
                     </flux:text>
                 @endforeach
 
                 @foreach ($this->storiesOnThisDay as $story)
-                    <flux:text class="text-amber-900 dark:text-amber-200" wire:key="story-{{ $story->id }}">
+                    <flux:text class="text-sm" wire:key="story-{{ $story->id }}">
                         📖 {{ __('On this day in :year:', ['year' => $story->start_date->format('Y')]) }}
                         <a href="{{ route('stories.show', $story) }}" wire:navigate class="underline">{{ $story->title }}</a>
                     </flux:text>

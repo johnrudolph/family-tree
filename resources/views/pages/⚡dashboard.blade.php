@@ -102,8 +102,6 @@ new #[Title('Dashboard')] class extends Component {
 }; ?>
 
 <div class="flex w-full flex-col gap-8">
-    <livewire:pages::on-this-day-banner />
-
     <div class="flex items-center gap-4">
         @if ($this->me)
             <x-person-avatar :person="$this->me" size="xl" />
@@ -178,6 +176,8 @@ new #[Title('Dashboard')] class extends Component {
         </div>
 
         <div class="flex flex-col gap-6">
+            <livewire:pages::on-this-day-banner />
+
             <div class="rounded-xl border border-zinc-200 p-5 dark:border-zinc-700">
                 <flux:heading level="2" size="sm">{{ __('Recently added stories') }}</flux:heading>
 
