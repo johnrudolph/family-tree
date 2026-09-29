@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Support\MediaUrl;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -27,7 +28,8 @@ new #[Title('Photo & details')] class extends Component {
 
     public string $newSocialLink = '';
 
-    public $photo = null;
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $newPhotos = [];
 
     public function mount(Person $person): void
     {
@@ -60,6 +62,18 @@ new #[Title('Photo & details')] class extends Component {
         $this->social_links = array_values($this->social_links);
     }
 
+    public function featurePhoto(int $mediaId): void
+    {
+        Gate::authorize('manageEnrichment', $this->person);
+
+        $media = $this->person->photoMedia()->firstWhere('id', $mediaId);
+        abort_unless($media, 404);
+
+        $this->person->featurePhoto($media);
+
+        Flux::toast(variant: 'success', text: __('Featured photo updated.'));
+    }
+
     public function save(): void
     {
         Gate::authorize('manageEnrichment', $this->person);
@@ -68,7 +82,7 @@ new #[Title('Photo & details')] class extends Component {
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'contact_email' => ['nullable', 'email', 'max:255'],
-            'photo' => ['nullable', 'image', 'max:20480'],
+            'newPhotos.*' => ['image', 'max:20480'],
         ]);
 
         $this->person->update([
@@ -79,10 +93,18 @@ new #[Title('Photo & details')] class extends Component {
             'consented_at' => $this->isSelf ? ($this->person->consented_at ?? now()) : $this->person->consented_at,
         ]);
 
-        if ($this->photo) {
-            $this->person->addMedia($this->photo->getRealPath())
-                ->usingFileName($this->photo->getClientOriginalName())
-                ->toMediaCollection('photo');
+        if ($this->newPhotos) {
+            foreach ($this->newPhotos as $photo) {
+                $this->person->addMedia($photo->getRealPath())
+                    ->usingFileName($photo->getClientOriginalName())
+                    ->toMediaCollection('photo');
+            }
+
+            // The gallery-to-feature grid above may already have cached an
+            // empty 'media' relation on this object (e.g. before the first
+            // photo is ever added) — drop it so photoUrl() elsewhere in this
+            // same request sees what was just uploaded, not that stale cache.
+            $this->person->unsetRelation('media');
         }
 
         Flux::toast(
@@ -112,13 +134,34 @@ new #[Title('Photo & details')] class extends Component {
     <form wire:submit="save" class="mt-6 flex flex-col gap-6">
         <div class="flex items-center gap-4">
             <x-person-avatar :person="$person" size="xl" />
-            <div class="flex-1" x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — try a smaller image, or check your connection and try again.')), { variant: 'danger', duration: 8000 })">
-                <flux:input type="file" wire:model="photo" accept="image/*" :label="__('Photo')" />
-                @if ($photo)
-                    <flux:text class="mt-1 text-xs text-zinc-500">{{ __('New photo selected — save to apply.') }}</flux:text>
+            <div class="flex-1" x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — try smaller images, or check your connection and try again.')), { variant: 'danger', duration: 8000 })">
+                <flux:input type="file" wire:model="newPhotos" multiple accept="image/*" :label="__('Add photos')" />
+                @if ($newPhotos)
+                    <flux:text class="mt-1 text-xs text-zinc-500">{{ __('New photos selected — save to apply.') }}</flux:text>
                 @endif
             </div>
         </div>
+
+        @if ($person->photoMedia()->isNotEmpty())
+            <div>
+                <flux:text class="text-sm font-medium">{{ __('Photos — click one to feature it everywhere else on the site') }}</flux:text>
+                <div class="mt-2 grid grid-cols-4 gap-2">
+                    @foreach ($person->photoMedia() as $media)
+                        <button
+                            type="button"
+                            wire:click="featurePhoto({{ $media->id }})"
+                            wire:key="photo-{{ $media->id }}"
+                            class="relative aspect-square overflow-hidden rounded {{ $media->getCustomProperty('featured') ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}"
+                        >
+                            <img src="{{ MediaUrl::of($media) }}" class="h-full w-full object-cover" alt="">
+                            @if ($media->getCustomProperty('featured'))
+                                <flux:badge size="sm" class="absolute bottom-1 left-1">{{ __('Featured') }}</flux:badge>
+                            @endif
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         <flux:input wire:model="contact_email" type="email" :label="__('Contact email')" />
         <flux:input wire:model="phone" :label="__('Phone')" />

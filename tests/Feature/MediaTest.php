@@ -19,11 +19,35 @@ test('a user can upload their own profile photo via the enrichment form', functi
 
     Livewire::actingAs($user)
         ->test('pages::people.enrich', ['person' => $person])
-        ->set('photo', UploadedFile::fake()->image('me.jpg'))
+        ->set('newPhotos', [UploadedFile::fake()->image('me.jpg')])
         ->call('save')
         ->assertHasNoErrors();
 
     expect($person->fresh()->photoUrl())->not->toBeNull();
+});
+
+test('a user can upload multiple photos and feature one of them', function () {
+    $user = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $user->update(['person_id' => $person->id]);
+
+    Livewire::actingAs($user)
+        ->test('pages::people.enrich', ['person' => $person])
+        ->set('newPhotos', [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    [$first, $second] = $person->fresh()->photoMedia()->all();
+    expect($person->fresh()->photoMedia())->toHaveCount(2);
+
+    Livewire::actingAs($user)
+        ->test('pages::people.enrich', ['person' => $person])
+        ->call('featurePhoto', $second->id)
+        ->assertHasNoErrors();
+
+    expect($first->fresh()->getCustomProperty('featured'))->toBeFalsy();
+    expect($second->fresh()->getCustomProperty('featured'))->toBeTrue();
+    expect($person->fresh()->featuredPhoto()->id)->toBe($second->id);
 });
 
 test('a user can add photos to a story\'s gallery while creating it', function () {

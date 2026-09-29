@@ -82,6 +82,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-29 18:00:00', 'Fixed .m4a voice memo recordings being rejected as story audio.'],
             ['2026-09-29 19:00:00', 'Fixed the story page\'s buttons and audio player controls overflowing on narrow phone screens.'],
             ['2026-09-29 20:00:00', 'Fixed memorial photos for deceased people not showing up on the family tree itself.'],
+            ['2026-09-29 21:00:00', 'You can now add multiple photos to a person, pick a featured one, and click any photo (on a person or a story) to see it bigger in a gallery.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

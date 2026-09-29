@@ -129,15 +129,7 @@ new class extends Component {
         </div>
     @endif
 
-    @if ($this->galleryUrls)
-        <div class="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            @foreach ($this->galleryUrls as $i => $mediaUrl)
-                <button type="button" onclick="openLightbox(@js($this->galleryUrls), {{ $i }})">
-                    <img src="{{ $mediaUrl }}" class="aspect-square rounded-lg object-cover" alt="">
-                </button>
-            @endforeach
-        </div>
-    @endif
+    <x-photo-gallery :urls="$this->galleryUrls" class="mt-6" />
 
     <div class="prose prose-zinc dark:prose-invert mt-6 max-w-none">
         {!! StoryBodyParser::render($story->body ?? '') !!}

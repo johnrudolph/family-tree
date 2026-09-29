@@ -43,9 +43,16 @@ test('a complete profile does not prompt the viewer', function () {
     ]);
 
     Livewire::actingAs($user)->test('pages::people.enrich', ['person' => $user->person])
-        ->set('photo', UploadedFile::fake()->image('me.jpg'))
+        ->set('newPhotos', [UploadedFile::fake()->image('me.jpg')])
         ->call('save')
         ->assertHasNoErrors();
+
+    // The enrich component's initial render reads $person's media before any
+    // upload, caching an empty relation onto this exact instance — since we
+    // passed $user->person by reference above, that's the same object $user
+    // still holds. Drop the cache so the dashboard test below re-queries
+    // fresh instead of seeing that stale, pre-upload snapshot.
+    $user->unsetRelation('person');
 
     Livewire::actingAs($user)
         ->test('pages::dashboard')

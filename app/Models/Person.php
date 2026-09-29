@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * @property int $id
@@ -93,12 +94,47 @@ class Person extends Model implements HasMedia
     }
 
     /**
-     * A single self-uploaded profile photo — see manageEnrichment on PersonPolicy;
-     * only the linked user may ever add or replace it.
+     * Any number of self-uploaded photos — see manageEnrichment on PersonPolicy;
+     * only the linked user (or, for the deceased, any page editor) may ever
+     * add to it.
      */
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('photo')->singleFile();
+        $this->addMediaCollection('photo');
+    }
+
+    /**
+     * @return Collection<int, Media>
+     */
+    public function photoMedia(): Collection
+    {
+        return $this->getMedia('photo');
+    }
+
+    /**
+     * The single photo chosen to represent this person everywhere but their
+     * own page (avatars, the family tree, link previews) — the first upload
+     * by default, until someone explicitly picks one via `featurePhoto()`.
+     */
+    public function featuredPhoto(): ?Media
+    {
+        $photos = $this->photoMedia();
+
+        return $photos->first(fn (Media $media) => $media->getCustomProperty('featured') === true)
+            ?? $photos->first();
+    }
+
+    public function featurePhoto(Media $media): void
+    {
+        foreach ($this->photoMedia() as $item) {
+            if ($item->getCustomProperty('featured') && $item->id !== $media->id) {
+                $item->setCustomProperty('featured', false);
+                $item->save();
+            }
+        }
+
+        $media->setCustomProperty('featured', true);
+        $media->save();
     }
 
     /**
@@ -108,7 +144,7 @@ class Person extends Model implements HasMedia
      */
     public function photoUrl(): ?string
     {
-        $media = $this->getFirstMedia('photo');
+        $media = $this->featuredPhoto();
 
         if (! $media) {
             return null;

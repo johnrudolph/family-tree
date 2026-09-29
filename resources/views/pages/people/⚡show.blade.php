@@ -140,6 +140,36 @@ new class extends Component {
         return $this->canEdit ? $this->person->pendingSuggestions()->count() : 0;
     }
 
+    #[Computed]
+    public function photoUrls(): array
+    {
+        if (! $this->person->canShowEnrichment()) {
+            return [];
+        }
+
+        return $this->person->photoMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all();
+    }
+
+    /**
+     * The featured photo's position within {@see photoUrls()}, matched by
+     * media ID rather than URL — MediaUrl::of() signs a fresh, unique URL
+     * on every call, so two calls for the same photo never produce equal
+     * strings to compare against.
+     */
+    #[Computed]
+    public function heroPhotoIndex(): ?int
+    {
+        $featured = $this->person->canShowEnrichment() ? $this->person->featuredPhoto() : null;
+
+        if (! $featured) {
+            return null;
+        }
+
+        $index = $this->person->photoMedia()->search(fn ($media) => $media->id === $featured->id);
+
+        return $index === false ? 0 : $index;
+    }
+
     /**
      * Every story this person appears in — the curated "who is this about"
      * list plus anything they're `[[tagged]]` in within a story body, merged
@@ -487,7 +517,13 @@ new class extends Component {
 
 <section class="w-full max-w-3xl">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <x-person-avatar :person="$person" size="xl" />
+        @if ($this->heroPhotoIndex !== null)
+            <button type="button" onclick="openLightbox(@js($this->photoUrls), {{ $this->heroPhotoIndex }})" class="block shrink-0">
+                <img src="{{ $this->photoUrls[$this->heroPhotoIndex] }}" class="size-32 rounded-full object-cover sm:size-40" alt="{{ $person->fullName() }}">
+            </button>
+        @else
+            <x-person-avatar :person="$person" size="xl" />
+        @endif
 
         <div class="min-w-0 flex-1">
             <flux:heading level="1">{{ $person->fullName() }}</flux:heading>
@@ -550,6 +586,10 @@ new class extends Component {
             @endif
         </div>
     </div>
+
+    @if (count($this->photoUrls) > 1)
+        <x-photo-gallery :urls="$this->photoUrls" class="mt-4" />
+    @endif
 
     @if ($this->isSelf && ! $person->hasConsented())
         <div class="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
