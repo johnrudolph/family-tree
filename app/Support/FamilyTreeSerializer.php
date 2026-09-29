@@ -50,7 +50,7 @@ class FamilyTreeSerializer
                     : ($person->last_name ?? ''),
                 'birthday' => self::lifespanLabel($person),
                 'dob_sort' => $person->dob?->format('Y-m-d'),
-                'avatar' => $person->hasConsented() ? $person->photoUrl() : null,
+                'avatar' => $person->canShowEnrichment() ? $person->photoUrl() : null,
                 'has_account' => $person->hasAccount(),
                 'url' => $person->wikiShowUrl(),
                 'living' => $person->is_living,

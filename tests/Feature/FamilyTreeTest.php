@@ -5,6 +5,7 @@ use App\Models\Relationship;
 use App\Models\User;
 use App\Support\FamilyTreeSerializer;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 test('the tree page renders for an authenticated member', function () {
     $user = User::factory()->withTwoFactor()->create();
@@ -91,6 +92,17 @@ test('a living person without consent has no avatar in the tree data', function 
     $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
 
     expect($data[(string) $person->id]['data']['avatar'])->toBeNull();
+});
+
+test('a deceased person\'s memorial photo shows on the tree without consent', function () {
+    Storage::fake('public');
+
+    $person = Person::factory()->create(['is_living' => false]);
+    $person->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('photo');
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['avatar'])->not->toBeNull();
 });
 
 test('serializing the tree does not N+1 query per person for accounts or photos', function () {
