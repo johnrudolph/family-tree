@@ -51,12 +51,16 @@ new class extends Component {
             $flux.modal('global-search').show();
         }
     "
-    x-on:modal-show.window="if ($event.detail.name === 'global-search') focusSearchInput()"
+    x-on:modal-show.window="if ($event.detail.name === 'global-search') {
+        $refs.searchInput.value = '';
+        filterPersonSearchResults({ target: $refs.searchInput });
+        focusSearchInput();
+    }"
 >
     <flux:modal name="global-search" variant="bare" class="w-full max-w-md">
         <div class="relative">
-            <flux:command>
-                <flux:command.input x-ref="searchInput" autofocus :placeholder="__('Jump to a person… (⌘K)')" clearable />
+            <flux:command filter="manual">
+                <flux:command.input x-ref="searchInput" autofocus :placeholder="__('Jump to a person… (⌘K)')" clearable x-on:input="filterPersonSearchResults($event)" />
                 {{-- Fixed height (5 rows) so the box never resizes — and
                      never re-centers — as filtering narrows the list. --}}
                 <flux:command.items class="h-[210px]">

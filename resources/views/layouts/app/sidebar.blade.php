@@ -11,6 +11,10 @@
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
+            <flux:modal.trigger name="global-search">
+                <flux:sidebar.search :placeholder="__('Search people…')" kbd="⌘K" />
+            </flux:modal.trigger>
+
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
@@ -67,6 +71,10 @@
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <flux:spacer />
+
+            <flux:modal.trigger name="global-search">
+                <flux:button square variant="subtle" icon="magnifying-glass" :tooltip="__('Search')" />
+            </flux:modal.trigger>
 
             <flux:dropdown position="top" align="end">
                 <flux:profile
