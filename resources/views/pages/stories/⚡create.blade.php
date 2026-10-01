@@ -2,10 +2,13 @@
 
 use App\Models\Person;
 use App\Models\Story;
+use App\Models\User;
+use App\Notifications\StoryAdded;
 use App\Services\PageEditorService;
 use App\Support\RichTextSanitizer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -108,6 +111,11 @@ new #[Title('New story')] class extends Component {
         }
 
         app(PageEditorService::class)->grantOwner($story, Auth::user());
+
+        Notification::send(
+            User::query()->where('notify_on_new_stories', true)->where('id', '!=', Auth::id())->get(),
+            new StoryAdded($story),
+        );
 
         $this->redirect(route('stories.show', $story), navigate: true);
     }

@@ -3,8 +3,10 @@
 use App\Models\Person;
 use App\Models\Story;
 use App\Models\User;
+use App\Notifications\StoryAdded;
 use App\Services\PageEditorService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -44,6 +46,28 @@ test('any member can create a story and tag people in it', function () {
 
     $story = Story::query()->where('title', 'The Move to Ohio')->firstOrFail();
     expect($story->people->pluck('id')->all())->toBe([$person->id]);
+});
+
+test('creating a story emails members who opted in, but not the creator or opted-out members', function () {
+    Notification::fake();
+
+    $creator = User::factory()->withTwoFactor()->create();
+    $optedIn = User::factory()->withTwoFactor()->create(['notify_on_new_stories' => true]);
+    $optedOut = User::factory()->withTwoFactor()->create(['notify_on_new_stories' => false]);
+
+    Livewire::actingAs($creator)
+        ->test('pages::stories.create')
+        ->set('title', 'The Move to Ohio')
+        ->set('start_date', '1962-06-01')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $story = Story::query()->where('title', 'The Move to Ohio')->firstOrFail();
+
+    Notification::assertSentTo($optedIn, StoryAdded::class);
+    Notification::assertNotSentTo($optedOut, StoryAdded::class);
+    Notification::assertNotSentTo($creator, StoryAdded::class);
+    Notification::assertSentTo($optedIn, StoryAdded::class, fn ($notification) => $notification->toMail($optedIn)->subject === "{$creator->name} added a story: {$story->title}");
 });
 
 test('creating a story sanitizes the rich text body before saving', function () {

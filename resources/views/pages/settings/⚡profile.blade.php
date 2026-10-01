@@ -14,6 +14,7 @@ new #[Title('Profile settings')] class extends Component {
 
     public string $name = '';
     public string $email = '';
+    public bool $notify_on_new_stories = true;
 
     /**
      * Mount the component.
@@ -22,6 +23,7 @@ new #[Title('Profile settings')] class extends Component {
     {
         $this->name = Auth::user()->name;
         $this->email = Auth::user()->email;
+        $this->notify_on_new_stories = Auth::user()->notify_on_new_stories;
     }
 
     /**
@@ -34,6 +36,7 @@ new #[Title('Profile settings')] class extends Component {
         $validated = $this->validate($this->profileRules($user->id));
 
         $user->fill($validated);
+        $user->notify_on_new_stories = $this->notify_on_new_stories;
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
@@ -106,6 +109,8 @@ new #[Title('Profile settings')] class extends Component {
                     </div>
                 @endif
             </div>
+
+            <flux:checkbox wire:model="notify_on_new_stories" :label="__('Email me when new stories are added')" />
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">

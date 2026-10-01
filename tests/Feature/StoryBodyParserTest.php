@@ -14,6 +14,18 @@ test('a matching [[Name]] tag renders as a link to the person page', function ()
         ->not->toContain('[[');
 });
 
+test('email rendering uses an inline style instead of Tailwind classes', function () {
+    $person = Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Drexler']);
+
+    $html = StoryBodyParser::render('<p>[[Jane Drexler]] got married.</p>', forEmail: true);
+
+    expect($html)
+        ->toContain('href="'.route('people.show', $person).'"')
+        ->toContain('style="color:#2563eb')
+        ->not->toContain('wire:navigate')
+        ->not->toContain('class=');
+});
+
 test('matching is case-insensitive', function () {
     $person = Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Drexler']);
 

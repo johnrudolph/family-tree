@@ -83,6 +83,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-29 19:00:00', 'Fixed the story page\'s buttons and audio player controls overflowing on narrow phone screens.'],
             ['2026-09-29 20:00:00', 'Fixed memorial photos for deceased people not showing up on the family tree itself.'],
             ['2026-09-29 21:00:00', 'You can now add multiple photos to a person, pick a featured one, and click any photo (on a person or a story) to see it bigger in a gallery.'],
+            ['2026-10-01 15:49:03', 'Members can now get an email whenever a new story is added. It\'s on by default and can be turned off from your profile settings.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

@@ -40,6 +40,8 @@ new #[Layout('layouts.auth')] #[Title('Your profile')] class extends Component {
 
     public $photo = null;
 
+    public bool $notify_on_new_stories = true;
+
     public function mount(): void
     {
         $person = Auth::user()->person;
@@ -56,6 +58,7 @@ new #[Layout('layouts.auth')] #[Title('Your profile')] class extends Component {
         $this->phone = $person->phone ?? '';
         $this->address = $person->address ?? '';
         $this->social_links = $person->social_links ?? [];
+        $this->notify_on_new_stories = Auth::user()->notify_on_new_stories;
     }
 
     public function addSocialLink(): void
@@ -113,6 +116,8 @@ new #[Layout('layouts.auth')] #[Title('Your profile')] class extends Component {
                 ->usingFileName($this->photo->getClientOriginalName())
                 ->toMediaCollection('photo');
         }
+
+        Auth::user()->update(['notify_on_new_stories' => $this->notify_on_new_stories]);
 
         app(RevisionService::class)->record($this->person, Auth::user(), $coreData);
 
@@ -188,6 +193,14 @@ new #[Layout('layouts.auth')] #[Title('Your profile')] class extends Component {
                         <flux:button wire:click="addSocialLink" type="button" size="sm">{{ __('Add') }}</flux:button>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+            <flux:heading size="sm">{{ __('Notifications') }}</flux:heading>
+
+            <div class="mt-4">
+                <flux:checkbox wire:model="notify_on_new_stories" :label="__('Email me when new stories are added')" />
             </div>
         </section>
 

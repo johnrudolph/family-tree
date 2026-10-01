@@ -50,6 +50,20 @@ test('saving the profile onboarding step updates core facts, enrichment fields, 
     expect($person->consented_at)->not->toBeNull();
 });
 
+test('the new story email preference defaults to on during onboarding, and can be turned off', function () {
+    $user = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($user)
+        ->test('pages::onboarding.profile')
+        ->assertSet('notify_on_new_stories', true)
+        ->set('first_name', 'Jonathan')
+        ->set('notify_on_new_stories', false)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($user->fresh()->notify_on_new_stories)->toBeFalse();
+});
+
 test('skipping the profile onboarding step makes no changes', function () {
     $user = User::factory()->withTwoFactor()->create();
     $originalName = $user->person->first_name;

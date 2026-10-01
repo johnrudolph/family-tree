@@ -17,19 +17,27 @@ class StoryBodyParser
      * than a broken link — the body is user-typed and can't be trusted to
      * always resolve, and leaving the brackets visible signals to an editor
      * that the tag needs fixing.
+     *
+     * Pass $forEmail when the result is going into an email — mail clients
+     * don't load the app's stylesheet or understand wire:navigate, so links
+     * there get an inline style instead of Tailwind classes.
      */
-    public static function render(string $html): string
+    public static function render(string $html, bool $forEmail = false): string
     {
         $people = self::peopleByName();
 
-        $result = preg_replace_callback(self::PATTERN, function (array $matches) use ($people) {
+        $result = preg_replace_callback(self::PATTERN, function (array $matches) use ($people, $forEmail) {
             $person = $people->get(self::normalize($matches[1]));
 
             if (! $person) {
                 return $matches[0];
             }
 
-            return '<a href="'.e(route('people.show', $person)).'" wire:navigate class="font-medium text-blue-600 hover:underline dark:text-blue-400">'.e($person->fullName()).'</a>';
+            $attributes = $forEmail
+                ? 'style="color:#2563eb;font-weight:600;text-decoration:underline"'
+                : 'wire:navigate class="font-medium text-blue-600 hover:underline dark:text-blue-400"';
+
+            return '<a href="'.e(route('people.show', $person)).'" '.$attributes.'>'.e($person->fullName()).'</a>';
         }, $html);
 
         return $result ?? $html;

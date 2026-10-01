@@ -28,6 +28,22 @@ test('profile information can be updated', function () {
     expect($user->email_verified_at)->toBeNull();
 });
 
+test('the new story email preference can be turned off and back on', function () {
+    $user = User::factory()->create(['notify_on_new_stories' => true]);
+
+    $this->actingAs($user);
+
+    Livewire::test('pages::settings.profile')
+        ->assertSet('notify_on_new_stories', true)
+        ->set('name', $user->name)
+        ->set('email', $user->email)
+        ->set('notify_on_new_stories', false)
+        ->call('updateProfileInformation')
+        ->assertHasNoErrors();
+
+    expect($user->refresh()->notify_on_new_stories)->toBeFalse();
+});
+
 test('email verification status is unchanged when email address is unchanged', function () {
     $user = User::factory()->create();
 

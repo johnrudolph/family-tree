@@ -25,6 +25,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $password
  * @property bool $is_admin
  * @property int|null $person_id
+ * @property bool $notify_on_new_stories
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -33,7 +34,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  * @property-read Person|null $person
  */
-#[Fillable(['name', 'email', 'password', 'is_admin', 'person_id'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'person_id', 'notify_on_new_stories'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -59,6 +60,7 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'is_admin' => 'boolean',
+            'notify_on_new_stories' => 'boolean',
         ];
     }
 
