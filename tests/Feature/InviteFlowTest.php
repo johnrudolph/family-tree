@@ -62,6 +62,22 @@ test('inviting without selecting a person fails validation', function () {
         ->assertHasErrors(['existingPersonId']);
 });
 
+test('admins can cancel a pending invite', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+    $person = Person::factory()->create(['is_living' => true]);
+    $invite = Invite::factory()->create([
+        'person_id' => $person->id,
+        'invited_by' => $admin->id,
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test('pages::invites.invite-person')
+        ->call('cancelInvite', $invite->id)
+        ->assertHasNoErrors();
+
+    expect(Invite::find($invite->id))->toBeNull();
+});
+
 test('non-admins cannot access the invite page', function () {
     $user = User::factory()->withTwoFactor()->create(['is_admin' => false]);
 

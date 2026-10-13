@@ -74,6 +74,18 @@ new #[Title('Invite a member')] class extends Component {
 
         Flux::toast(variant: 'success', text: "Invite sent to {$invite->email}.");
     }
+
+    public function cancelInvite(int $inviteId): void
+    {
+        abort_unless(Auth::user()->is_admin, 403);
+
+        $invite = Invite::whereNull('accepted_at')->findOrFail($inviteId);
+        $invite->delete();
+
+        unset($this->pendingInvites);
+
+        Flux::toast(variant: 'success', text: "Invite to {$invite->email} canceled.");
+    }
 }; ?>
 
 <section class="w-full">
@@ -106,6 +118,7 @@ new #[Title('Invite a member')] class extends Component {
                         {{ $invite->isExpired() ? __('Expired') : __('Expires').' '.$invite->expires_at->diffForHumans() }}
                     </flux:text>
                 </div>
+                <flux:button type="button" wire:click="cancelInvite({{ $invite->id }})" wire:confirm="{{ __('Cancel this invite?') }}" size="sm" variant="danger">{{ __('Cancel') }}</flux:button>
             </div>
         @empty
             <flux:text class="text-zinc-500">{{ __('No pending invites.') }}</flux:text>
