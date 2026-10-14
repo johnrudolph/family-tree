@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\URL;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -365,6 +366,20 @@ class Person extends Model implements HasMedia
     public function wikiShowUrl(): string
     {
         return route('people.show', $this);
+    }
+
+    /**
+     * A signed, unauthenticated URL that bots can fetch to unfurl a link
+     * preview for this person — the real page stays behind login.
+     */
+    public function ogShareUrl(): string
+    {
+        return URL::signedRoute('og.person.show', ['person' => $this]);
+    }
+
+    public function ogImageUrl(): string
+    {
+        return URL::signedRoute('og.person.image', ['person' => $this]);
     }
 
     public function wikiSuggestionsUrl(): string

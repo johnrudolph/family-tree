@@ -3,6 +3,7 @@
 use App\Models\Person;
 use App\Models\Story;
 use App\Models\User;
+use App\Notifications\SlackAnnouncement;
 use App\Notifications\StoryAdded;
 use App\Services\PageEditorService;
 use Illuminate\Http\UploadedFile;
@@ -68,6 +69,43 @@ test('creating a story emails members who opted in, but not the creator or opted
     Notification::assertNotSentTo($optedOut, StoryAdded::class);
     Notification::assertNotSentTo($creator, StoryAdded::class);
     Notification::assertSentTo($optedIn, StoryAdded::class, fn ($notification) => $notification->toMail($optedIn)->subject === "{$creator->name} added a story: {$story->title}");
+});
+
+test('creating a story posts to Slack when a webhook url is configured', function () {
+    config(['services.slack.webhook_url' => 'https://hooks.slack.com/services/test']);
+    Notification::fake();
+
+    $creator = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($creator)
+        ->test('pages::stories.create')
+        ->set('title', 'The Move to Ohio')
+        ->set('start_date', '1962-06-01')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $story = Story::query()->where('title', 'The Move to Ohio')->firstOrFail();
+
+    Notification::assertSentOnDemand(
+        SlackAnnouncement::class,
+        fn ($notification) => str_contains($notification->toSlack(new stdClass)->toArray()['text'], $story->ogShareUrl()),
+    );
+});
+
+test('creating a story does not post to Slack when no webhook url is configured', function () {
+    config(['services.slack.webhook_url' => null]);
+    Notification::fake();
+
+    $creator = User::factory()->withTwoFactor()->create();
+
+    Livewire::actingAs($creator)
+        ->test('pages::stories.create')
+        ->set('title', 'The Move to Ohio')
+        ->set('start_date', '1962-06-01')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Notification::assertSentOnDemandTimes(SlackAnnouncement::class, 0);
 });
 
 test('creating a story sanitizes the rich text body before saving', function () {

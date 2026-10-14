@@ -29,10 +29,9 @@ return [
     ],
 
     'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
+        // A single incoming webhook URL for the family's Slack workspace —
+        // there's only ever one channel, so no per-user routing is needed.
+        'webhook_url' => env('SLACK_WEBHOOK_URL'),
     ],
 
     'nominatim' => [

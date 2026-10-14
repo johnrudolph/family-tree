@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ac5f01ecf26d47afd377e670c3cbba21",
+    "content-hash": "78343050708acf841e3ae813ed6e4527",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -2206,6 +2206,71 @@
                 "source": "https://github.com/laravel/serializable-closure"
             },
             "time": "2026-08-18T20:28:54+00:00"
+        },
+        {
+            "name": "laravel/slack-notification-channel",
+            "version": "v3.10.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/slack-notification-channel.git",
+                "reference": "f5690359278aaebf5a0e5b07659caea95b6ded40"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/slack-notification-channel/zipball/f5690359278aaebf5a0e5b07659caea95b6ded40",
+                "reference": "f5690359278aaebf5a0e5b07659caea95b6ded40",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0|^8.0",
+                "illuminate/http": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "illuminate/notifications": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.0"
+            },
+            "require-dev": {
+                "mockery/mockery": "^1.0",
+                "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0|^11.0",
+                "phpstan/phpstan": "^1.10|^2.0",
+                "phpunit/phpunit": "^9.0|^10.4|^11.5|^12.0|^13.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Illuminate\\Notifications\\SlackChannelServiceProvider"
+                    ]
+                },
+                "branch-alias": {
+                    "dev-master": "3.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Illuminate\\Notifications\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                }
+            ],
+            "description": "Slack Notification Channel for laravel.",
+            "keywords": [
+                "laravel",
+                "notifications",
+                "slack"
+            ],
+            "support": {
+                "issues": "https://github.com/laravel/slack-notification-channel/issues",
+                "source": "https://github.com/laravel/slack-notification-channel/tree/v3.10.0"
+            },
+            "time": "2026-07-24T20:53:54+00:00"
         },
         {
             "name": "laravel/tinker",
@@ -8800,12 +8865,12 @@
             "version": "v5.7.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/vlucas/phpdotenv.git",
+                "url": "https://github.com/phpdotenv/phpdotenv.git",
                 "reference": "301c07936b16d88628b126b01d082ba153cf4c40"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/vlucas/phpdotenv/zipball/301c07936b16d88628b126b01d082ba153cf4c40",
+                "url": "https://api.github.com/repos/phpdotenv/phpdotenv/zipball/301c07936b16d88628b126b01d082ba153cf4c40",
                 "reference": "301c07936b16d88628b126b01d082ba153cf4c40",
                 "shasum": ""
             },
@@ -13004,7 +13069,8 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "ext-imagick": "*"
     },
     "platform-dev": {},
     "plugin-api-version": "2.9.0"

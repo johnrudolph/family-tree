@@ -86,6 +86,8 @@ class ChangeLogSeeder extends Seeder
             ['2026-10-01 15:49:03', 'Members can now get an email whenever a new story is added. It\'s on by default and can be turned off from your profile settings.'],
             ['2026-10-13 00:00:00', 'Admins can now cancel a pending invite, so a fresh one can be sent.'],
             ['2026-10-13 00:05:00', 'The timeline and map pages can now be filtered down to one or more specific people, shown as removable pills.'],
+            ['2026-10-13 00:10:00', 'New stories can now also post an announcement to a Slack channel.'],
+            ['2026-10-13 00:15:00', 'Links to a story or person now show a nice preview image with their photo when shared.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

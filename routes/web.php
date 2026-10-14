@@ -1,9 +1,21 @@
 <?php
 
+use App\Http\Controllers\OgImageController;
+use App\Http\Controllers\OgPreviewController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
 Route::view('/', 'welcome')->name('home');
+
+// Public (but signature-protected) routes so link-unfurling bots can read
+// Open Graph tags and fetch a preview image for content that otherwise
+// sits behind this invite-only app's login wall.
+Route::middleware('signed')->group(function () {
+    Route::get('/p/people/{person}', [OgPreviewController::class, 'person'])->name('og.person.show');
+    Route::get('/p/people/{person}/image', [OgImageController::class, 'person'])->name('og.person.image');
+    Route::get('/p/stories/{story:slug}', [OgPreviewController::class, 'story'])->name('og.story.show');
+    Route::get('/p/stories/{story:slug}/image', [OgImageController::class, 'story'])->name('og.story.image');
+});
 
 Route::livewire('invites/{token}', 'pages::invites.accept')->name('invites.accept');
 

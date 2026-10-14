@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -154,6 +155,20 @@ class Story extends Model implements HasMedia
     public function wikiShowUrl(): string
     {
         return route('stories.show', $this);
+    }
+
+    /**
+     * A signed, unauthenticated URL that bots can fetch to unfurl a link
+     * preview for this story — the real page stays behind login.
+     */
+    public function ogShareUrl(): string
+    {
+        return URL::signedRoute('og.story.show', ['story' => $this]);
+    }
+
+    public function ogImageUrl(): string
+    {
+        return URL::signedRoute('og.story.image', ['story' => $this]);
     }
 
     public function wikiSuggestionsUrl(): string

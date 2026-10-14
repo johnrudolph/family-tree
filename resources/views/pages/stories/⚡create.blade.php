@@ -4,7 +4,9 @@ use App\Models\Person;
 use App\Models\Story;
 use App\Models\User;
 use App\Notifications\StoryAdded;
+use App\Notifications\SlackAnnouncement;
 use App\Services\PageEditorService;
+use App\Services\SlackNotifier;
 use App\Support\RichTextSanitizer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -116,6 +118,10 @@ new #[Title('New story')] class extends Component {
             User::query()->where('notify_on_new_stories', true)->where('id', '!=', Auth::id())->get(),
             new StoryAdded($story),
         );
+
+        app(SlackNotifier::class)->send(new SlackAnnouncement(
+            "{$story->creator->name} added a story: *{$story->title}*\n{$story->ogShareUrl()}"
+        ));
 
         $this->redirect(route('stories.show', $story), navigate: true);
     }
