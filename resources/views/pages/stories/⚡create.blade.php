@@ -226,9 +226,7 @@ new #[Title('New story')] class extends Component {
         </div>
 
         @if ($this->canUploadMedia)
-            <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
-                <flux:input type="file" wire:model="photos" multiple accept="image/*" :label="__('Or upload new photos')" :description="__('You can pick a featured image for the timeline after publishing, from the edit page.')" />
-            </div>
+            @include('partials.photo-upload-dropzone', ['model' => 'photos', 'label' => __('Or upload new photos — you can pick a featured image for the timeline after publishing, from the edit page.')])
             @if ($photos)
                 <div class="grid grid-cols-4 gap-2">
                     @foreach ($photos as $photo)

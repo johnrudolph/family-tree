@@ -5,6 +5,7 @@ use App\Support\MediaUrl;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -40,15 +41,28 @@ new #[Title('Photos')] class extends Component {
             ->paginate(24);
     }
 
-    public function upload(): void
+    /**
+     * Each file in $newPhotos finishes its own upload independently (Livewire
+     * chunks, previews, and tracks progress per-file natively) — as soon as
+     * one lands here, turn it into a real Photo immediately rather than
+     * waiting for the whole batch, so a single bad file or a closed tab
+     * never loses photos that already finished uploading.
+     */
+    public function updatedNewPhotos(): void
     {
         Gate::authorize('create', Photo::class);
 
-        $validated = $this->validate([
-            'newPhotos.*' => ['image', 'max:20480'],
-        ]);
+        $failures = 0;
 
         foreach ($this->newPhotos as $uploaded) {
+            $validator = Validator::make(['photo' => $uploaded], ['photo' => ['image', 'max:20480']]);
+
+            if ($validator->fails()) {
+                $failures++;
+
+                continue;
+            }
+
             $photo = Photo::create(['uploaded_by' => Auth::id()]);
             $photo->addMedia($uploaded->getRealPath())
                 ->usingFileName($uploaded->getClientOriginalName())
@@ -58,7 +72,9 @@ new #[Title('Photos')] class extends Component {
         $this->reset('newPhotos');
         unset($this->photos);
 
-        Flux::toast(variant: 'success', text: __('Photos uploaded.'));
+        if ($failures > 0) {
+            Flux::toast(variant: 'danger', text: trans_choice('1 photo was too large or not a valid image and was skipped.|:count photos were too large or not valid images and were skipped.', $failures, ['count' => $failures]));
+        }
     }
 }; ?>
 
@@ -69,13 +85,8 @@ new #[Title('Photos')] class extends Component {
     <flux:subheading>{{ __('Every standalone photo in the family archive — tag people, pick a date and location, and reuse the same photo across stories.') }}</flux:subheading>
 
     @if ($this->canUpload)
-        <div class="mt-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-            <form wire:submit="upload" class="flex flex-col gap-3 sm:flex-row sm:items-end" x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — try smaller images, or check your connection and try again.')), { variant: 'danger', duration: 8000 })">
-                <div class="flex-1">
-                    <flux:input type="file" wire:model="newPhotos" multiple accept="image/*" :label="__('Upload photos')" />
-                </div>
-                <flux:button type="submit" variant="primary">{{ __('Upload') }}</flux:button>
-            </form>
+        <div class="mt-4">
+            @include('partials.photo-upload-dropzone', ['model' => 'newPhotos'])
         </div>
     @endif
 

@@ -30,7 +30,6 @@ test('an admin can upload a photo from the library', function () {
     Livewire::actingAs($admin)
         ->test('pages::photos.index')
         ->set('newPhotos', [UploadedFile::fake()->image('a.jpg')])
-        ->call('upload')
         ->assertHasNoErrors();
 
     expect(Photo::count())->toBe(1);
@@ -42,10 +41,23 @@ test('a non-admin cannot upload a photo from the library', function () {
     Livewire::actingAs($member)
         ->test('pages::photos.index')
         ->set('newPhotos', [UploadedFile::fake()->image('a.jpg')])
-        ->call('upload')
         ->assertForbidden();
 
     expect(Photo::count())->toBe(0);
+});
+
+test('uploading several photos at once creates one each, skipping any invalid file without losing the rest', function () {
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test('pages::photos.index')
+        ->set('newPhotos', [
+            UploadedFile::fake()->image('a.jpg'),
+            UploadedFile::fake()->create('not-an-image.txt', 10),
+            UploadedFile::fake()->image('b.jpg'),
+        ]);
+
+    expect(Photo::count())->toBe(2);
 });
 
 test('a member can view a photo\'s page', function () {
