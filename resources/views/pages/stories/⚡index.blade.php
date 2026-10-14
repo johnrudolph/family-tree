@@ -13,7 +13,7 @@ new #[Title('Stories')] class extends Component {
     #[Computed]
     public function stories()
     {
-        return Story::query()->with(['creator', 'location', 'media'])->orderByDesc('start_date')->paginate(15);
+        return Story::query()->with(['creator', 'location', 'photos.media', 'featuredPhoto.media'])->orderByDesc('start_date')->paginate(15);
     }
 }; ?>
 
@@ -25,7 +25,7 @@ new #[Title('Stories')] class extends Component {
 
     <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @forelse ($this->stories as $story)
-            @php($featured = $story->featuredImage())
+            @php($featured = $story->featuredImage()?->fileMedia())
             <a href="{{ route('stories.show', $story) }}" wire:navigate
                class="block overflow-hidden rounded-lg border border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
                 @if ($featured)

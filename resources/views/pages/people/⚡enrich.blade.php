@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Photo;
 use App\Support\MediaUrl;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -62,14 +63,15 @@ new #[Title('Photo & details')] class extends Component {
         $this->social_links = array_values($this->social_links);
     }
 
-    public function featurePhoto(int $mediaId): void
+    public function featurePhoto(int $photoId): void
     {
         Gate::authorize('manageEnrichment', $this->person);
 
-        $media = $this->person->photoMedia()->firstWhere('id', $mediaId);
-        abort_unless($media, 404);
+        $photo = $this->person->photos->firstWhere('id', $photoId);
+        abort_unless($photo, 404);
 
-        $this->person->featurePhoto($media);
+        $this->person->avatar_photo_id = $photo->id;
+        $this->person->save();
 
         Flux::toast(variant: 'success', text: __('Featured photo updated.'));
     }
@@ -94,17 +96,26 @@ new #[Title('Photo & details')] class extends Component {
         ]);
 
         if ($this->newPhotos) {
-            foreach ($this->newPhotos as $photo) {
-                $this->person->addMedia($photo->getRealPath())
-                    ->usingFileName($photo->getClientOriginalName())
-                    ->toMediaCollection('photo');
+            // Uploading your own profile photo is a narrower, pre-existing
+            // allowance (manageEnrichment, checked above) — it doesn't go
+            // through the admin-only Photo library upload gate.
+            foreach ($this->newPhotos as $uploaded) {
+                $photo = Photo::create(['uploaded_by' => Auth::id()]);
+                $photo->addMedia($uploaded->getRealPath())
+                    ->usingFileName($uploaded->getClientOriginalName())
+                    ->toMediaCollection('file');
+                $photo->people()->attach($this->person->id);
+
+                if ($this->person->avatar_photo_id === null) {
+                    $this->person->avatar_photo_id = $photo->id;
+                }
             }
 
-            // The gallery-to-feature grid above may already have cached an
-            // empty 'media' relation on this object (e.g. before the first
-            // photo is ever added) — drop it so photoUrl() elsewhere in this
-            // same request sees what was just uploaded, not that stale cache.
-            $this->person->unsetRelation('media');
+            if ($this->person->isDirty('avatar_photo_id')) {
+                $this->person->save();
+            }
+
+            $this->person->unsetRelation('photos');
         }
 
         Flux::toast(
@@ -142,19 +153,19 @@ new #[Title('Photo & details')] class extends Component {
             </div>
         </div>
 
-        @if ($person->photoMedia()->isNotEmpty())
+        @if ($person->photos->isNotEmpty())
             <div>
                 <flux:text class="text-sm font-medium">{{ __('Photos — click one to feature it everywhere else on the site') }}</flux:text>
                 <div class="mt-2 grid grid-cols-4 gap-2">
-                    @foreach ($person->photoMedia() as $media)
+                    @foreach ($person->photos as $photo)
                         <button
                             type="button"
-                            wire:click="featurePhoto({{ $media->id }})"
-                            wire:key="photo-{{ $media->id }}"
-                            class="relative aspect-square overflow-hidden rounded {{ $media->getCustomProperty('featured') ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}"
+                            wire:click="featurePhoto({{ $photo->id }})"
+                            wire:key="photo-{{ $photo->id }}"
+                            class="relative aspect-square overflow-hidden rounded {{ $photo->id === $person->avatar_photo_id ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}"
                         >
-                            <img src="{{ MediaUrl::of($media) }}" class="h-full w-full object-cover" alt="">
-                            @if ($media->getCustomProperty('featured'))
+                            <img src="{{ MediaUrl::of($photo->fileMedia()) }}" class="h-full w-full object-cover" alt="">
+                            @if ($photo->id === $person->avatar_photo_id)
                                 <flux:badge size="sm" class="absolute bottom-1 left-1">{{ __('Featured') }}</flux:badge>
                             @endif
                         </button>

@@ -1,12 +1,16 @@
 <?php
 
+use App\Concerns\PicksExistingPhotos;
+use App\Models\AudioRecording;
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Story;
 use App\Services\RevisionService;
 use App\Services\StoryDeletionService;
 use App\Support\MediaUrl;
 use App\Support\RichTextSanitizer;
 use Flux\Flux;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
@@ -17,7 +21,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 
 new #[Title('Edit story')] class extends Component {
-    use WithFileUploads;
+    use PicksExistingPhotos, WithFileUploads;
 
     #[Locked]
     public Story $story;
@@ -51,6 +55,8 @@ new #[Title('Edit story')] class extends Component {
     /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
     public $audio = null;
 
+    public ?int $existingAudioId = null;
+
     public string $deleteConfirmationName = '';
 
     public function mount(Story $story): void
@@ -82,23 +88,51 @@ new #[Title('Edit story')] class extends Component {
         $this->location_id = $locationId;
     }
 
-    public function featureImage(int $mediaId): void
+    #[Computed]
+    public function canUploadMedia(): bool
+    {
+        return Gate::allows('create', Photo::class);
+    }
+
+    #[Computed]
+    public function availableAudioRecordings(): Collection
+    {
+        return AudioRecording::query()->latest()->limit(60)->get();
+    }
+
+    public function featureImage(int $photoId): void
     {
         Gate::authorize('update', $this->story);
 
-        $media = $this->story->galleryMedia()->firstWhere('id', $mediaId);
-        abort_unless($media, 404);
+        $photo = $this->story->photos->firstWhere('id', $photoId);
+        abort_unless($photo, 404);
 
-        $this->story->featureImage($media);
+        $this->story->featured_photo_id = $photo->id;
+        $this->story->save();
 
         Flux::toast(variant: 'success', text: __('Featured image updated.'));
+    }
+
+    public function removePhoto(int $photoId): void
+    {
+        Gate::authorize('update', $this->story);
+
+        $this->story->photos()->detach($photoId);
+
+        if ($this->story->featured_photo_id === $photoId) {
+            $this->story->featured_photo_id = $this->story->photos()->first()?->id;
+            $this->story->save();
+        }
+
+        Flux::toast(variant: 'success', text: __('Photo removed from this story.'));
     }
 
     public function removeAudio(): void
     {
         Gate::authorize('update', $this->story);
 
-        $this->story->clearMediaCollection('audio');
+        $this->story->audio_recording_id = null;
+        $this->story->save();
 
         Flux::toast(variant: 'success', text: __('Audio removed.'));
     }
@@ -147,8 +181,11 @@ new #[Title('Edit story')] class extends Component {
             'end_year' => ['nullable', 'integer', 'min:1000', 'max:'.($currentYear + 1)],
             'person_ids' => ['array'],
             'person_ids.*' => ['exists:people,id'],
+            'selectedPhotoIds' => ['array'],
+            'selectedPhotoIds.*' => ['exists:photos,id'],
             'newPhotos.*' => ['image', 'max:20480'],
             'audio' => ['nullable', 'file', 'mimes:mp3,mp4,m4a,wav,ogg,webm,aac', 'max:102400'],
+            'existingAudioId' => ['nullable', 'integer', 'exists:audio_recordings,id'],
         ]);
 
         $data = [
@@ -164,16 +201,40 @@ new #[Title('Edit story')] class extends Component {
         $this->story->update($data);
         $this->story->people()->sync($validated['person_ids']);
 
-        foreach ($this->newPhotos as $photo) {
-            $this->story->addMedia($photo->getRealPath())
-                ->usingFileName($photo->getClientOriginalName())
-                ->toMediaCollection('gallery');
+        if ($validated['selectedPhotoIds']) {
+            $this->story->photos()->syncWithoutDetaching($validated['selectedPhotoIds']);
         }
 
-        if ($this->audio) {
-            $this->story->addMedia($this->audio->getRealPath())
+        if ($this->newPhotos) {
+            Gate::authorize('create', Photo::class);
+
+            foreach ($this->newPhotos as $uploaded) {
+                $photo = Photo::create(['uploaded_by' => Auth::id()]);
+                $photo->addMedia($uploaded->getRealPath())
+                    ->usingFileName($uploaded->getClientOriginalName())
+                    ->toMediaCollection('file');
+                $this->story->photos()->attach($photo->id);
+            }
+        }
+
+        if ($validated['existingAudioId']) {
+            $this->story->audio_recording_id = $validated['existingAudioId'];
+        } elseif ($this->audio) {
+            Gate::authorize('create', AudioRecording::class);
+
+            $recording = AudioRecording::create(['uploaded_by' => Auth::id()]);
+            $recording->addMedia($this->audio->getRealPath())
                 ->usingFileName($this->audio->getClientOriginalName())
-                ->toMediaCollection('audio');
+                ->toMediaCollection('file');
+            $this->story->audio_recording_id = $recording->id;
+        }
+
+        if ($this->story->featured_photo_id === null) {
+            $this->story->featured_photo_id = $this->story->photos()->first()?->id;
+        }
+
+        if ($this->story->isDirty(['audio_recording_id', 'featured_photo_id'])) {
+            $this->story->save();
         }
 
         app(RevisionService::class)->record($this->story, Auth::user(), $data);
@@ -230,30 +291,44 @@ new #[Title('Edit story')] class extends Component {
             @endforeach
         </flux:select>
 
-        @if ($story->galleryMedia()->isNotEmpty())
+        @if ($story->photos->isNotEmpty())
             <div>
-                <flux:text class="text-sm font-medium">{{ __('Gallery — click a photo to feature it on the timeline') }}</flux:text>
+                <flux:text class="text-sm font-medium">{{ __('Gallery — click a photo to feature it on the timeline, or remove it from this story') }}</flux:text>
                 <div class="mt-2 grid grid-cols-4 gap-2">
-                    @foreach ($story->galleryMedia() as $media)
-                        <button
-                            type="button"
-                            wire:click="featureImage({{ $media->id }})"
-                            wire:key="gallery-{{ $media->id }}"
-                            class="relative aspect-square overflow-hidden rounded {{ $media->getCustomProperty('featured') ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}"
-                        >
-                            <img src="{{ MediaUrl::of($media) }}" class="h-full w-full object-cover" alt="">
-                            @if ($media->getCustomProperty('featured'))
+                    @foreach ($story->photos as $photo)
+                        <div class="group relative aspect-square overflow-hidden rounded {{ $photo->id === $story->featured_photo_id ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}">
+                            <button type="button" wire:click="featureImage({{ $photo->id }})" wire:key="gallery-{{ $photo->id }}" class="block h-full w-full">
+                                <img src="{{ MediaUrl::of($photo->fileMedia()) }}" class="h-full w-full object-cover" alt="">
+                            </button>
+                            @if ($photo->id === $story->featured_photo_id)
                                 <flux:badge size="sm" class="absolute bottom-1 left-1">{{ __('Featured') }}</flux:badge>
                             @endif
-                        </button>
+                            <button
+                                type="button"
+                                wire:click="removePhoto({{ $photo->id }})"
+                                wire:confirm="{{ __('Remove this photo from the story? The photo itself stays in the library.') }}"
+                                class="absolute top-1 right-1 hidden size-5 items-center justify-center rounded-full bg-black/60 text-white group-hover:flex"
+                            >
+                                <flux:icon.x-mark class="size-3" />
+                            </button>
+                        </div>
                     @endforeach
                 </div>
             </div>
         @endif
 
-        <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
-            <flux:input type="file" wire:model="newPhotos" multiple accept="image/*" :label="__('Add photos')" />
+        <div>
+            <flux:text class="text-sm font-medium">{{ __('Add photos from the library') }}</flux:text>
+            <div class="mt-2">
+                @include('partials.photo-picker')
+            </div>
         </div>
+
+        @if ($this->canUploadMedia)
+            <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
+                <flux:input type="file" wire:model="newPhotos" multiple accept="image/*" :label="__('Or upload new photos')" />
+            </div>
+        @endif
 
         <flux:separator />
 
@@ -261,14 +336,24 @@ new #[Title('Edit story')] class extends Component {
             <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                 <div class="flex min-w-0 items-center gap-2">
                     <flux:icon.volume-2 class="size-5 shrink-0 text-zinc-400" />
-                    <flux:text class="truncate text-sm">{{ $story->audioMedia()->file_name }}</flux:text>
+                    <flux:text class="truncate text-sm">{{ $story->audioRecording->fileMedia()->file_name }}</flux:text>
                 </div>
-                <flux:button type="button" wire:click="removeAudio" wire:confirm="{{ __('Remove this audio?') }}" size="sm" variant="danger">{{ __('Remove') }}</flux:button>
+                <flux:button type="button" wire:click="removeAudio" wire:confirm="{{ __('Remove this audio from the story?') }}" size="sm" variant="danger">{{ __('Remove') }}</flux:button>
             </div>
         @else
-            <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Audio upload failed — the file may be too large or an unsupported format.')), { variant: 'danger', duration: 8000 })">
-                <flux:input type="file" wire:model="audio" accept="audio/*" :label="__('Audio (optional)')" :description="__('An oral history recording — someone speaking about this story. Shown with a small player.')" />
-            </div>
+            @if ($this->availableAudioRecordings->isNotEmpty())
+                <flux:select wire:model="existingAudioId" variant="listbox" searchable clearable class="mb-2" :placeholder="__('Use an existing recording…')">
+                    @foreach ($this->availableAudioRecordings as $recording)
+                        <flux:select.option value="{{ $recording->id }}">{{ $recording->description ?: "Recording #{$recording->id}" }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
+
+            @if ($this->canUploadMedia && ! $existingAudioId)
+                <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Audio upload failed — the file may be too large or an unsupported format.')), { variant: 'danger', duration: 8000 })">
+                    <flux:input type="file" wire:model="audio" accept="audio/*" :label="__('Or upload a new recording')" :description="__('An oral history recording — someone speaking about this story. Shown with a small player.')" />
+                </div>
+            @endif
         @endif
 
         <div class="flex gap-2">
@@ -293,7 +378,7 @@ new #[Title('Edit story')] class extends Component {
                 <div>
                     <flux:heading size="lg">{{ __('Delete :title?', ['title' => $story->title]) }}</flux:heading>
                     <flux:subheading class="mt-2">
-                        {{ __('This can\'t be undone. Its photos and audio, tags to people, edit history, and pending suggestions are all deleted too.') }}
+                        {{ __('This can\'t be undone. Its tags to people, edit history, and pending suggestions are all deleted too — its photos and audio stay in the library.') }}
                     </flux:subheading>
                 </div>
 

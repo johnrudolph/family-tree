@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Story;
 use App\Models\User;
 use App\Services\PageEditorService;
@@ -37,21 +38,20 @@ test('a user can upload multiple photos and feature one of them', function () {
         ->call('save')
         ->assertHasNoErrors();
 
-    [$first, $second] = $person->fresh()->photoMedia()->all();
-    expect($person->fresh()->photoMedia())->toHaveCount(2);
+    [$first, $second] = $person->fresh()->photos->all();
+    expect($person->fresh()->photos)->toHaveCount(2);
 
     Livewire::actingAs($user)
         ->test('pages::people.enrich', ['person' => $person])
         ->call('featurePhoto', $second->id)
         ->assertHasNoErrors();
 
-    expect($first->fresh()->getCustomProperty('featured'))->toBeFalsy();
-    expect($second->fresh()->getCustomProperty('featured'))->toBeTrue();
+    expect($person->fresh()->avatar_photo_id)->toBe($second->id);
     expect($person->fresh()->featuredPhoto()->id)->toBe($second->id);
 });
 
-test('a user can add photos to a story\'s gallery while creating it', function () {
-    $user = User::factory()->withTwoFactor()->create();
+test('an admin can add photos to a story\'s gallery while creating it', function () {
+    $user = User::factory()->withTwoFactor()->create(['is_admin' => true]);
 
     Livewire::actingAs($user)
         ->test('pages::stories.create')
@@ -62,11 +62,23 @@ test('a user can add photos to a story\'s gallery while creating it', function (
         ->assertHasNoErrors();
 
     $story = Story::query()->where('title', 'A Photographed Day')->firstOrFail();
-    expect($story->galleryMedia())->toHaveCount(2);
+    expect($story->photos)->toHaveCount(2);
 });
 
-test('an editor can add photos to a story gallery', function () {
-    $editor = User::factory()->withTwoFactor()->create();
+test('a non-admin cannot upload new photos while creating a story', function () {
+    $user = User::factory()->withTwoFactor()->create(['is_admin' => false]);
+
+    Livewire::actingAs($user)
+        ->test('pages::stories.create')
+        ->set('title', 'A Photographed Day')
+        ->set('start_date', '2020-01-01')
+        ->set('photos', [UploadedFile::fake()->image('a.jpg')])
+        ->call('save')
+        ->assertForbidden();
+});
+
+test('an admin editor can add photos to a story gallery', function () {
+    $editor = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $story = Story::factory()->create();
     app(PageEditorService::class)->grantOwner($story, $editor);
 
@@ -76,5 +88,21 @@ test('an editor can add photos to a story gallery', function () {
         ->call('save')
         ->assertHasNoErrors();
 
-    expect($story->fresh()->galleryMedia())->toHaveCount(2);
+    expect($story->fresh()->photos)->toHaveCount(2);
+});
+
+test('an editor can attach an already-existing photo to a story without being an admin', function () {
+    $editor = User::factory()->withTwoFactor()->create(['is_admin' => false]);
+    $story = Story::factory()->create();
+    app(PageEditorService::class)->grantOwner($story, $editor);
+
+    $photo = Photo::factory()->create();
+
+    Livewire::actingAs($editor)
+        ->test('pages::stories.edit', ['story' => $story])
+        ->set('selectedPhotoIds', [$photo->id])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($story->fresh()->photos->pluck('id')->all())->toContain($photo->id);
 });

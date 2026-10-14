@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Photo;
 use App\Services\RevisionService;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -112,9 +113,19 @@ new #[Layout('layouts.auth')] #[Title('Your profile')] class extends Component {
         ]);
 
         if ($this->photo) {
-            $this->person->addMedia($this->photo->getRealPath())
+            // Setting your own profile photo during onboarding is a
+            // narrower, pre-existing allowance (manageEnrichment, checked
+            // above) — it doesn't go through the admin-only Photo library
+            // upload gate.
+            $photo = Photo::create(['uploaded_by' => Auth::id()]);
+            $photo->addMedia($this->photo->getRealPath())
                 ->usingFileName($this->photo->getClientOriginalName())
-                ->toMediaCollection('photo');
+                ->toMediaCollection('file');
+            $photo->people()->attach($this->person->id);
+
+            if ($this->person->avatar_photo_id === null) {
+                $this->person->update(['avatar_photo_id' => $photo->id]);
+            }
         }
 
         Auth::user()->update(['notify_on_new_stories' => $this->notify_on_new_stories]);

@@ -63,7 +63,7 @@ new #[Title('People')] class extends Component {
     public function people()
     {
         return Person::query()
-            ->with('media')
+            ->with(['avatarPhoto.media', 'photos.media'])
             ->when($this->directRelativeIdsOrNull(), fn ($query, $ids) => $query->whereIn('id', $ids))
             ->when($this->search, fn ($query) => $query
                 ->where('first_name', 'like', "%{$this->search}%")

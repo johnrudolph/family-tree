@@ -1,6 +1,9 @@
 <?php
 
+use App\Concerns\PicksExistingPhotos;
+use App\Models\AudioRecording;
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Story;
 use App\Models\User;
 use App\Notifications\StoryAdded;
@@ -8,16 +11,18 @@ use App\Notifications\SlackAnnouncement;
 use App\Services\PageEditorService;
 use App\Services\SlackNotifier;
 use App\Support\RichTextSanitizer;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 new #[Title('New story')] class extends Component {
-    use WithFileUploads;
+    use PicksExistingPhotos, WithFileUploads;
 
     public string $title = '';
 
@@ -48,6 +53,8 @@ new #[Title('New story')] class extends Component {
     /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
     public $audio = null;
 
+    public ?int $existingAudioId = null;
+
     public function mount(): void
     {
         Gate::authorize('create', Story::class);
@@ -56,6 +63,18 @@ new #[Title('New story')] class extends Component {
     public function people()
     {
         return Person::query()->orderBy('first_name')->get();
+    }
+
+    #[Computed]
+    public function canUploadMedia(): bool
+    {
+        return Gate::allows('create', Photo::class);
+    }
+
+    #[Computed]
+    public function availableAudioRecordings(): Collection
+    {
+        return AudioRecording::query()->latest()->limit(60)->get();
     }
 
     #[On('location-selected')]
@@ -83,8 +102,11 @@ new #[Title('New story')] class extends Component {
             'end_year' => ['nullable', 'integer', 'min:1000', 'max:'.($currentYear + 1)],
             'person_ids' => ['array'],
             'person_ids.*' => ['exists:people,id'],
+            'selectedPhotoIds' => ['array'],
+            'selectedPhotoIds.*' => ['exists:photos,id'],
             'photos.*' => ['image', 'max:20480'],
             'audio' => ['nullable', 'file', 'mimes:mp3,mp4,m4a,wav,ogg,webm,aac', 'max:102400'],
+            'existingAudioId' => ['nullable', 'integer', 'exists:audio_recordings,id'],
         ]);
 
         $story = Story::create([
@@ -100,16 +122,36 @@ new #[Title('New story')] class extends Component {
 
         $story->people()->sync($validated['person_ids']);
 
-        foreach ($this->photos as $photo) {
-            $story->addMedia($photo->getRealPath())
-                ->usingFileName($photo->getClientOriginalName())
-                ->toMediaCollection('gallery');
+        if ($validated['selectedPhotoIds']) {
+            $story->photos()->attach($validated['selectedPhotoIds']);
         }
 
-        if ($this->audio) {
-            $story->addMedia($this->audio->getRealPath())
+        if ($this->photos) {
+            Gate::authorize('create', Photo::class);
+
+            foreach ($this->photos as $uploaded) {
+                $photo = Photo::create(['uploaded_by' => Auth::id()]);
+                $photo->addMedia($uploaded->getRealPath())
+                    ->usingFileName($uploaded->getClientOriginalName())
+                    ->toMediaCollection('file');
+                $story->photos()->attach($photo->id);
+            }
+        }
+
+        if ($validated['existingAudioId']) {
+            $story->audio_recording_id = $validated['existingAudioId'];
+        } elseif ($this->audio) {
+            Gate::authorize('create', AudioRecording::class);
+
+            $recording = AudioRecording::create(['uploaded_by' => Auth::id()]);
+            $recording->addMedia($this->audio->getRealPath())
                 ->usingFileName($this->audio->getClientOriginalName())
-                ->toMediaCollection('audio');
+                ->toMediaCollection('file');
+            $story->audio_recording_id = $recording->id;
+        }
+
+        if ($story->isDirty('audio_recording_id')) {
+            $story->save();
         }
 
         app(PageEditorService::class)->grantOwner($story, Auth::user());
@@ -173,19 +215,48 @@ new #[Title('New story')] class extends Component {
             @endforeach
         </flux:select>
 
-        <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
-            <flux:input type="file" wire:model="photos" multiple accept="image/*" :label="__('Photos')" :description="__('You can pick a featured image for the timeline after publishing, from the edit page.')" />
-        </div>
-        @if ($photos)
-            <div class="grid grid-cols-4 gap-2">
-                @foreach ($photos as $photo)
-                    <img src="{{ $photo->temporaryUrl() }}" class="aspect-square rounded object-cover" alt="">
-                @endforeach
+        <flux:separator />
+
+        <div>
+            <flux:text class="font-medium">{{ __('Photos') }}</flux:text>
+            <flux:text class="text-sm text-zinc-500">{{ __('Pick from the photo library — click any to select.') }}</flux:text>
+            <div class="mt-2">
+                @include('partials.photo-picker')
             </div>
+        </div>
+
+        @if ($this->canUploadMedia)
+            <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Photo upload failed — the photos you selected likely add up to more than the server allows in one upload. Try again with fewer photos at once, or smaller ones.')), { variant: 'danger', duration: 8000 })">
+                <flux:input type="file" wire:model="photos" multiple accept="image/*" :label="__('Or upload new photos')" :description="__('You can pick a featured image for the timeline after publishing, from the edit page.')" />
+            </div>
+            @if ($photos)
+                <div class="grid grid-cols-4 gap-2">
+                    @foreach ($photos as $photo)
+                        <img src="{{ $photo->temporaryUrl() }}" class="aspect-square rounded object-cover" alt="">
+                    @endforeach
+                </div>
+            @endif
         @endif
 
-        <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Audio upload failed — the file may be too large or an unsupported format.')), { variant: 'danger', duration: 8000 })">
-            <flux:input type="file" wire:model="audio" accept="audio/*" :label="__('Audio (optional)')" :description="__('An oral history recording — someone speaking about this story. Shown with a small player.')" />
+        <flux:separator />
+
+        <div>
+            <flux:text class="font-medium">{{ __('Audio (optional)') }}</flux:text>
+            <flux:text class="text-sm text-zinc-500">{{ __('An oral history recording — someone speaking about this story. Shown with a small player.') }}</flux:text>
+
+            @if ($this->availableAudioRecordings->isNotEmpty())
+                <flux:select wire:model="existingAudioId" variant="listbox" searchable clearable class="mt-2" :placeholder="__('Use an existing recording…')">
+                    @foreach ($this->availableAudioRecordings as $recording)
+                        <flux:select.option value="{{ $recording->id }}">{{ $recording->description ?: "Recording #{$recording->id}" }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
+
+            @if ($this->canUploadMedia && ! $existingAudioId)
+                <div x-data x-on:livewire-upload-error="$flux.toast(@js(__('Audio upload failed — the file may be too large or an unsupported format.')), { variant: 'danger', duration: 8000 })" class="mt-2">
+                    <flux:input type="file" wire:model="audio" accept="audio/*" :label="__('Or upload a new recording')" />
+                </div>
+            @endif
         </div>
 
         <div class="flex gap-2">

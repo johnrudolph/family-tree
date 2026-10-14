@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AudioRecording;
 use App\Models\Person;
 use App\Models\Story;
 use App\Models\User;
@@ -27,9 +28,7 @@ test('the audio collection accepts the mime type m4a files are actually sniffed 
     // sniff (not the extension) tags them audio/x-m4a rather than the more
     // common audio/mp4 — both need to be accepted or a real recording gets
     // rejected by Media Library after passing our own validation.
-    $story = Story::factory()->create();
-
-    expect($story->getMediaCollection('audio')->acceptsMimeTypes)->toContain('audio/x-m4a');
+    expect((new AudioRecording)->getMediaCollection('file')->acceptsMimeTypes)->toContain('audio/x-m4a');
 });
 
 test('any member can create a story and tag people in it', function () {
@@ -169,7 +168,7 @@ test('a story title over 70 characters is rejected', function () {
 test('an editor can feature a gallery image, and only one image is featured at a time', function () {
     Storage::fake('public');
 
-    $editor = User::factory()->withTwoFactor()->create();
+    $editor = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $story = Story::factory()->create();
     app(PageEditorService::class)->grantOwner($story, $editor);
 
@@ -179,29 +178,28 @@ test('an editor can feature a gallery image, and only one image is featured at a
         ->call('save')
         ->assertHasNoErrors();
 
-    [$first, $second] = $story->fresh()->galleryMedia()->all();
+    [$first, $second] = $story->fresh()->photos->all();
 
     Livewire::actingAs($editor)
         ->test('pages::stories.edit', ['story' => $story])
         ->call('featureImage', $first->id)
         ->assertHasNoErrors();
 
-    expect($first->fresh()->getCustomProperty('featured'))->toBeTrue();
+    expect($story->fresh()->featured_photo_id)->toBe($first->id);
 
     Livewire::actingAs($editor)
         ->test('pages::stories.edit', ['story' => $story])
         ->call('featureImage', $second->id)
         ->assertHasNoErrors();
 
-    expect($first->fresh()->getCustomProperty('featured'))->toBeFalsy();
-    expect($second->fresh()->getCustomProperty('featured'))->toBeTrue();
+    expect($story->fresh()->featured_photo_id)->toBe($second->id);
     expect($story->fresh()->featuredImage()->id)->toBe($second->id);
 });
 
 test('a story can be created with an audio recording', function () {
     Storage::fake('public');
 
-    $user = User::factory()->withTwoFactor()->create();
+    $user = User::factory()->withTwoFactor()->create(['is_admin' => true]);
 
     Livewire::actingAs($user)
         ->test('pages::stories.create')
@@ -218,7 +216,7 @@ test('a story can be created with an audio recording', function () {
 test('an editor can add and remove audio on an existing story', function () {
     Storage::fake('public');
 
-    $editor = User::factory()->withTwoFactor()->create();
+    $editor = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $story = Story::factory()->create();
     app(PageEditorService::class)->grantOwner($story, $editor);
 

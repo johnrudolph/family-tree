@@ -2,6 +2,7 @@
 
 use App\Models\PageEditor;
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Relationship;
 use App\Models\Revision;
 use App\Models\Story;
@@ -74,17 +75,19 @@ test('deleting a person unlinks but does not delete their user account', functio
     expect($user->fresh()->person_id)->toBeNull();
 });
 
-test('deleting a person removes their uploaded photo', function () {
+test('deleting a person untags them from a photo, but the photo itself survives', function () {
     Storage::fake('public');
 
     $person = Person::factory()->create();
-    $person->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('photo');
-
-    expect($person->getMedia('photo'))->toHaveCount(1);
+    $photo = Photo::create();
+    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->people()->attach($person->id);
 
     app(PersonDeletionService::class)->delete($person);
 
-    expect(Media::query()->count())->toBe(0);
+    expect(Photo::query()->count())->toBe(1);
+    expect(Media::query()->count())->toBe(1);
+    expect($photo->fresh()->people)->toHaveCount(0);
 });
 
 test('an admin can delete a person from their page by typing their name to confirm', function () {

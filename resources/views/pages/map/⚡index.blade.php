@@ -87,8 +87,11 @@ new #[Title('Map')] class extends Component {
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             @include('partials.direct-relatives-toggle')
-            @include('partials.people-filter')
         </div>
+    </div>
+
+    <div class="mt-3">
+        @include('partials.people-filter')
     </div>
 
     <div

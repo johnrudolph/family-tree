@@ -16,9 +16,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * @property int $id
@@ -47,20 +44,23 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string|null $contact_email
  * @property array<int, string>|null $social_links
  * @property int $created_by
+ * @property int|null $avatar_photo_id
  * @property-read User|null $user
  * @property-read User $creator
  * @property-read Location|null $birthLocation
  * @property-read Location|null $deathLocation
+ * @property-read Photo|null $avatarPhoto
+ * @property-read Collection<int, Photo> $photos
  */
 #[Fillable([
     'first_name', 'middle_name', 'last_name', 'sex', 'sex_unknown', 'preferred_name', 'use_preferred_name_everywhere', 'dob', 'dob_precision', 'dob_unknown', 'birth_location_id', 'birth_location_unknown',
     'dod', 'dod_precision', 'dod_unknown', 'death_location_id', 'death_location_unknown', 'is_living', 'bio', 'created_by',
-    'consented_at', 'address', 'phone', 'contact_email', 'social_links',
+    'consented_at', 'address', 'phone', 'contact_email', 'social_links', 'avatar_photo_id',
 ])]
-class Person extends Model implements HasMedia
+class Person extends Model
 {
     /** @use HasFactory<PersonFactory> */
-    use HasFactory, HasWikiWorkflow, InteractsWithMedia;
+    use HasFactory, HasWikiWorkflow;
 
     /**
      * Eloquent doesn't reload a model's attributes from the DB after insert,
@@ -95,47 +95,35 @@ class Person extends Model implements HasMedia
     }
 
     /**
-     * Any number of self-uploaded photos — see manageEnrichment on PersonPolicy;
-     * only the linked user (or, for the deceased, any page editor) may ever
-     * add to it.
+     * Every photo tagged to this person — whether they/their editor uploaded
+     * it directly, someone tagged them in a standalone photo, or it came
+     * from a story's gallery. Tagging is the ownership signal now that
+     * photos are decoupled from any single owner.
+     *
+     * @return BelongsToMany<Photo, $this>
      */
-    public function registerMediaCollections(): void
+    public function photos(): BelongsToMany
     {
-        $this->addMediaCollection('photo');
+        return $this->belongsToMany(Photo::class, 'photo_person')->orderBy('photos.created_at');
     }
 
     /**
-     * @return Collection<int, Media>
+     * @return BelongsTo<Photo, $this>
      */
-    public function photoMedia(): Collection
+    public function avatarPhoto(): BelongsTo
     {
-        return $this->getMedia('photo');
+        return $this->belongsTo(Photo::class, 'avatar_photo_id');
     }
 
     /**
-     * The single photo chosen to represent this person everywhere but their
-     * own page (avatars, the family tree, link previews) — the first upload
-     * by default, until someone explicitly picks one via `featurePhoto()`.
+     * The photo chosen to represent this person everywhere but their own
+     * page (avatars, the family tree, link previews) — any photo they're
+     * tagged in is eligible, explicitly picked via `avatar_photo_id`, or the
+     * earliest-tagged one as a fallback until someone picks.
      */
-    public function featuredPhoto(): ?Media
+    public function featuredPhoto(): ?Photo
     {
-        $photos = $this->photoMedia();
-
-        return $photos->first(fn (Media $media) => $media->getCustomProperty('featured') === true)
-            ?? $photos->first();
-    }
-
-    public function featurePhoto(Media $media): void
-    {
-        foreach ($this->photoMedia() as $item) {
-            if ($item->getCustomProperty('featured') && $item->id !== $media->id) {
-                $item->setCustomProperty('featured', false);
-                $item->save();
-            }
-        }
-
-        $media->setCustomProperty('featured', true);
-        $media->save();
+        return $this->avatarPhoto ?? $this->photos->first();
     }
 
     /**
@@ -145,7 +133,7 @@ class Person extends Model implements HasMedia
      */
     public function photoUrl(): ?string
     {
-        $media = $this->featuredPhoto();
+        $media = $this->featuredPhoto()?->fileMedia();
 
         if (! $media) {
             return null;

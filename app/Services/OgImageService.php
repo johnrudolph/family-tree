@@ -38,12 +38,12 @@ class OgImageService
 
     public function forPerson(Person $person): string
     {
-        return $this->render($person->fullName(), $person->featuredPhoto());
+        return $this->render($person->fullName(), $person->featuredPhoto()?->fileMedia());
     }
 
     public function forStory(Story $story): string
     {
-        return $this->render($story->title, $story->featuredImage());
+        return $this->render($story->title, $story->featuredImage()?->fileMedia());
     }
 
     private function render(string $title, ?Media $photo): string

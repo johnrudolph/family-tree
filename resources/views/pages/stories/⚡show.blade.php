@@ -32,13 +32,18 @@ new class extends Component {
     #[Computed]
     public function galleryUrls(): array
     {
-        return $this->story->galleryMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all();
+        return $this->story->photos
+            ->map(fn ($photo) => $photo->fileMedia())
+            ->filter()
+            ->map(fn ($media) => MediaUrl::of($media))
+            ->values()
+            ->all();
     }
 
     #[Computed]
     public function audioUrl(): ?string
     {
-        $media = $this->story->audioMedia();
+        $media = $this->story->audioRecording?->fileMedia();
 
         return $media ? MediaUrl::of($media) : null;
     }

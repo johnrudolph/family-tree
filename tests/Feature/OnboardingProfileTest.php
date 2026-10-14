@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Photo;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 test('the security onboarding page explains who can see personal information here', function () {
@@ -48,6 +51,24 @@ test('saving the profile onboarding step updates core facts, enrichment fields, 
     expect($person->dob?->toDateString())->toBe('1990-01-01');
     expect($person->contact_email)->toBe('me@example.com');
     expect($person->consented_at)->not->toBeNull();
+});
+
+test('a non-admin user can set their own profile photo during onboarding', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->withTwoFactor()->create(['is_admin' => false]);
+
+    Livewire::actingAs($user)
+        ->test('pages::onboarding.profile')
+        ->set('first_name', 'Jonathan')
+        ->set('photo', UploadedFile::fake()->image('me.jpg'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $person = $user->fresh()->person;
+    expect(Photo::count())->toBe(1);
+    expect($person->avatar_photo_id)->not->toBeNull();
+    expect($person->photos()->count())->toBe(1);
 });
 
 test('the new story email preference defaults to on during onboarding, and can be turned off', function () {

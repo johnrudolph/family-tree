@@ -38,7 +38,7 @@ class TimelineSerializer
     {
         return Person::query()
             ->whereNotNull('dob')
-            ->with('birthLocation')
+            ->with(['birthLocation', 'avatarPhoto.media', 'photos.media'])
             ->when($personIds, fn ($query, $ids) => $query->whereIn('id', $ids))
             ->get()
             ->map(fn (Person $person): array => [
@@ -67,7 +67,7 @@ class TimelineSerializer
     {
         return Person::query()
             ->whereNotNull('dod')
-            ->with('deathLocation')
+            ->with(['deathLocation', 'avatarPhoto.media', 'photos.media'])
             ->when($personIds, fn ($query, $ids) => $query->whereIn('id', $ids))
             ->get()
             ->map(fn (Person $person): array => [
@@ -95,11 +95,11 @@ class TimelineSerializer
     private static function storyEvents(?Collection $personIds): array
     {
         return Story::query()
-            ->with('location')
+            ->with(['location', 'photos.media', 'featuredPhoto.media'])
             ->when($personIds, fn ($query, $ids) => $query->whereHas('people', fn ($q) => $q->whereIn('people.id', $ids)))
             ->get()
             ->map(function (Story $story): array {
-                $featured = $story->featuredImage();
+                $featured = $story->featuredImage()?->fileMedia();
 
                 return [
                     'type' => 'story',
@@ -112,7 +112,7 @@ class TimelineSerializer
                     'story_id' => $story->id,
                     'avatar_url' => null,
                     'featured_image_url' => $featured ? MediaUrl::of($featured) : null,
-                    'gallery_urls' => $story->galleryMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all(),
+                    'gallery_urls' => $story->photos->map(fn ($photo) => $photo->fileMedia())->filter()->map(fn ($media) => MediaUrl::of($media))->values()->all(),
                     'body_html' => StoryBodyParser::render($story->body ?? ''),
                     'url' => route('stories.show', $story),
                     'location' => self::locationPayload($story->location),

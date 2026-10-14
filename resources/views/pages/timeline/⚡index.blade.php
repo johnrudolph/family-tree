@@ -82,7 +82,6 @@ new #[Title('Timeline')] class extends Component {
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             @include('partials.direct-relatives-toggle')
-            @include('partials.people-filter')
 
             <div class="flex items-center gap-2">
                 <flux:icon.magnifying-glass-minus class="size-4 shrink-0 text-zinc-400" />
@@ -98,6 +97,10 @@ new #[Title('Timeline')] class extends Component {
                 <flux:icon.magnifying-glass-plus class="size-4 shrink-0 text-zinc-400" />
             </div>
         </div>
+    </div>
+
+    <div class="mt-3">
+        @include('partials.people-filter')
     </div>
 
     <div

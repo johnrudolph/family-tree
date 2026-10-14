@@ -88,6 +88,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-10-13 00:05:00', 'The timeline and map pages can now be filtered down to one or more specific people, shown as removable pills.'],
             ['2026-10-13 00:10:00', 'New stories can now also post an announcement to a Slack channel.'],
             ['2026-10-13 00:15:00', 'Links to a story or person now show a nice preview image with their photo when shared.'],
+            ['2026-10-14 00:00:00', 'Added a Photos page. Photos and audio recordings can now exist on their own, get tagged to people, and be reused across stories instead of being tied to just one.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

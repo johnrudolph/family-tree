@@ -13,9 +13,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * @property int $id
@@ -27,16 +24,21 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property Carbon|null $end_date
  * @property string|null $end_date_precision
  * @property int|null $location_id
+ * @property int|null $featured_photo_id
+ * @property int|null $audio_recording_id
  * @property int $created_by
  * @property-read User $creator
  * @property-read Collection<int, Person> $people
  * @property-read Location|null $location
+ * @property-read Collection<int, Photo> $photos
+ * @property-read Photo|null $featuredPhoto
+ * @property-read AudioRecording|null $audioRecording
  */
-#[Fillable(['title', 'slug', 'body', 'location_id', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'created_by'])]
-class Story extends Model implements HasMedia
+#[Fillable(['title', 'slug', 'body', 'location_id', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'created_by', 'featured_photo_id', 'audio_recording_id'])]
+class Story extends Model
 {
     /** @use HasFactory<StoryFactory> */
-    use HasFactory, HasWikiWorkflow, InteractsWithMedia;
+    use HasFactory, HasWikiWorkflow;
 
     /**
      * @return array<string, string>
@@ -49,56 +51,43 @@ class Story extends Model implements HasMedia
         ];
     }
 
-    public function registerMediaCollections(): void
+    /**
+     * @return BelongsToMany<Photo, $this>
+     */
+    public function photos(): BelongsToMany
     {
-        $this->addMediaCollection('gallery');
-        $this->addMediaCollection('audio')
-            ->singleFile()
-            ->acceptsMimeTypes(['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/aac']);
+        return $this->belongsToMany(Photo::class, 'story_photo')->orderBy('photos.created_at');
     }
 
-    public function audioMedia(): ?Media
+    /**
+     * @return BelongsTo<Photo, $this>
+     */
+    public function featuredPhoto(): BelongsTo
     {
-        return $this->getFirstMedia('audio');
+        return $this->belongsTo(Photo::class, 'featured_photo_id');
+    }
+
+    /**
+     * The photo chosen to represent this story on the timeline and in link
+     * previews — explicitly picked via `featured_photo_id`, or the
+     * earliest-linked photo as a fallback until an editor picks one.
+     */
+    public function featuredImage(): ?Photo
+    {
+        return $this->featuredPhoto ?? $this->photos->first();
+    }
+
+    /**
+     * @return BelongsTo<AudioRecording, $this>
+     */
+    public function audioRecording(): BelongsTo
+    {
+        return $this->belongsTo(AudioRecording::class);
     }
 
     public function hasAudio(): bool
     {
-        return $this->audioMedia() !== null;
-    }
-
-    /**
-     * @return Collection<int, Media>
-     */
-    public function galleryMedia(): Collection
-    {
-        return $this->getMedia('gallery');
-    }
-
-    /**
-     * The single gallery image chosen to represent this story on the
-     * timeline and in link previews — the first upload by default,
-     * until an editor explicitly picks one via `featureImage()`.
-     */
-    public function featuredImage(): ?Media
-    {
-        $gallery = $this->galleryMedia();
-
-        return $gallery->first(fn (Media $media) => $media->getCustomProperty('featured') === true)
-            ?? $gallery->first();
-    }
-
-    public function featureImage(Media $media): void
-    {
-        foreach ($this->galleryMedia() as $item) {
-            if ($item->getCustomProperty('featured') && $item->id !== $media->id) {
-                $item->setCustomProperty('featured', false);
-                $item->save();
-            }
-        }
-
-        $media->setCustomProperty('featured', true);
-        $media->save();
+        return $this->audio_recording_id !== null;
     }
 
     protected static function booted(): void

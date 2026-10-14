@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Relationship;
 use App\Models\User;
 use App\Services\PageEditorService;
@@ -147,12 +148,17 @@ new class extends Component {
             return [];
         }
 
-        return $this->person->photoMedia()->map(fn ($media) => MediaUrl::of($media))->values()->all();
+        return $this->person->photos
+            ->map(fn (Photo $photo) => $photo->fileMedia())
+            ->filter()
+            ->map(fn ($media) => MediaUrl::of($media))
+            ->values()
+            ->all();
     }
 
     /**
      * The featured photo's position within {@see photoUrls()}, matched by
-     * media ID rather than URL — MediaUrl::of() signs a fresh, unique URL
+     * photo ID rather than URL — MediaUrl::of() signs a fresh, unique URL
      * on every call, so two calls for the same photo never produce equal
      * strings to compare against.
      */
@@ -165,7 +171,7 @@ new class extends Component {
             return null;
         }
 
-        $index = $this->person->photoMedia()->search(fn ($media) => $media->id === $featured->id);
+        $index = $this->person->photos->search(fn (Photo $photo) => $photo->id === $featured->id);
 
         return $index === false ? 0 : $index;
     }

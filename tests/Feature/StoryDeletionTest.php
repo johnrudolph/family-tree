@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\AudioRecording;
 use App\Models\PageEditor;
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Revision;
 use App\Models\Story;
 use App\Models\Suggestion;
@@ -45,19 +47,27 @@ test('deleting a story removes its page editors, revisions, and suggestions', fu
     expect(Suggestion::query()->where('suggestable_type', Story::class)->where('suggestable_id', $story->id)->count())->toBe(0);
 });
 
-test('deleting a story removes its gallery photos and audio', function () {
+test('deleting a story unlinks its photos and audio without deleting them', function () {
     Storage::fake('public');
 
     $story = Story::factory()->create();
-    $story->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('gallery');
+    $photo = Photo::create();
+    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $story->photos()->attach($photo->id);
+
+    $recording = AudioRecording::create();
     $wavHeader = 'RIFF'.pack('V', 36).'WAVE'.'fmt '.pack('V', 16).pack('v', 1).pack('v', 1).pack('V', 8000).pack('V', 8000).pack('v', 1).pack('v', 8).'data'.pack('V', 0);
-    $story->addMediaFromString($wavHeader)->usingFileName('a.wav')->preservingOriginal()->toMediaCollection('audio');
+    $recording->addMediaFromString($wavHeader)->usingFileName('a.wav')->preservingOriginal()->toMediaCollection('file');
+    $story->update(['audio_recording_id' => $recording->id]);
 
     expect(Media::query()->count())->toBe(2);
 
     app(StoryDeletionService::class)->delete($story);
 
-    expect(Media::query()->count())->toBe(0);
+    expect(Media::query()->count())->toBe(2);
+    expect(Photo::query()->count())->toBe(1);
+    expect(AudioRecording::query()->count())->toBe(1);
+    expect($photo->fresh()->stories)->toHaveCount(0);
 });
 
 test('an editor can delete a story from its edit page by typing the title to confirm', function () {

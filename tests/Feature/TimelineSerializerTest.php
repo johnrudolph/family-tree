@@ -2,6 +2,7 @@
 
 use App\Models\Location;
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Story;
 use App\Support\TimelineSerializer;
 use Illuminate\Support\Facades\Storage;
@@ -85,11 +86,10 @@ test('a story\'s featured image is included when one is set', function () {
     Storage::fake('public');
 
     $story = Story::factory()->create();
-    $media = $story->addMediaFromString('fake-image-bytes')
-        ->usingFileName('a.jpg')
-        ->preservingOriginal()
-        ->toMediaCollection('gallery');
-    $story->featureImage($media);
+    $photo = Photo::create();
+    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $story->photos()->attach($photo->id);
+    $story->update(['featured_photo_id' => $photo->id]);
 
     $event = collect(TimelineSerializer::events())->firstWhere('story_id', $story->id);
 
@@ -100,8 +100,11 @@ test('a story\'s full gallery is included for the timeline\'s lightbox', functio
     Storage::fake('public');
 
     $story = Story::factory()->create();
-    $story->addMediaFromString('fake-image-bytes-1')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('gallery');
-    $story->addMediaFromString('fake-image-bytes-2')->usingFileName('b.jpg')->preservingOriginal()->toMediaCollection('gallery');
+    $first = Photo::create();
+    $first->addMediaFromString('fake-image-bytes-1')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $second = Photo::create();
+    $second->addMediaFromString('fake-image-bytes-2')->usingFileName('b.jpg')->preservingOriginal()->toMediaCollection('file');
+    $story->photos()->attach([$first->id, $second->id]);
 
     $event = collect(TimelineSerializer::events())->firstWhere('story_id', $story->id);
 

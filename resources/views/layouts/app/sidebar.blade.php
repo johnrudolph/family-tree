@@ -41,6 +41,10 @@
                         {{ __('Stories') }}
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="photo" :href="route('photos.index')" :current="request()->routeIs('photos.*')" wire:navigate>
+                        {{ __('Photos') }}
+                    </flux:sidebar.item>
+
                     <flux:sidebar.item icon="star" :href="route('changelog.index')" :current="request()->routeIs('changelog.*')" wire:navigate>
                         {{ __('Change Log') }}
                     </flux:sidebar.item>

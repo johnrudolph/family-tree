@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Location;
+use App\Models\Photo;
 use App\Models\Story;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
@@ -23,11 +24,10 @@ test('the stories index shows a story\'s location and featured image', function 
     $viewer = User::factory()->withTwoFactor()->create();
     $location = Location::factory()->create(['city' => 'Portland', 'region' => 'OR']);
     $story = Story::factory()->create(['title' => 'A Trip to the Coast', 'location_id' => $location->id]);
-    $media = $story->addMediaFromString('fake-image-bytes')
-        ->usingFileName('a.jpg')
-        ->preservingOriginal()
-        ->toMediaCollection('gallery');
-    $story->featureImage($media);
+    $photo = Photo::create();
+    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $story->photos()->attach($photo->id);
+    $story->update(['featured_photo_id' => $photo->id]);
 
     $response = $this->actingAs($viewer)->get(route('stories.index'));
 

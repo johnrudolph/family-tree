@@ -91,7 +91,7 @@ new #[Title('Dashboard')] class extends Component {
     #[Computed]
     public function recentStories()
     {
-        return Story::query()->with(['creator', 'media'])->latest()->limit(5)->get();
+        return Story::query()->with('creator')->latest()->limit(5)->get();
     }
 
     #[Computed]

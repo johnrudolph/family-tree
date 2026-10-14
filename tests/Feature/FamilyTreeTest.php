@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Relationship;
 use App\Models\User;
 use App\Support\FamilyTreeSerializer;
@@ -98,7 +99,10 @@ test('a deceased person\'s memorial photo shows on the tree without consent', fu
     Storage::fake('public');
 
     $person = Person::factory()->create(['is_living' => false]);
-    $person->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('photo');
+    $photo = Photo::create();
+    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->people()->attach($person->id);
+    $person->update(['avatar_photo_id' => $photo->id]);
 
     $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
 
