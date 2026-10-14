@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Person;
 use App\Services\RelationshipService;
 use App\Support\TimelineSerializer;
 use Illuminate\Support\Collection;
@@ -10,6 +11,9 @@ use Livewire\Component;
 
 new #[Title('Timeline')] class extends Component {
     public bool $directRelativesOnly = false;
+
+    /** @var array<int, int> */
+    public array $selectedPersonIds = [];
 
     public function mount(): void
     {
@@ -32,26 +36,43 @@ new #[Title('Timeline')] class extends Component {
     }
 
     /**
-     * Null when the filter is off (or unavailable), meaning "don't
-     * filter" — so callers can pass this straight into whereIn()/when().
+     * @return Collection<int, Person>
+     */
+    #[Computed]
+    public function filterablePeople(): Collection
+    {
+        return Person::query()->orderBy('first_name')->orderBy('last_name')->get();
+    }
+
+    /**
+     * Null when neither filter is active, meaning "don't filter" — so
+     * callers can pass this straight into whereIn()/when(). When both the
+     * direct-relatives toggle and a specific-people selection are active,
+     * they narrow each other down to their intersection.
      *
      * @return Collection<int, int>|null
      */
-    private function directRelativeIdsOrNull(): ?Collection
+    private function filteredPersonIdsOrNull(): ?Collection
     {
-        if (! $this->directRelativesOnly) {
-            return null;
+        $ids = null;
+
+        if ($this->directRelativesOnly) {
+            $viewer = Auth::user()->person;
+            $ids = $viewer ? app(RelationshipService::class)->directRelativeIds($viewer) : null;
         }
 
-        $viewer = Auth::user()->person;
+        if ($this->selectedPersonIds !== []) {
+            $selected = collect($this->selectedPersonIds)->map(fn ($id) => (int) $id)->values();
+            $ids = $ids ? $ids->intersect($selected)->values() : $selected;
+        }
 
-        return $viewer ? app(RelationshipService::class)->directRelativeIds($viewer) : null;
+        return $ids;
     }
 
     #[Computed]
     public function events(): array
     {
-        return TimelineSerializer::events($this->directRelativeIdsOrNull());
+        return TimelineSerializer::events($this->filteredPersonIdsOrNull());
     }
 }; ?>
 
@@ -61,6 +82,7 @@ new #[Title('Timeline')] class extends Component {
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             @include('partials.direct-relatives-toggle')
+            @include('partials.people-filter')
 
             <div class="flex items-center gap-2">
                 <flux:icon.magnifying-glass-minus class="size-4 shrink-0 text-zinc-400" />
@@ -80,7 +102,7 @@ new #[Title('Timeline')] class extends Component {
 
     <div
         wire:ignore
-        wire:key="timeline-{{ $directRelativesOnly ? 'mine' : 'all' }}"
+        wire:key="timeline-{{ $directRelativesOnly ? 'mine' : 'all' }}-{{ implode('-', $selectedPersonIds) }}"
         x-data
         x-init="initTimeline($el, @js($this->events))"
         class="relative isolate mt-4 h-[70vh] w-full touch-none overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"

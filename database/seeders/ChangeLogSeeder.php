@@ -85,6 +85,7 @@ class ChangeLogSeeder extends Seeder
             ['2026-09-29 21:00:00', 'You can now add multiple photos to a person, pick a featured one, and click any photo (on a person or a story) to see it bigger in a gallery.'],
             ['2026-10-01 15:49:03', 'Members can now get an email whenever a new story is added. It\'s on by default and can be turned off from your profile settings.'],
             ['2026-10-13 00:00:00', 'Admins can now cancel a pending invite, so a fresh one can be sent.'],
+            ['2026-10-13 00:05:00', 'The timeline and map pages can now be filtered down to one or more specific people, shown as removable pills.'],
         ];
 
         foreach ($entries as [$mergedAt, $description]) {

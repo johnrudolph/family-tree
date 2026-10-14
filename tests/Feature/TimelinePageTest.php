@@ -46,3 +46,35 @@ test('toggling "only show my direct relatives" hides everyone else\'s events', f
     expect($names)->toContain('Sibling');
     expect($names)->not->toContain('Stranger');
 });
+
+test('selecting specific people hides everyone else\'s events', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $chosen = Person::factory()->create(['first_name' => 'Chosen', 'dob' => '1990-01-01']);
+    $stranger = Person::factory()->create(['first_name' => 'Stranger', 'dob' => '1990-01-01']);
+
+    $component = Livewire::actingAs($viewer)
+        ->test('pages::timeline.index')
+        ->set('selectedPersonIds', [$chosen->id]);
+
+    $names = collect($component->instance()->events())->pluck('title')->implode(' ');
+
+    expect($names)->toContain('Chosen');
+    expect($names)->not->toContain('Stranger');
+});
+
+test('combining the direct-relatives filter with a specific-people selection narrows to their intersection', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $sibling = Person::factory()->create(['first_name' => 'Sibling', 'dob' => '1990-01-01']);
+    $stranger = Person::factory()->create(['first_name' => 'Stranger', 'dob' => '1990-01-01']);
+    Relationship::create(['person_a_id' => $viewer->person_id, 'person_b_id' => $sibling->id, 'type' => 'sibling']);
+
+    $component = Livewire::actingAs($viewer)
+        ->test('pages::timeline.index')
+        ->set('directRelativesOnly', true)
+        ->set('selectedPersonIds', [$stranger->id]);
+
+    $names = collect($component->instance()->events())->pluck('title')->implode(' ');
+
+    expect($names)->not->toContain('Sibling');
+    expect($names)->not->toContain('Stranger');
+});

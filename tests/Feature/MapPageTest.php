@@ -35,3 +35,19 @@ test('toggling "only show my direct relatives" hides everyone else\'s points', f
     expect($titles)->toContain('Sibling');
     expect($titles)->not->toContain('Stranger');
 });
+
+test('selecting specific people hides everyone else\'s points', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $location = Location::factory()->create();
+    $chosen = Person::factory()->create(['first_name' => 'Chosen', 'dob' => '1990-01-01', 'birth_location_id' => $location->id]);
+    $stranger = Person::factory()->create(['first_name' => 'Stranger', 'dob' => '1990-01-01', 'birth_location_id' => $location->id]);
+
+    $component = Livewire::actingAs($viewer)
+        ->test('pages::map.index')
+        ->set('selectedPersonIds', [$chosen->id]);
+
+    $titles = collect($component->instance()->points())->pluck('title')->implode(' ');
+
+    expect($titles)->toContain('Chosen');
+    expect($titles)->not->toContain('Stranger');
+});
