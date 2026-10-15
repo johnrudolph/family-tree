@@ -30,6 +30,14 @@ function filterPersonSearchResults(event) {
 
         item.toggleAttribute('data-hidden', ! matches);
     });
+
+    // filter="manual" (needed for our own per-word matching above) tells
+    // Flux not to auto-highlight an item as you type — normally its own
+    // built-in filter does that. Without it nothing is "active", so arrowing
+    // down starts from scratch and Enter does nothing. Re-highlight the
+    // first visible result ourselves, same as Flux's own filter does.
+    root._activatable?.clearActive();
+    root._activatable?.activateFirst();
 }
 
 window.filterPersonSearchResults = filterPersonSearchResults;
