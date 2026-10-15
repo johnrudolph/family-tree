@@ -9,9 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 
 /**
- * Read-only querying for any model listed in config/api.php. Nothing here
- * ever writes — there is no store/update/destroy, and the router only
- * registers GET routes for this controller.
+ * Querying — and, for a deliberately narrow set of models, writing — any
+ * model listed in config/api.php. There is no destroy anywhere, and
+ * store/update only work for models config/api.php marks `writable`,
+ * restricted to that model's own fillable columns either way.
  */
 class ModelController extends Controller
 {
@@ -82,6 +83,35 @@ class ModelController extends Controller
         return response()->json($record);
     }
 
+    public function store(string $model, Request $request): JsonResponse
+    {
+        $config = $this->resolveWritable($model);
+
+        /** @var class-string<Model> $class */
+        $class = $config['model'];
+
+        $data = $request->only((new $class)->getFillable());
+
+        $record = $class::create($data);
+
+        return response()->json($record, 201);
+    }
+
+    public function update(string $model, int|string $id, Request $request): JsonResponse
+    {
+        $config = $this->resolveWritable($model);
+
+        /** @var class-string<Model> $class */
+        $class = $config['model'];
+        $record = $class::query()->findOrFail($id);
+
+        $data = $request->only((new $class)->getFillable());
+
+        $record->update($data);
+
+        return response()->json($record);
+    }
+
     /**
      * @return array{model: class-string<Model>, relations: array<int, string>}
      */
@@ -90,6 +120,18 @@ class ModelController extends Controller
         $config = Config::get("api.models.{$model}");
 
         abort_unless($config, 404, "Unknown model \"{$model}\". See GET /api/v1/models for the list.");
+
+        return $config;
+    }
+
+    /**
+     * @return array{model: class-string<Model>, relations: array<int, string>}
+     */
+    private function resolveWritable(string $model): array
+    {
+        $config = $this->resolve($model);
+
+        abort_unless($config['writable'] ?? false, 403, "Model \"{$model}\" is read-only through this API.");
 
         return $config;
     }

@@ -36,11 +36,19 @@ return [
     | business value for queries, so it's simplest to leave access to
     | this out entirely.
     |
+    | `writable` opts a model into PATCH /api/v1/models/{key}/{id} — still
+    | no create, no delete, and still restricted to that model's own
+    | fillable columns. Defaults to false; only set it on models where
+    | "correct a genealogy fact via the API" is a real, intended use case.
+    | Users, invites, page-editors, etc. are deliberately never writable
+    | here, even though they're readable — this isn't a general admin API.
+    |
     */
     'models' => [
         'people' => [
             'model' => Person::class,
             'relations' => ['birthLocation', 'deathLocation', 'user', 'creator', 'avatarPhoto', 'photos', 'stories'],
+            'writable' => true,
         ],
         'stories' => [
             'model' => Story::class,
@@ -49,10 +57,12 @@ return [
         'relationships' => [
             'model' => Relationship::class,
             'relations' => ['personA', 'personB'],
+            'writable' => true,
         ],
         'locations' => [
             'model' => Location::class,
             'relations' => [],
+            'writable' => true,
         ],
         'photos' => [
             'model' => Photo::class,
