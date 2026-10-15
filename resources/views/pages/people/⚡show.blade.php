@@ -141,58 +141,40 @@ new class extends Component {
         return $this->canEdit ? $this->person->pendingSuggestions()->count() : 0;
     }
 
+    /**
+     * @return array<int, array{id: int, thumb: string}>
+     */
     #[Computed]
-    public function photoUrls(): array
+    public function galleryPhotos(): array
     {
         if (! $this->person->canShowEnrichment()) {
             return [];
         }
 
         return $this->person->photos
-            ->map(fn (Photo $photo) => $photo->fileMedia())
-            ->filter()
-            ->map(fn ($media) => MediaUrl::of($media, conversion: 'thumb'))
+            ->filter(fn (Photo $photo) => $photo->fileMedia())
+            ->map(fn (Photo $photo) => [
+                'id' => $photo->id,
+                'thumb' => MediaUrl::of($photo->fileMedia(), conversion: 'thumb'),
+            ])
             ->values()
             ->all();
     }
 
     /**
-     * Same order as {@see photoUrls()}, but full resolution — what the
-     * lightbox opens to when a thumbnail is clicked.
+     * @return array{id: int, thumb: string}|null
      */
     #[Computed]
-    public function photoFullUrls(): array
-    {
-        if (! $this->person->canShowEnrichment()) {
-            return [];
-        }
-
-        return $this->person->photos
-            ->map(fn (Photo $photo) => $photo->fileMedia())
-            ->filter()
-            ->map(fn ($media) => MediaUrl::of($media))
-            ->values()
-            ->all();
-    }
-
-    /**
-     * The featured photo's position within {@see photoUrls()}, matched by
-     * photo ID rather than URL — MediaUrl::of() signs a fresh, unique URL
-     * on every call, so two calls for the same photo never produce equal
-     * strings to compare against.
-     */
-    #[Computed]
-    public function heroPhotoIndex(): ?int
+    public function heroPhoto(): ?array
     {
         $featured = $this->person->canShowEnrichment() ? $this->person->featuredPhoto() : null;
+        $media = $featured?->fileMedia();
 
-        if (! $featured) {
+        if (! $featured || ! $media) {
             return null;
         }
 
-        $index = $this->person->photos->search(fn (Photo $photo) => $photo->id === $featured->id);
-
-        return $index === false ? 0 : $index;
+        return ['id' => $featured->id, 'thumb' => MediaUrl::of($media, conversion: 'thumb')];
     }
 
     /**
@@ -542,9 +524,9 @@ new class extends Component {
 
 <section class="w-full max-w-3xl">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-        @if ($this->heroPhotoIndex !== null)
-            <button type="button" onclick="openLightbox(@js($this->photoFullUrls), {{ $this->heroPhotoIndex }})" class="block shrink-0">
-                <img src="{{ $this->photoUrls[$this->heroPhotoIndex] }}" class="size-32 rounded-full object-cover sm:size-40" alt="{{ $person->fullName() }}">
+        @if ($this->heroPhoto)
+            <button type="button" wire:click="$dispatch('open-photo-lightbox', { photoId: {{ $this->heroPhoto['id'] }}, contextIds: @js(collect($this->galleryPhotos)->pluck('id')) })" class="block shrink-0">
+                <img src="{{ $this->heroPhoto['thumb'] }}" class="size-32 rounded-full object-cover sm:size-40" alt="{{ $person->fullName() }}">
             </button>
         @else
             <x-person-avatar :person="$person" size="xl" />
@@ -621,8 +603,8 @@ new class extends Component {
             </div>
         @endplaceholder
 
-        @if (count($this->photoUrls) > 1)
-            <x-photo-gallery :urls="$this->photoUrls" :full-urls="$this->photoFullUrls" class="mt-4" />
+        @if (count($this->galleryPhotos) > 1)
+            <x-photo-gallery :photos="$this->galleryPhotos" class="mt-4" />
         @endif
     @endisland
 

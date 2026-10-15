@@ -17,10 +17,17 @@ new #[Title('Photos')] class extends Component {
 
     public string $search = '';
 
+    public bool $untaggedOnly = false;
+
     /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
     public array $newPhotos = [];
 
     public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedUntaggedOnly(): void
     {
         $this->resetPage();
     }
@@ -34,11 +41,28 @@ new #[Title('Photos')] class extends Component {
     #[Computed]
     public function photos()
     {
+        return $this->filteredQuery()->with(['media', 'people'])->paginate(24);
+    }
+
+    /**
+     * Every photo matching the current filters, not just the current page —
+     * so the lightbox can flip through the whole filtered set (e.g. every
+     * untagged photo) without being boxed in by pagination.
+     *
+     * @return array<int, int>
+     */
+    #[Computed]
+    public function allFilteredPhotoIds(): array
+    {
+        return $this->filteredQuery()->pluck('id')->all();
+    }
+
+    private function filteredQuery()
+    {
         return Photo::query()
-            ->with(['media', 'people'])
             ->when($this->search, fn ($query) => $query->where('description', 'like', "%{$this->search}%"))
-            ->latest()
-            ->paginate(24);
+            ->when($this->untaggedOnly, fn ($query) => $query->doesntHave('people'))
+            ->latest();
     }
 
     /**
@@ -90,13 +114,14 @@ new #[Title('Photos')] class extends Component {
         </div>
     @endif
 
-    <div class="mt-4">
+    <div class="mt-4 flex flex-wrap items-center gap-4">
         <flux:input wire:model.live.debounce.300ms="search" :placeholder="__('Search descriptions…')" class="max-w-sm" />
+        <flux:checkbox wire:model.live="untaggedOnly" :label="__('No tags only')" :description="__('Find photos that still need people tagged')" />
     </div>
 
     <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         @forelse ($this->photos as $photo)
-            <a href="{{ route('photos.show', $photo) }}" wire:navigate class="group relative aspect-square overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+            <button type="button" wire:click="$dispatch('open-photo-lightbox', { photoId: {{ $photo->id }}, contextIds: @js($this->allFilteredPhotoIds) })" class="group relative aspect-square overflow-hidden rounded-lg bg-zinc-100 text-left dark:bg-zinc-800">
                 @if ($photo->fileMedia())
                     <img src="{{ MediaUrl::of($photo->fileMedia(), conversion: 'thumb') }}" class="h-full w-full object-cover transition group-hover:opacity-90" alt="">
                 @endif
@@ -105,7 +130,7 @@ new #[Title('Photos')] class extends Component {
                         {{ $photo->people->map->fullName()->join(', ') }}
                     </span>
                 @endif
-            </a>
+            </button>
         @empty
             <flux:text class="col-span-full text-zinc-500">{{ __('No photos yet.') }}</flux:text>
         @endforelse

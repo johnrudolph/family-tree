@@ -29,25 +29,18 @@ new class extends Component {
         return $this->canEdit ? $this->story->pendingSuggestions()->count() : 0;
     }
 
+    /**
+     * @return array<int, array{id: int, thumb: string}>
+     */
     #[Computed]
-    public function galleryUrls(): array
+    public function galleryPhotos(): array
     {
         return $this->story->photos
-            ->map(fn ($photo) => $photo->fileMedia())
-            ->filter()
-            ->map(fn ($media) => MediaUrl::of($media, conversion: 'thumb'))
-            ->values()
-            ->all();
-    }
-
-    /** Same order as {@see galleryUrls()}, but full resolution — for the lightbox. */
-    #[Computed]
-    public function galleryFullUrls(): array
-    {
-        return $this->story->photos
-            ->map(fn ($photo) => $photo->fileMedia())
-            ->filter()
-            ->map(fn ($media) => MediaUrl::of($media))
+            ->filter(fn ($photo) => $photo->fileMedia())
+            ->map(fn ($photo) => [
+                'id' => $photo->id,
+                'thumb' => MediaUrl::of($photo->fileMedia(), conversion: 'thumb'),
+            ])
             ->values()
             ->all();
     }
@@ -146,7 +139,7 @@ new class extends Component {
         </div>
     @endif
 
-    <x-photo-gallery :urls="$this->galleryUrls" :full-urls="$this->galleryFullUrls" class="mt-6" />
+    <x-photo-gallery :photos="$this->galleryPhotos" class="mt-6" />
 
     <div class="prose prose-zinc dark:prose-invert mt-6 max-w-none">
         {!! StoryBodyParser::render($story->body ?? '') !!}

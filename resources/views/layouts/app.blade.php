@@ -2,4 +2,6 @@
     <flux:main>
         {{ $slot }}
     </flux:main>
+
+    <livewire:photo-lightbox />
 </x-layouts::app.sidebar>

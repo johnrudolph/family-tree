@@ -1,11 +1,11 @@
 <?php
 
+use App\Concerns\EditsPhotoDetails;
 use App\Models\Person;
 use App\Models\Photo;
 use App\Services\PhotoDeletionService;
 use App\Support\MediaUrl;
 use Flux\Flux;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -13,34 +13,15 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component {
+    use EditsPhotoDetails;
+
     #[Locked]
     public Photo $photo;
-
-    public string $description = '';
-
-    public string $date_precision = 'exact';
-
-    public ?string $date = null;
-
-    public ?string $year = null;
-
-    public bool $hasDate = false;
-
-    public ?int $location_id = null;
-
-    /** @var array<int, int> */
-    public array $person_ids = [];
 
     public function mount(Photo $photo): void
     {
         $this->photo = $photo;
-        $this->description = $photo->description ?? '';
-        $this->hasDate = $photo->date !== null;
-        $this->date_precision = $photo->date_precision ?? 'exact';
-        $this->date = $photo->date_precision === 'exact' ? $photo->date?->toDateString() : null;
-        $this->year = $photo->date_precision === 'year' ? $photo->date?->format('Y') : null;
-        $this->location_id = $photo->location_id;
-        $this->person_ids = $photo->people->pluck('id')->all();
+        $this->fillPhotoForm($photo);
     }
 
     public function people()
@@ -68,29 +49,7 @@ new class extends Component {
 
     public function save(): void
     {
-        Gate::authorize('update', $this->photo);
-
-        $currentYear = (int) now()->format('Y');
-
-        $validated = $this->validate([
-            'description' => ['nullable', 'string', 'max:1000'],
-            'hasDate' => ['boolean'],
-            'date_precision' => ['required_if:hasDate,true', 'in:exact,year'],
-            'date' => ['required_if:date_precision,exact', 'nullable', 'date'],
-            'year' => ['required_if:date_precision,year', 'nullable', 'integer', 'min:1000', 'max:'.$currentYear],
-            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
-            'person_ids' => ['array'],
-            'person_ids.*' => ['exists:people,id'],
-        ]);
-
-        $this->photo->update([
-            'description' => $validated['description'] ?: null,
-            'date' => $validated['hasDate'] ? ($validated['date_precision'] === 'year' ? "{$validated['year']}-01-01" : $validated['date']) : null,
-            'date_precision' => $validated['hasDate'] ? $validated['date_precision'] : null,
-            'location_id' => $validated['location_id'],
-        ]);
-
-        $this->photo->people()->sync($validated['person_ids']);
+        $this->savePhotoDetails($this->photo);
 
         Flux::toast(variant: 'success', text: __('Saved.'));
     }
