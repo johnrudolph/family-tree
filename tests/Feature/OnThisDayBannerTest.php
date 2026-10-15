@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Relationship;
 use App\Models\Story;
 use App\Models\User;
 use Livewire\Livewire;
@@ -115,6 +116,58 @@ test('a year-only death date is never matched, even if its Jan 1 placeholder dat
     Livewire::actingAs($viewer)
         ->test('pages::on-this-day-banner')
         ->assertDontSee('YearOnlyDeath');
+});
+
+test('a couple married on this day in a past year shows an anniversary line', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $viewer->person->update(['dob' => null]);
+    $husband = Person::factory()->create(['first_name' => 'Married', 'last_name' => 'One']);
+    $wife = Person::factory()->create(['first_name' => 'Married', 'last_name' => 'Two']);
+    Relationship::factory()->create([
+        'person_a_id' => $husband->id,
+        'person_b_id' => $wife->id,
+        'started_at' => now()->subYears(10),
+        'started_at_precision' => 'exact',
+    ]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::on-this-day-banner')
+        ->assertSee('got married')
+        ->assertSee($husband->fullName())
+        ->assertSee($wife->fullName());
+});
+
+test('a couple divorced on this day in a past year shows a divorce line', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $viewer->person->update(['dob' => null]);
+    $husband = Person::factory()->create(['first_name' => 'Divorced', 'last_name' => 'One']);
+    $wife = Person::factory()->create(['first_name' => 'Divorced', 'last_name' => 'Two']);
+    Relationship::factory()->create([
+        'person_a_id' => $husband->id,
+        'person_b_id' => $wife->id,
+        'status' => 'divorced',
+        'ended_at' => now()->subYears(3),
+        'ended_at_precision' => 'exact',
+    ]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::on-this-day-banner')
+        ->assertSee('divorced')
+        ->assertSee($husband->fullName())
+        ->assertSee($wife->fullName());
+});
+
+test('a year-only marriage date is never matched, even if its Jan 1 placeholder date is today', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $viewer->person->update(['dob' => null]);
+    Relationship::factory()->create([
+        'started_at' => now()->startOfYear(),
+        'started_at_precision' => 'year',
+    ]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::on-this-day-banner')
+        ->assertDontSee('got married');
 });
 
 test('the banner renders nothing when there is nothing to show today', function () {

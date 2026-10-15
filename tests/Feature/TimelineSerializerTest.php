@@ -3,6 +3,7 @@
 use App\Models\Location;
 use App\Models\Person;
 use App\Models\Photo;
+use App\Models\Relationship;
 use App\Models\Story;
 use App\Support\TimelineSerializer;
 use Illuminate\Support\Facades\Storage;
@@ -117,4 +118,64 @@ test('birth and death events have an empty gallery_urls, not null', function () 
     $event = collect(TimelineSerializer::events())->firstWhere('person_id', $person->id);
 
     expect($event['gallery_urls'])->toBe([]);
+});
+
+test('a spouse relationship with a marriage date produces a marriage event', function () {
+    $husband = Person::factory()->create(['first_name' => 'John', 'last_name' => 'Belz']);
+    $wife = Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Belz']);
+    $relationship = Relationship::factory()->create([
+        'person_a_id' => $husband->id,
+        'person_b_id' => $wife->id,
+        'started_at' => '1980-06-14',
+        'started_at_precision' => 'exact',
+        'location_id' => Location::factory()->create(['city' => 'Omaha', 'region' => 'NE'])->id,
+    ]);
+
+    $event = collect(TimelineSerializer::events())->firstWhere('relationship_id', $relationship->id);
+
+    expect($event['type'])->toBe('marriage');
+    expect($event['date'])->toBe('1980-06-14');
+    expect($event['title'])->toBe('John Belz and Jane Belz get married');
+    expect($event['location']['label'])->toBe('Omaha, NE');
+});
+
+test('a divorced spouse relationship with an end date produces a separate divorce event', function () {
+    $husband = Person::factory()->create();
+    $wife = Person::factory()->create();
+    $relationship = Relationship::factory()->create([
+        'person_a_id' => $husband->id,
+        'person_b_id' => $wife->id,
+        'status' => 'divorced',
+        'started_at' => '1980-06-14',
+        'started_at_precision' => 'exact',
+        'ended_at' => '1995-02-20',
+        'ended_at_precision' => 'exact',
+    ]);
+
+    $events = collect(TimelineSerializer::events())->where('relationship_id', $relationship->id);
+
+    expect($events->pluck('type')->sort()->values()->all())->toBe(['divorce', 'marriage']);
+    expect($events->firstWhere('type', 'divorce')['date'])->toBe('1995-02-20');
+});
+
+test('a relationship with no marriage date produces no timeline event', function () {
+    $relationship = Relationship::factory()->create(['started_at' => null]);
+
+    $events = collect(TimelineSerializer::events())->where('relationship_id', $relationship->id);
+
+    expect($events)->toBeEmpty();
+});
+
+test('a marriage event\'s featured image comes from its first attached photo', function () {
+    Storage::fake('public');
+
+    $relationship = Relationship::factory()->create(['started_at' => '1980-06-14', 'started_at_precision' => 'exact']);
+    $photo = Photo::create();
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $relationship->photos()->attach($photo->id);
+
+    $event = collect(TimelineSerializer::events())->firstWhere('relationship_id', $relationship->id);
+
+    expect($event['featured_image_url'])->not->toBeNull();
+    expect($event['gallery_urls'])->toHaveCount(1);
 });

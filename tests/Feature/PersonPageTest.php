@@ -331,6 +331,97 @@ test('adding a relationship dispatches a family-widget-updated event for the min
         ->assertDispatched('family-widget-updated');
 });
 
+test('adding a spouse relationship records the marriage date and location', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $other = Person::factory()->create();
+    $location = Location::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.show', ['person' => $person])
+        ->set('relType', 'spouse')
+        ->set('relMode', 'existing')
+        ->set('relExistingPersonId', $other->id)
+        ->set('relSpouseStatus', 'married')
+        ->set('relStartedAt', '2010-06-12')
+        ->set('relMarriageLocationId', $location->id)
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $relationship = Relationship::query()->where('type', 'spouse')->first();
+
+    expect($relationship->started_at->toDateString())->toBe('2010-06-12');
+    expect($relationship->started_at_precision)->toBe('exact');
+    expect($relationship->location_id)->toBe($location->id);
+});
+
+test('marking a new spouse relationship as divorced records the divorce date', function () {
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $other = Person::factory()->create();
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.show', ['person' => $person])
+        ->set('relType', 'spouse')
+        ->set('relMode', 'existing')
+        ->set('relExistingPersonId', $other->id)
+        ->set('relSpouseStatus', 'divorced')
+        ->set('relEndedAt', '2018-09-01')
+        ->call('addRelationship')
+        ->assertHasNoErrors();
+
+    $relationship = Relationship::query()->where('type', 'spouse')->first();
+
+    expect($relationship->status)->toBe('divorced');
+    expect($relationship->ended_at->toDateString())->toBe('2018-09-01');
+});
+
+test('an editor can edit an existing marriage\'s dates, location, and photos', function () {
+    Storage::fake('public');
+
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $spouse = Person::factory()->create();
+    $location = Location::factory()->create();
+    $photo = Photo::create();
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    app(PageEditorService::class)->grantOwner($person, $editor);
+    $relationship = Relationship::factory()->create(['person_a_id' => $person->id, 'person_b_id' => $spouse->id]);
+
+    Livewire::actingAs($editor)
+        ->test('pages::people.show', ['person' => $person])
+        ->call('openEditRelationship', $relationship->id)
+        ->set('editRelStatus', 'divorced')
+        ->set('editRelStartedAt', '2005-05-05')
+        ->set('editRelEndedAt', '2015-07-07')
+        ->set('editRelLocationId', $location->id)
+        ->call('togglePhoto', $photo->id)
+        ->call('saveRelationshipDetails')
+        ->assertHasNoErrors();
+
+    $relationship->refresh();
+
+    expect($relationship->status)->toBe('divorced');
+    expect($relationship->started_at->toDateString())->toBe('2005-05-05');
+    expect($relationship->ended_at->toDateString())->toBe('2015-07-07');
+    expect($relationship->location_id)->toBe($location->id);
+    expect($relationship->photos->pluck('id')->all())->toBe([$photo->id]);
+});
+
+test('a non-editor cannot edit a marriage\'s details', function () {
+    $viewer = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $spouse = Person::factory()->create();
+    $relationship = Relationship::factory()->create(['person_a_id' => $person->id, 'person_b_id' => $spouse->id]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::people.show', ['person' => $person])
+        ->call('openEditRelationship', $relationship->id)
+        ->assertForbidden();
+});
+
 test('an editor sees the editors and history sections directly on the person page', function () {
     $editor = User::factory()->withTwoFactor()->create(['name' => 'Editor Name']);
     $person = Person::factory()->create();

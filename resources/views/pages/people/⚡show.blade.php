@@ -1,5 +1,6 @@
 <?php
 
+use App\Concerns\PicksExistingPhotos;
 use App\Models\Person;
 use App\Models\Photo;
 use App\Models\Relationship;
@@ -24,6 +25,8 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component {
+    use PicksExistingPhotos;
+
     #[Locked]
     public Person $person;
 
@@ -60,6 +63,46 @@ new class extends Component {
     public ?int $relNewDeathLocationId = null;
 
     public string $relSpouseStatus = 'married';
+
+    public ?string $relStartedAt = null;
+
+    public string $relStartedAtPrecision = 'exact';
+
+    public ?string $relStartedAtYear = null;
+
+    public ?string $relEndedAt = null;
+
+    public string $relEndedAtPrecision = 'exact';
+
+    public ?string $relEndedAtYear = null;
+
+    public ?int $relMarriageLocationId = null;
+
+    public ?int $editingRelationshipId = null;
+
+    public string $editRelStatus = 'married';
+
+    public ?string $editRelStartedAt = null;
+
+    public string $editRelStartedAtPrecision = 'exact';
+
+    public ?string $editRelStartedAtYear = null;
+
+    public ?string $editRelEndedAt = null;
+
+    public string $editRelEndedAtPrecision = 'exact';
+
+    public ?string $editRelEndedAtYear = null;
+
+    public ?int $editRelLocationId = null;
+
+    /**
+     * Bumped after opening the edit-relationship modal so the location
+     * picker (a nested Livewire component with its own internal state)
+     * remounts fresh with the relationship being edited's location,
+     * instead of keeping whatever was selected last time the modal opened.
+     */
+    public int $editRelFormKey = 0;
 
     /** @var array<int, int> child ids to also link to the new spouse as parent */
     public array $relAlsoParentOfChildIds = [];
@@ -251,8 +294,18 @@ new class extends Component {
                     'id' => $relationship->id,
                     'label' => $label,
                     'other' => $other,
+                    'is_spouse' => $relationship->type === 'spouse',
+                    'relationship' => $relationship,
                 ];
             });
+    }
+
+    #[Computed]
+    public function editingRelationship(): ?Relationship
+    {
+        return $this->editingRelationshipId
+            ? Relationship::query()->find($this->editingRelationshipId)
+            : null;
     }
 
     #[Computed]
@@ -323,6 +376,8 @@ new class extends Component {
         match ($field) {
             'relBirth' => $this->relNewBirthLocationId = $locationId,
             'relDeath' => $this->relNewDeathLocationId = $locationId,
+            'relMarriage' => $this->relMarriageLocationId = $locationId,
+            'editRelLocation' => $this->editRelLocationId = $locationId,
             default => null,
         };
     }
@@ -349,6 +404,13 @@ new class extends Component {
             'relNewDodYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'relNewDeathLocationId' => ['nullable', 'integer', 'exists:locations,id'],
             'relSpouseStatus' => ['required_if:relType,spouse', 'in:married,divorced'],
+            'relStartedAtPrecision' => ['required', 'in:exact,year'],
+            'relStartedAt' => ['nullable', 'date'],
+            'relStartedAtYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
+            'relEndedAtPrecision' => ['required', 'in:exact,year'],
+            'relEndedAt' => ['nullable', 'date'],
+            'relEndedAtYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
+            'relMarriageLocationId' => ['nullable', 'integer', 'exists:locations,id'],
         ]);
 
         $relationships = app(RelationshipService::class);
@@ -381,6 +443,11 @@ new class extends Component {
                     $other = Person::findOrFail($validated['relExistingPersonId']);
                 }
 
+                [$startedAt, $startedAtPrecision] = PersonDateInput::resolve($validated['relStartedAtPrecision'], $validated['relStartedAt'], $validated['relStartedAtYear']);
+                [$endedAt, $endedAtPrecision] = $validated['relSpouseStatus'] === 'divorced'
+                    ? PersonDateInput::resolve($validated['relEndedAtPrecision'], $validated['relEndedAt'], $validated['relEndedAtYear'])
+                    : [null, null];
+
                 match ($this->relType) {
                     'parent' => Relationship::create([
                         'person_a_id' => $other->id,
@@ -397,6 +464,11 @@ new class extends Component {
                         'person_b_id' => $other->id,
                         'type' => 'spouse',
                         'status' => $validated['relSpouseStatus'],
+                        'location_id' => $validated['relMarriageLocationId'],
+                        'started_at' => $startedAt,
+                        'started_at_precision' => $startedAt ? $startedAtPrecision : null,
+                        'ended_at' => $endedAt,
+                        'ended_at_precision' => $endedAt ? $endedAtPrecision : null,
                     ]),
                     'sibling' => $relationships->addSibling($this->person, $other),
                 };
@@ -425,7 +497,7 @@ new class extends Component {
             return;
         }
 
-        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewSex', 'relNewDob', 'relNewDobPrecision', 'relNewDobYear', 'relNewBirthLocationId', 'relNewIsLiving', 'relNewDod', 'relNewDodPrecision', 'relNewDodYear', 'relNewDeathLocationId']);
+        $this->reset(['relExistingPersonId', 'relNewFirstName', 'relNewMiddleName', 'relNewLastName', 'relNewSex', 'relNewDob', 'relNewDobPrecision', 'relNewDobYear', 'relNewBirthLocationId', 'relNewIsLiving', 'relNewDod', 'relNewDodPrecision', 'relNewDodYear', 'relNewDeathLocationId', 'relStartedAt', 'relStartedAtPrecision', 'relStartedAtYear', 'relEndedAt', 'relEndedAtPrecision', 'relEndedAtYear', 'relMarriageLocationId']);
         $this->relNewLocationFormKey++;
         unset($this->relationshipRows, $this->candidatePeople, $this->candidateStepchildren, $this->candidateCoParents, $this->existingParents, $this->familyTreeData);
         $this->seedAlsoLinkSuggestions();
@@ -451,6 +523,75 @@ new class extends Component {
         Flux::toast(variant: 'success', text: __('Relationship removed.'));
 
         $this->dispatch('family-widget-updated', data: FamilyTreeSerializer::toChartData());
+    }
+
+    public function openEditRelationship(int $relationshipId): void
+    {
+        Gate::authorize('update', $this->person);
+
+        $relationship = Relationship::query()
+            ->where('type', 'spouse')
+            ->where(fn ($query) => $query
+                ->where('person_a_id', $this->person->id)
+                ->orWhere('person_b_id', $this->person->id))
+            ->findOrFail($relationshipId);
+
+        $this->editingRelationshipId = $relationship->id;
+        $this->editRelStatus = $relationship->status ?? 'married';
+        $this->editRelStartedAt = $relationship->started_at_precision === 'exact' ? $relationship->started_at?->toDateString() : null;
+        $this->editRelStartedAtPrecision = $relationship->started_at_precision ?? 'exact';
+        $this->editRelStartedAtYear = $relationship->started_at_precision === 'year' ? $relationship->started_at?->format('Y') : null;
+        $this->editRelEndedAt = $relationship->ended_at_precision === 'exact' ? $relationship->ended_at?->toDateString() : null;
+        $this->editRelEndedAtPrecision = $relationship->ended_at_precision ?? 'exact';
+        $this->editRelEndedAtYear = $relationship->ended_at_precision === 'year' ? $relationship->ended_at?->format('Y') : null;
+        $this->editRelLocationId = $relationship->location_id;
+        $this->selectedPhotoIds = $relationship->photos->pluck('id')->all();
+        $this->editRelFormKey++;
+        $this->resetValidation();
+
+        Flux::modal('edit-relationship')->show();
+    }
+
+    public function saveRelationshipDetails(): void
+    {
+        Gate::authorize('update', $this->person);
+
+        $relationship = $this->editingRelationship;
+        abort_unless($relationship, 404);
+
+        $validated = $this->validate([
+            'editRelStatus' => ['required', 'in:married,divorced'],
+            'editRelStartedAtPrecision' => ['required', 'in:exact,year'],
+            'editRelStartedAt' => ['nullable', 'date'],
+            'editRelStartedAtYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
+            'editRelEndedAtPrecision' => ['required', 'in:exact,year'],
+            'editRelEndedAt' => ['nullable', 'date'],
+            'editRelEndedAtYear' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
+            'editRelLocationId' => ['nullable', 'integer', 'exists:locations,id'],
+        ]);
+
+        [$startedAt, $startedAtPrecision] = PersonDateInput::resolve($validated['editRelStartedAtPrecision'], $validated['editRelStartedAt'], $validated['editRelStartedAtYear']);
+        [$endedAt, $endedAtPrecision] = $validated['editRelStatus'] === 'divorced'
+            ? PersonDateInput::resolve($validated['editRelEndedAtPrecision'], $validated['editRelEndedAt'], $validated['editRelEndedAtYear'])
+            : [null, null];
+
+        $relationship->update([
+            'status' => $validated['editRelStatus'],
+            'location_id' => $validated['editRelLocationId'],
+            'started_at' => $startedAt,
+            'started_at_precision' => $startedAt ? $startedAtPrecision : null,
+            'ended_at' => $endedAt,
+            'ended_at_precision' => $endedAt ? $endedAtPrecision : null,
+        ]);
+
+        $relationship->photos()->sync($this->selectedPhotoIds);
+
+        unset($this->relationshipRows);
+        $this->editingRelationshipId = null;
+        $this->selectedPhotoIds = [];
+
+        Flux::modal('edit-relationship')->close();
+        Flux::toast(variant: 'success', text: __('Marriage details saved.'));
     }
 
     public function addEditor(): void
@@ -712,15 +853,33 @@ new class extends Component {
             <div class="mt-2 space-y-2">
                 @forelse ($this->relationshipRows as $row)
                     <div class="flex items-center justify-between rounded-lg border border-zinc-200 p-2 dark:border-zinc-700" wire:key="rel-{{ $row['id'] }}">
-                        <div class="flex min-w-0 items-center gap-2">
-                            <flux:badge size="sm">{{ $row['label'] }}</flux:badge>
-                            <a href="{{ route('people.show', $row['other']) }}" wire:navigate class="truncate text-sm hover:underline">
-                                {{ $row['other']->fullName() }}
-                            </a>
+                        <div class="min-w-0">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <flux:badge size="sm">{{ $row['label'] }}</flux:badge>
+                                <a href="{{ route('people.show', $row['other']) }}" wire:navigate class="truncate text-sm hover:underline">
+                                    {{ $row['other']->fullName() }}
+                                </a>
+                            </div>
+                            @if ($row['is_spouse'] && ($row['relationship']->started_at || $row['relationship']->location))
+                                <flux:text class="text-xs text-zinc-500">
+                                    {{ $row['relationship']->status === 'divorced' ? __('Divorced') : __('Married') }}
+                                    @if ($row['relationship']->started_at)
+                                        {{ $row['relationship']->started_at_precision === 'year' ? $row['relationship']->started_at->format('Y') : $row['relationship']->started_at->format('M j, Y') }}
+                                    @endif
+                                    @if ($row['relationship']->location)
+                                        {{ __('in :place', ['place' => $row['relationship']->location->shortLabel()]) }}
+                                    @endif
+                                </flux:text>
+                            @endif
                         </div>
-                        @if ($this->canEdit)
-                            <flux:button wire:click="removeRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="x-mark" />
-                        @endif
+                        <div class="flex shrink-0 items-center gap-1">
+                            @if ($this->canEdit && $row['is_spouse'])
+                                <flux:button wire:click="openEditRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="pencil" />
+                            @endif
+                            @if ($this->canEdit)
+                                <flux:button wire:click="removeRelationship({{ $row['id'] }})" size="sm" variant="ghost" icon="x-mark" />
+                            @endif
+                        </div>
                     </div>
                 @empty
                     <flux:text class="text-zinc-500">{{ __('No relationships recorded yet.') }}</flux:text>
@@ -854,11 +1013,18 @@ new class extends Component {
                             />
                         </div>
 
-                        <div x-show="$wire.relType === 'spouse'">
+                        <div x-show="$wire.relType === 'spouse'" class="flex flex-col gap-3">
                             <flux:select wire:model="relSpouseStatus">
                                 <flux:select.option value="married">{{ __('Married') }}</flux:select.option>
                                 <flux:select.option value="divorced">{{ __('Divorced') }}</flux:select.option>
                             </flux:select>
+
+                            <x-date-precision-field label="{{ __('Marriage date') }}" date-model="relStartedAt" precision-model="relStartedAtPrecision" year-model="relStartedAtYear" />
+                            <livewire:location-picker field="relMarriage" :location-id="$relMarriageLocationId" :label="__('Marriage location')" wire:key="rel-marriage-location-picker-{{ $relNewLocationFormKey }}" />
+
+                            <div x-show="$wire.relSpouseStatus === 'divorced'">
+                                <x-date-precision-field label="{{ __('Divorce date') }}" date-model="relEndedAt" precision-model="relEndedAtPrecision" year-model="relEndedAtYear" />
+                            </div>
 
                             <x-relationship-pills
                                 :label="__('Also mark as parent of')"
@@ -929,6 +1095,33 @@ new class extends Component {
 
                         <flux:button type="submit" variant="primary" size="sm">{{ __('Add relationship') }}</flux:button>
                     </form>
+                </flux:modal>
+
+                <flux:modal name="edit-relationship" class="w-96" @close="$set('editingRelationshipId', null)">
+                    @if ($this->editingRelationship)
+                        <flux:heading level="2" size="sm">{{ __('Marriage details') }}</flux:heading>
+
+                        <form wire:submit="saveRelationshipDetails" class="mt-3 flex flex-col gap-3">
+                            <flux:select wire:model.live="editRelStatus">
+                                <flux:select.option value="married">{{ __('Married') }}</flux:select.option>
+                                <flux:select.option value="divorced">{{ __('Divorced') }}</flux:select.option>
+                            </flux:select>
+
+                            <x-date-precision-field label="{{ __('Marriage date') }}" date-model="editRelStartedAt" precision-model="editRelStartedAtPrecision" year-model="editRelStartedAtYear" />
+                            <livewire:location-picker field="editRelLocation" :location-id="$editRelLocationId" :label="__('Marriage location')" wire:key="edit-rel-location-picker-{{ $editRelFormKey }}" />
+
+                            <div x-show="$wire.editRelStatus === 'divorced'">
+                                <x-date-precision-field label="{{ __('Divorce date') }}" date-model="editRelEndedAt" precision-model="editRelEndedAtPrecision" year-model="editRelEndedAtYear" />
+                            </div>
+
+                            <flux:separator />
+
+                            <flux:label>{{ __('Photos') }}</flux:label>
+                            @include('partials.photo-picker')
+
+                            <flux:button type="submit" variant="primary" size="sm">{{ __('Save') }}</flux:button>
+                        </form>
+                    @endif
                 </flux:modal>
             @endif
         </div>

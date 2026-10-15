@@ -167,7 +167,7 @@ function render(root, events, scale) {
         .attr('x1', (d) => scale(new Date(d.date)))
         .attr('x2', (d) => scale(new Date(d.end_date)));
 
-    const dotSel = svg.select('g.timeline-dots').selectAll('circle.dot').data(dots, (d) => `${d.type}-${d.person_id || d.story_id}`);
+    const dotSel = svg.select('g.timeline-dots').selectAll('circle.dot').data(dots, (d) => `${d.type}-${d.person_id || d.story_id || d.relationship_id}`);
     dotSel.exit().remove();
     dotSel.enter().append('circle').attr('class', (d) => `dot ${d.type === 'story' ? 'fill-blue-500' : 'fill-zinc-400 dark:fill-zinc-500'}`)
         .attr('r', 4)
@@ -198,7 +198,7 @@ function render(root, events, scale) {
     }
 
     const cardLayer = select(root).select('.timeline-cards');
-    const cardSel = cardLayer.selectAll('.timeline-card').data(shown, (d) => `${d.event.type}-${d.event.person_id || d.event.story_id}`);
+    const cardSel = cardLayer.selectAll('.timeline-card').data(shown, (d) => `${d.event.type}-${d.event.person_id || d.event.story_id || d.event.relationship_id}`);
 
     cardSel.exit().remove();
 

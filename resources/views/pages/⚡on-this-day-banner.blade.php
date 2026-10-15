@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Models\Relationship;
 use App\Models\Story;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -62,6 +63,33 @@ new class extends Component {
             ->get();
     }
 
+    #[Computed]
+    public function marriedOnThisDay()
+    {
+        return Relationship::query()
+            ->where('type', 'spouse')
+            ->where('started_at_precision', 'exact')
+            ->whereMonth('started_at', now()->month)
+            ->whereDay('started_at', now()->day)
+            ->with(['personA', 'personB'])
+            ->orderBy('started_at')
+            ->get();
+    }
+
+    #[Computed]
+    public function divorcedOnThisDay()
+    {
+        return Relationship::query()
+            ->where('type', 'spouse')
+            ->where('status', 'divorced')
+            ->where('ended_at_precision', 'exact')
+            ->whereMonth('ended_at', now()->month)
+            ->whereDay('ended_at', now()->day)
+            ->with(['personA', 'personB'])
+            ->orderBy('ended_at')
+            ->get();
+    }
+
     /**
      * The "Happy birthday X, Y & Z!" name list, each name linked to their
      * page — built here (rather than in the Blade) so it can reuse
@@ -81,7 +109,9 @@ new class extends Component {
         return $this->livingBirthdays->isNotEmpty()
             || $this->bornOnThisDay->isNotEmpty()
             || $this->diedOnThisDay->isNotEmpty()
-            || $this->storiesOnThisDay->isNotEmpty();
+            || $this->storiesOnThisDay->isNotEmpty()
+            || $this->marriedOnThisDay->isNotEmpty()
+            || $this->divorcedOnThisDay->isNotEmpty();
     }
 }; ?>
 
@@ -117,6 +147,26 @@ new class extends Component {
                     <flux:text class="text-sm" wire:key="story-{{ $story->id }}">
                         📖 {{ __('On this day in :year:', ['year' => $story->start_date->format('Y')]) }}
                         <a href="{{ route('stories.show', $story) }}" wire:navigate class="underline">{{ $story->title }}</a>
+                    </flux:text>
+                @endforeach
+
+                @foreach ($this->marriedOnThisDay as $relationship)
+                    <flux:text class="text-sm" wire:key="married-{{ $relationship->id }}">
+                        💍 {{ __('On this day in :year, ', ['year' => $relationship->started_at->format('Y')]) }}
+                        <a href="{{ route('people.show', $relationship->personA) }}" wire:navigate class="underline">{{ $relationship->personA->fullName() }}</a>
+                        {{ __('and') }}
+                        <a href="{{ route('people.show', $relationship->personB) }}" wire:navigate class="underline">{{ $relationship->personB->fullName() }}</a>
+                        {{ __('got married') }}
+                    </flux:text>
+                @endforeach
+
+                @foreach ($this->divorcedOnThisDay as $relationship)
+                    <flux:text class="text-sm" wire:key="divorced-{{ $relationship->id }}">
+                        💔 {{ __('On this day in :year, ', ['year' => $relationship->ended_at->format('Y')]) }}
+                        <a href="{{ route('people.show', $relationship->personA) }}" wire:navigate class="underline">{{ $relationship->personA->fullName() }}</a>
+                        {{ __('and') }}
+                        <a href="{{ route('people.show', $relationship->personB) }}" wire:navigate class="underline">{{ $relationship->personB->fullName() }}</a>
+                        {{ __('divorced') }}
                     </flux:text>
                 @endforeach
             </div>

@@ -4,7 +4,9 @@ namespace App\Support;
 
 use App\Models\Location;
 use App\Models\Person;
+use App\Models\Relationship;
 use App\Models\Story;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 class TimelineSerializer
@@ -23,7 +25,7 @@ class TimelineSerializer
      */
     public static function events(?Collection $personIds = null): array
     {
-        $events = [...self::birthEvents($personIds), ...self::deathEvents($personIds), ...self::storyEvents($personIds)];
+        $events = [...self::birthEvents($personIds), ...self::deathEvents($personIds), ...self::storyEvents($personIds), ...self::marriageEvents($personIds), ...self::divorceEvents($personIds)];
 
         usort($events, fn (array $a, array $b) => $a['date'] <=> $b['date']);
 
@@ -120,6 +122,68 @@ class TimelineSerializer
                     'location' => self::locationPayload($story->location),
                 ];
             })->all();
+    }
+
+    /**
+     * @param  Collection<int, int>|null  $personIds
+     * @return array<int, array<string, mixed>>
+     */
+    private static function marriageEvents(?Collection $personIds): array
+    {
+        return Relationship::query()
+            ->where('type', 'spouse')
+            ->whereNotNull('started_at')
+            ->with(['personA', 'personB', 'location', 'photos.media'])
+            ->when($personIds, fn ($query, $ids) => $query
+                ->where(fn ($q) => $q->whereIn('person_a_id', $ids)->orWhereIn('person_b_id', $ids)))
+            ->get()
+            ->map(fn (Relationship $relationship): array => self::relationshipEvent($relationship, 'marriage', $relationship->started_at, $relationship->started_at_precision, __(':a and :b get married', ['a' => $relationship->personA->fullName(), 'b' => $relationship->personB->fullName()])))
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, int>|null  $personIds
+     * @return array<int, array<string, mixed>>
+     */
+    private static function divorceEvents(?Collection $personIds): array
+    {
+        return Relationship::query()
+            ->where('type', 'spouse')
+            ->where('status', 'divorced')
+            ->whereNotNull('ended_at')
+            ->with(['personA', 'personB', 'location', 'photos.media'])
+            ->when($personIds, fn ($query, $ids) => $query
+                ->where(fn ($q) => $q->whereIn('person_a_id', $ids)->orWhereIn('person_b_id', $ids)))
+            ->get()
+            ->map(fn (Relationship $relationship): array => self::relationshipEvent($relationship, 'divorce', $relationship->ended_at, $relationship->ended_at_precision, __(':a and :b divorce', ['a' => $relationship->personA->fullName(), 'b' => $relationship->personB->fullName()])))
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function relationshipEvent(Relationship $relationship, string $type, CarbonInterface $date, ?string $precision, string $title): array
+    {
+        $photo = $relationship->photos->first();
+        $media = $photo?->fileMedia();
+
+        return [
+            'type' => $type,
+            'date' => $date->toDateString(),
+            'date_precision' => $precision ?? 'exact',
+            'end_date' => null,
+            'end_date_precision' => null,
+            'title' => $title,
+            'person_id' => null,
+            'story_id' => null,
+            'relationship_id' => $relationship->id,
+            'avatar_url' => null,
+            'featured_image_url' => $media ? MediaUrl::of($media, conversion: 'thumb') : null,
+            'gallery_urls' => $relationship->photos->map(fn ($p) => $p->fileMedia())->filter()->map(fn ($m) => MediaUrl::of($m))->values()->all(),
+            'body_html' => null,
+            'url' => route('people.show', $relationship->personA),
+            'location' => self::locationPayload($relationship->location),
+        ];
     }
 
     /**
