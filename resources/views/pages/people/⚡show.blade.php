@@ -709,21 +709,13 @@ new class extends Component {
                 </flux:button>
             </div>
 
-            @island(lazy: true)
-                @placeholder
-                    <div class="mt-2 flex h-96 w-full animate-pulse items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
-                        <flux:icon.share class="size-8 text-zinc-300 dark:text-zinc-600" />
-                    </div>
-                @endplaceholder
-
-                <div
-                    wire:ignore
-                    class="mt-2 h-96 w-full rounded-lg border border-zinc-200 dark:border-zinc-700"
-                    x-init="initPersonFamilyWidget($refs.familyWidget, @js($this->familyTreeData), @js($person->id))"
-                >
-                    <div x-ref="familyWidget" class="h-full w-full"></div>
-                </div>
-            @endisland
+            <div
+                wire:ignore
+                class="mt-2 h-96 w-full rounded-lg border border-zinc-200 dark:border-zinc-700"
+                x-init="initPersonFamilyWidget($refs.familyWidget, @js($this->familyTreeData), @js($person->id))"
+            >
+                <div x-ref="familyWidget" class="h-full w-full"></div>
+            </div>
 
             @if ($this->canEdit)
                 <flux:modal.trigger name="add-relationship">
