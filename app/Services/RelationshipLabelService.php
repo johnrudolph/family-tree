@@ -11,9 +11,12 @@ use Throwable;
  * "sibling-in-law", etc. — by finding their nearest common blood ancestor
  * and, failing that, checking one hop through marriage on either side.
  *
- * We don't collect gender, so every term is deliberately neutral (no
- * "aunt"/"uncle" split, no "niece"/"nephew" split) — this is presented as
- * "aunt/uncle" rather than guessing.
+ * Terms are computed neutrally throughout ("aunt/uncle", "spouse") and only
+ * gendered at the very end, based on the sex of whichever person the term
+ * actually describes — never guessed. Anyone with no recorded sex keeps the
+ * neutral term (e.g. "aunt/uncle") rather than defaulting to one or the
+ * other. Cousin terms have no gendered English equivalent, so they're left
+ * alone either way.
  */
 class RelationshipLabelService
 {
@@ -42,11 +45,11 @@ class RelationshipLabelService
     {
         $blood = $this->bloodTerm($viewer, $target);
         if ($blood !== null) {
-            return $blood;
+            return $this->gendered($blood, $target->sex);
         }
 
         if ($this->areSpouses($viewer, $target)) {
-            return 'spouse';
+            return $this->gendered('spouse', $target->sex);
         }
 
         // Married into a blood relative's family: e.g. target is the spouse
@@ -54,7 +57,7 @@ class RelationshipLabelService
         foreach ($target->spouses() as $targetSpouse) {
             $rel = $this->bloodTerm($viewer, $targetSpouse);
             if ($rel !== null) {
-                return $this->inLawTerm($rel);
+                return $this->inLawTerm($rel, $target, $targetSpouse);
             }
         }
 
@@ -62,7 +65,7 @@ class RelationshipLabelService
         foreach ($viewer->spouses() as $viewerSpouse) {
             $rel = $this->bloodTerm($viewerSpouse, $target);
             if ($rel !== null) {
-                return $this->inLawTerm($rel);
+                return $this->inLawTerm($rel, $target, $viewerSpouse);
             }
         }
 
@@ -219,12 +222,63 @@ class RelationshipLabelService
         return $label;
     }
 
-    private function inLawTerm(string $bloodTerm): string
+    /**
+     * $inLaw is the person the label is actually about (their own sex
+     * genders "sibling-in-law" itself); $bloodRelative is the blood
+     * relative they married into — e.g. for "uncle's wife", $bloodRelative
+     * (the uncle/aunt) genders "aunt/uncle" and $inLaw (the wife/husband)
+     * genders "spouse".
+     */
+    private function inLawTerm(string $bloodTerm, Person $inLaw, Person $bloodRelative): string
     {
-        return match ($bloodTerm) {
+        $neutral = match ($bloodTerm) {
             'parent', 'child', 'sibling' => "{$bloodTerm}-in-law",
             'half-sibling' => 'sibling-in-law',
-            default => "{$bloodTerm}'s spouse",
+            default => null,
         };
+
+        if ($neutral !== null) {
+            return $this->gendered($neutral, $inLaw->sex);
+        }
+
+        return $this->gendered($bloodTerm, $bloodRelative->sex)."'s ".$this->gendered('spouse', $inLaw->sex);
+    }
+
+    /**
+     * Swaps a neutral kinship term for its gendered form when $sex is
+     * known, preserving any "great-" prefix already baked into $term.
+     * Unknown/null sex (or a term with no gendered equivalent, like
+     * "cousin") is returned unchanged.
+     */
+    private function gendered(string $term, ?string $sex): string
+    {
+        if ($sex !== 'male' && $sex !== 'female') {
+            return $term;
+        }
+
+        // Longest/most specific suffix first — "grandparent" must be
+        // checked before "parent", since it ends with "parent" too.
+        $forms = [
+            'parent-in-law' => ['male' => 'father-in-law', 'female' => 'mother-in-law'],
+            'child-in-law' => ['male' => 'son-in-law', 'female' => 'daughter-in-law'],
+            'sibling-in-law' => ['male' => 'brother-in-law', 'female' => 'sister-in-law'],
+            'grandparent' => ['male' => 'grandfather', 'female' => 'grandmother'],
+            'grandchild' => ['male' => 'grandson', 'female' => 'granddaughter'],
+            'half-sibling' => ['male' => 'half-brother', 'female' => 'half-sister'],
+            'aunt/uncle' => ['male' => 'uncle', 'female' => 'aunt'],
+            'niece/nephew' => ['male' => 'nephew', 'female' => 'niece'],
+            'parent' => ['male' => 'father', 'female' => 'mother'],
+            'child' => ['male' => 'son', 'female' => 'daughter'],
+            'sibling' => ['male' => 'brother', 'female' => 'sister'],
+            'spouse' => ['male' => 'husband', 'female' => 'wife'],
+        ];
+
+        foreach ($forms as $neutral => $gendered) {
+            if (str_ends_with($term, $neutral)) {
+                return substr($term, 0, -strlen($neutral)).$gendered[$sex];
+            }
+        }
+
+        return $term;
     }
 }
