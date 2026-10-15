@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FamilyTreeSerializer;
 use Database\Factories\RelationshipFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -35,6 +36,12 @@ class Relationship extends Model
             'started_at' => 'date',
             'ended_at' => 'date',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => FamilyTreeSerializer::forgetCache());
+        static::deleted(fn () => FamilyTreeSerializer::forgetCache());
     }
 
     /**

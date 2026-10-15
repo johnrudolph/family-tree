@@ -87,7 +87,7 @@ test('a story\'s featured image is included when one is set', function () {
 
     $story = Story::factory()->create();
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
     $story->photos()->attach($photo->id);
     $story->update(['featured_photo_id' => $photo->id]);
 
@@ -101,9 +101,9 @@ test('a story\'s full gallery is included for the timeline\'s lightbox', functio
 
     $story = Story::factory()->create();
     $first = Photo::create();
-    $first->addMediaFromString('fake-image-bytes-1')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $first->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
     $second = Photo::create();
-    $second->addMediaFromString('fake-image-bytes-2')->usingFileName('b.jpg')->preservingOriginal()->toMediaCollection('file');
+    $second->addMediaFromString(fakeImageBytes())->usingFileName('b.jpg')->preservingOriginal()->toMediaCollection('file');
     $story->photos()->attach([$first->id, $second->id]);
 
     $event = collect(TimelineSerializer::events())->firstWhere('story_id', $story->id);

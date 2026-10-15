@@ -160,7 +160,7 @@ test('a related story with a featured photo renders its thumbnail on the person 
     $story->people()->attach($person->id);
 
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
     $story->photos()->attach($photo->id);
     $story->update(['featured_photo_id' => $photo->id]);
 

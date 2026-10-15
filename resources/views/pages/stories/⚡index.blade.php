@@ -29,7 +29,7 @@ new #[Title('Stories')] class extends Component {
             <a href="{{ route('stories.show', $story) }}" wire:navigate
                class="block overflow-hidden rounded-lg border border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
                 @if ($featured)
-                    <img src="{{ MediaUrl::of($featured) }}" class="aspect-video w-full object-cover" alt="">
+                    <img src="{{ MediaUrl::of($featured, conversion: 'thumb') }}" class="aspect-video w-full object-cover" alt="">
                 @else
                     <div class="flex aspect-video w-full items-center justify-center bg-zinc-100 dark:bg-zinc-800">
                         <flux:icon.book-open class="size-8 text-zinc-400" />

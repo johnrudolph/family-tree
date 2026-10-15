@@ -111,7 +111,9 @@ class TimelineSerializer
                     'person_id' => null,
                     'story_id' => $story->id,
                     'avatar_url' => null,
-                    'featured_image_url' => $featured ? MediaUrl::of($featured) : null,
+                    'featured_image_url' => $featured ? MediaUrl::of($featured, conversion: 'thumb') : null,
+                    // Full resolution — only rendered lazily, inside the
+                    // modal opened by clicking an event, not on the card.
                     'gallery_urls' => $story->photos->map(fn ($photo) => $photo->fileMedia())->filter()->map(fn ($media) => MediaUrl::of($media))->values()->all(),
                     'body_html' => StoryBodyParser::render($story->body ?? ''),
                     'url' => route('stories.show', $story),

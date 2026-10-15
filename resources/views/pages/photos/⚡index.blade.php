@@ -98,7 +98,7 @@ new #[Title('Photos')] class extends Component {
         @forelse ($this->photos as $photo)
             <a href="{{ route('photos.show', $photo) }}" wire:navigate class="group relative aspect-square overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
                 @if ($photo->fileMedia())
-                    <img src="{{ MediaUrl::of($photo->fileMedia()) }}" class="h-full w-full object-cover transition group-hover:opacity-90" alt="">
+                    <img src="{{ MediaUrl::of($photo->fileMedia(), conversion: 'thumb') }}" class="h-full w-full object-cover transition group-hover:opacity-90" alt="">
                 @endif
                 @if ($photo->people->isNotEmpty())
                     <span class="absolute right-1 bottom-1 left-1 truncate rounded bg-black/60 px-1.5 py-0.5 text-xs text-white">

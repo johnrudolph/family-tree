@@ -100,7 +100,7 @@ test('a deceased person\'s memorial photo shows on the tree without consent', fu
 
     $person = Person::factory()->create(['is_living' => false]);
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
     $photo->people()->attach($person->id);
     $person->update(['avatar_photo_id' => $photo->id]);
 
@@ -121,6 +121,43 @@ test('serializing the tree does not N+1 query per person for accounts or photos'
     // A small constant number of queries regardless of person count — people,
     // relationships, plus eager-loaded user/media — not one per person.
     expect($queryCount)->toBeLessThan(10);
+});
+
+test('a second call to toChartData reuses the cached result instead of re-querying', function () {
+    Person::factory()->count(3)->create();
+
+    FamilyTreeSerializer::toChartData();
+
+    DB::enableQueryLog();
+    FamilyTreeSerializer::toChartData();
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    expect($queryCount)->toBe(0);
+});
+
+test('saving a person busts the cached tree data', function () {
+    $person = Person::factory()->create(['first_name' => 'Before']);
+    $cached = FamilyTreeSerializer::toChartData();
+    expect(collect($cached)->firstWhere('id', (string) $person->id)['data']['first name'])->toBe('Before');
+
+    $person->update(['first_name' => 'After']);
+
+    $refreshed = FamilyTreeSerializer::toChartData();
+    expect(collect($refreshed)->firstWhere('id', (string) $person->id)['data']['first name'])->toBe('After');
+});
+
+test('saving a relationship busts the cached tree data', function () {
+    $parent = Person::factory()->create();
+    $child = Person::factory()->create();
+
+    $cached = FamilyTreeSerializer::toChartData();
+    expect(collect($cached)->firstWhere('id', (string) $child->id)['rels']['parents'])->toBe([]);
+
+    Relationship::create(['person_a_id' => $parent->id, 'person_b_id' => $child->id, 'type' => 'parent_child']);
+
+    $refreshed = FamilyTreeSerializer::toChartData();
+    expect(collect($refreshed)->firstWhere('id', (string) $child->id)['rels']['parents'])->toBe([(string) $parent->id]);
 });
 
 test('the tree data flags whether each person has a linked user account', function () {

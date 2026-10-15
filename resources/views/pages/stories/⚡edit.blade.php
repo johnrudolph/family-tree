@@ -298,7 +298,7 @@ new #[Title('Edit story')] class extends Component {
                     @foreach ($story->photos as $photo)
                         <div class="group relative aspect-square overflow-hidden rounded {{ $photo->id === $story->featured_photo_id ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}">
                             <button type="button" wire:click="featureImage({{ $photo->id }})" wire:key="gallery-{{ $photo->id }}" class="block h-full w-full">
-                                <img src="{{ MediaUrl::of($photo->fileMedia()) }}" class="h-full w-full object-cover" alt="">
+                                <img src="{{ MediaUrl::of($photo->fileMedia(), conversion: 'thumb') }}" class="h-full w-full object-cover" alt="">
                             </button>
                             @if ($photo->id === $story->featured_photo_id)
                                 <flux:badge size="sm" class="absolute bottom-1 left-1">{{ __('Featured') }}</flux:badge>

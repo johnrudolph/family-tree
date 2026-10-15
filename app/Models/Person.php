@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasWikiWorkflow;
+use App\Support\FamilyTreeSerializer;
 use App\Support\MediaUrl;
 use Carbon\CarbonInterface;
 use Database\Factories\PersonFactory;
@@ -94,6 +95,12 @@ class Person extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saved(fn () => FamilyTreeSerializer::forgetCache());
+        static::deleted(fn () => FamilyTreeSerializer::forgetCache());
+    }
+
     /**
      * Every photo tagged to this person — whether they/their editor uploaded
      * it directly, someone tagged them in a standalone photo, or it came
@@ -129,7 +136,10 @@ class Person extends Model
     /**
      * A short-lived signed URL rather than a permanent public one — this app
      * is invite-only and photos shouldn't be reachable by anyone who merely
-     * guesses or leaks a URL, on R2 or otherwise.
+     * guesses or leaks a URL, on R2 or otherwise. This is always an avatar —
+     * the family tree, timeline cards, and every other caller only ever
+     * show it small — so it's always the thumbnail conversion, never the
+     * (often multi-MB, straight off a phone) original.
      */
     public function photoUrl(): ?string
     {
@@ -139,7 +149,7 @@ class Person extends Model
             return null;
         }
 
-        return MediaUrl::of($media);
+        return MediaUrl::of($media, conversion: 'thumb');
     }
 
     public function hasConsented(): bool

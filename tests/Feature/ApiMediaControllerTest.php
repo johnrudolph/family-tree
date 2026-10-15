@@ -11,7 +11,7 @@ beforeEach(function () {
 
 test('listing media returns a signed url for each file', function () {
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
 
     $response = $this->withToken($this->token)->getJson('/api/v1/media')->assertOk();
 
@@ -21,7 +21,7 @@ test('listing media returns a signed url for each file', function () {
 
 test('media can be filtered by model_type and collection_name', function () {
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
 
     $response = $this->withToken($this->token)
         ->getJson('/api/v1/media?'.http_build_query(['model_type' => 'App\\Models\\Photo', 'collection_name' => 'file']))
@@ -38,7 +38,7 @@ test('media can be filtered by model_type and collection_name', function () {
 
 test('showing a single media record returns it', function () {
     $photo = Photo::create();
-    $media = $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $media = $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
 
     $this->withToken($this->token)
         ->getJson("/api/v1/media/{$media->id}")

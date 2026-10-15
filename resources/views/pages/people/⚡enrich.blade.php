@@ -164,7 +164,7 @@ new #[Title('Photo & details')] class extends Component {
                             wire:key="photo-{{ $photo->id }}"
                             class="relative aspect-square overflow-hidden rounded {{ $photo->id === $person->avatar_photo_id ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}"
                         >
-                            <img src="{{ MediaUrl::of($photo->fileMedia()) }}" class="h-full w-full object-cover" alt="">
+                            <img src="{{ MediaUrl::of($photo->fileMedia(), conversion: 'thumb') }}" class="h-full w-full object-cover" alt="">
                             @if ($photo->id === $person->avatar_photo_id)
                                 <flux:badge size="sm" class="absolute bottom-1 left-1">{{ __('Featured') }}</flux:badge>
                             @endif

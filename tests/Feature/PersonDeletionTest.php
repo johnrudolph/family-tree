@@ -80,7 +80,7 @@ test('deleting a person untags them from a photo, but the photo itself survives'
 
     $person = Person::factory()->create();
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
     $photo->people()->attach($person->id);
 
     app(PersonDeletionService::class)->delete($person);

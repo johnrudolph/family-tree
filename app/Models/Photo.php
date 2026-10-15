@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -51,6 +52,22 @@ class Photo extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('file')->singleFile();
+    }
+
+    /**
+     * Every place a photo shows up as an avatar or in a grid (People,
+     * Photos, a story's gallery, a person's own gallery) only ever needs a
+     * few hundred pixels — serving the original (often several MB straight
+     * off a phone) for those was the single biggest thing making those
+     * pages feel slow. Only the single-photo lightbox view needs the
+     * original. Generated synchronously (no queue worker runs in this app)
+     * so the thumbnail exists by the time the upload request returns.
+     */
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->fit(Fit::Crop, 400, 400)
+            ->nonQueued();
     }
 
     public function fileMedia(): ?Media

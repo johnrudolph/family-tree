@@ -52,7 +52,7 @@ test('deleting a story unlinks its photos and audio without deleting them', func
 
     $story = Story::factory()->create();
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
     $story->photos()->attach($photo->id);
 
     $recording = AudioRecording::create();

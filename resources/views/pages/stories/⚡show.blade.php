@@ -35,6 +35,18 @@ new class extends Component {
         return $this->story->photos
             ->map(fn ($photo) => $photo->fileMedia())
             ->filter()
+            ->map(fn ($media) => MediaUrl::of($media, conversion: 'thumb'))
+            ->values()
+            ->all();
+    }
+
+    /** Same order as {@see galleryUrls()}, but full resolution — for the lightbox. */
+    #[Computed]
+    public function galleryFullUrls(): array
+    {
+        return $this->story->photos
+            ->map(fn ($photo) => $photo->fileMedia())
+            ->filter()
             ->map(fn ($media) => MediaUrl::of($media))
             ->values()
             ->all();
@@ -134,7 +146,7 @@ new class extends Component {
         </div>
     @endif
 
-    <x-photo-gallery :urls="$this->galleryUrls" class="mt-6" />
+    <x-photo-gallery :urls="$this->galleryUrls" :full-urls="$this->galleryFullUrls" class="mt-6" />
 
     <div class="prose prose-zinc dark:prose-invert mt-6 max-w-none">
         {!! StoryBodyParser::render($story->body ?? '') !!}

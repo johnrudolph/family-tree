@@ -151,6 +151,25 @@ new class extends Component {
         return $this->person->photos
             ->map(fn (Photo $photo) => $photo->fileMedia())
             ->filter()
+            ->map(fn ($media) => MediaUrl::of($media, conversion: 'thumb'))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Same order as {@see photoUrls()}, but full resolution — what the
+     * lightbox opens to when a thumbnail is clicked.
+     */
+    #[Computed]
+    public function photoFullUrls(): array
+    {
+        if (! $this->person->canShowEnrichment()) {
+            return [];
+        }
+
+        return $this->person->photos
+            ->map(fn (Photo $photo) => $photo->fileMedia())
+            ->filter()
             ->map(fn ($media) => MediaUrl::of($media))
             ->values()
             ->all();
@@ -524,7 +543,7 @@ new class extends Component {
 <section class="w-full max-w-3xl">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
         @if ($this->heroPhotoIndex !== null)
-            <button type="button" onclick="openLightbox(@js($this->photoUrls), {{ $this->heroPhotoIndex }})" class="block shrink-0">
+            <button type="button" onclick="openLightbox(@js($this->photoFullUrls), {{ $this->heroPhotoIndex }})" class="block shrink-0">
                 <img src="{{ $this->photoUrls[$this->heroPhotoIndex] }}" class="size-32 rounded-full object-cover sm:size-40" alt="{{ $person->fullName() }}">
             </button>
         @else
@@ -594,7 +613,7 @@ new class extends Component {
     </div>
 
     @if (count($this->photoUrls) > 1)
-        <x-photo-gallery :urls="$this->photoUrls" class="mt-4" />
+        <x-photo-gallery :urls="$this->photoUrls" :full-urls="$this->photoFullUrls" class="mt-4" />
     @endif
 
     @if ($this->isSelf && ! $person->hasConsented())
@@ -643,7 +662,7 @@ new class extends Component {
                         @php($featured = $story->featuredImage()?->fileMedia())
                         <a href="{{ route('stories.show', $story) }}" wire:navigate class="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
                             @if ($featured)
-                                <img src="{{ MediaUrl::of($featured) }}" class="size-12 shrink-0 rounded object-cover" alt="">
+                                <img src="{{ MediaUrl::of($featured, conversion: 'thumb') }}" class="size-12 shrink-0 rounded object-cover" alt="">
                             @else
                                 <div class="flex size-12 shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-700">
                                     <flux:icon.book-open class="size-5 text-zinc-400" />

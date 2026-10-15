@@ -31,8 +31,8 @@ function seedLegacyMedia(Person|Story $owner, string $collection, string $bytes,
 
 test('a person\'s featured photo becomes a standalone Photo tagged to them and stays their avatar', function () {
     $person = Person::factory()->create();
-    seedLegacyMedia($person, 'photo', 'plain-bytes', 'a.jpg');
-    $featured = seedLegacyMedia($person, 'photo', 'featured-bytes', 'b.jpg');
+    seedLegacyMedia($person, 'photo', fakeImageBytes(), 'a.jpg');
+    $featured = seedLegacyMedia($person, 'photo', fakeImageBytes(), 'b.jpg');
     $featured->setCustomProperty('featured', true);
     $featured->save();
 
@@ -54,7 +54,7 @@ test('a story\'s gallery photos become standalone photos tagged with the story\'
     $bob = Person::factory()->create();
     $story->people()->sync([$alice->id, $bob->id]);
 
-    $media = seedLegacyMedia($story, 'gallery', 'gallery-bytes', 'g.jpg');
+    $media = seedLegacyMedia($story, 'gallery', fakeImageBytes(), 'g.jpg');
     $media->setCustomProperty('featured', true);
     $media->save();
 

@@ -44,7 +44,13 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * A real (if tiny) 1x1 PNG — Photo's `thumb` media conversion runs
+ * synchronously on upload, so GD actually has to decode whatever bytes are
+ * added to the 'file' collection in a test. A placeholder string like
+ * 'fake-image-bytes' fails that decode; this doesn't.
+ */
+function fakeImageBytes(): string
 {
-    // ..
+    return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
 }

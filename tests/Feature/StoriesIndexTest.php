@@ -25,7 +25,7 @@ test('the stories index shows a story\'s location and featured image', function 
     $location = Location::factory()->create(['city' => 'Portland', 'region' => 'OR']);
     $story = Story::factory()->create(['title' => 'A Trip to the Coast', 'location_id' => $location->id]);
     $photo = Photo::create();
-    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
     $story->photos()->attach($photo->id);
     $story->update(['featured_photo_id' => $photo->id]);
 
@@ -33,7 +33,7 @@ test('the stories index shows a story\'s location and featured image', function 
 
     $response->assertOk()
         ->assertSee('Portland, OR')
-        ->assertSee('a.jpg', false);
+        ->assertSee('a-thumb.jpg', false);
 });
 
 test('a story with no photos shows a placeholder instead of a broken image', function () {

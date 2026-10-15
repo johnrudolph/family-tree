@@ -10,7 +10,7 @@
                 class="relative aspect-square overflow-hidden rounded {{ in_array($photo->id, $selectedPhotoIds, true) ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-800' : '' }}"
             >
                 @if ($photo->fileMedia())
-                    <img src="{{ \App\Support\MediaUrl::of($photo->fileMedia()) }}" class="h-full w-full object-cover" alt="">
+                    <img src="{{ \App\Support\MediaUrl::of($photo->fileMedia(), conversion: 'thumb') }}" class="h-full w-full object-cover" alt="">
                 @endif
                 @if (in_array($photo->id, $selectedPhotoIds, true))
                     <span class="absolute inset-0 flex items-center justify-center bg-blue-500/30">

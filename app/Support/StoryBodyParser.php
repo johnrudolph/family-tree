@@ -76,10 +76,16 @@ class StoryBodyParser
     }
 
     /**
+     * Memoized for the lifetime of the request — render()/taggedPersonIds()
+     * each call this once per story body they process, and a single page
+     * (the timeline, a person's tagged-stories list) can process dozens of
+     * bodies in one request. Without this it was a fresh `Person::all()`
+     * every single time, people included.
+     *
      * @return Collection<string, Person> keyed by lowercase full name
      */
     private static function peopleByName(): Collection
     {
-        return Person::query()->get()->keyBy(fn (Person $person) => mb_strtolower($person->fullName()));
+        return once(fn () => Person::query()->get()->keyBy(fn (Person $person) => mb_strtolower($person->fullName())));
     }
 }

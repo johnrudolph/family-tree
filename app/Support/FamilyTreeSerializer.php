@@ -4,16 +4,46 @@ namespace App\Support;
 
 use App\Models\Person;
 use App\Models\Relationship;
+use Illuminate\Support\Facades\Cache;
 
 class FamilyTreeSerializer
 {
+    private const CACHE_KEY = 'family-tree.chart-data';
+
     /**
      * Serialize the whole tree into family-chart's Datum[] shape:
      * https://github.com/donatso/family-chart — {id, data, rels: {parents, spouses, children}}.
      *
+     * Every person's page embeds a scoped-down copy of this same tree (see
+     * the person-page family widget), so this runs on nearly every page
+     * view in the app, not just the tree page itself — cache it. Busted
+     * explicitly whenever a Person or Relationship changes (see their
+     * `booted()`), with a bounded TTL as a safety net for anything that
+     * mutates the DB without going through Eloquent (e.g. a FK's
+     * `nullOnDelete` doesn't fire model events).
+     *
+     * The TTL is deliberately shorter than MediaUrl's default signed-URL
+     * expiration (1 hour) — each person's `avatar` here is one of those
+     * signed URLs, baked into the cached array, so the cache has to recycle
+     * comfortably before they'd expire and cached pages start showing
+     * broken images.
+     *
      * @return array<int, array<string, mixed>>
      */
     public static function toChartData(): array
+    {
+        return Cache::remember(self::CACHE_KEY, now()->addMinutes(30), fn () => self::buildChartData());
+    }
+
+    public static function forgetCache(): void
+    {
+        Cache::forget(self::CACHE_KEY);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function buildChartData(): array
     {
         // Eager-load all of these — hasAccount()/photoUrl() are called once
         // per person below, and without this each one is a fresh N+1 query.

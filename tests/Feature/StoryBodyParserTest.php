@@ -2,6 +2,7 @@
 
 use App\Models\Person;
 use App\Support\StoryBodyParser;
+use Illuminate\Support\Facades\DB;
 
 test('a matching [[Name]] tag renders as a link to the person page', function () {
     $person = Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Drexler']);
@@ -57,4 +58,17 @@ test('taggedPersonIds ignores unmatched tags', function () {
     $ids = StoryBodyParser::taggedPersonIds('<p>[[Jane Drexler]] and [[Nobody Real]].</p>');
 
     expect($ids)->toHaveCount(1);
+});
+
+test('rendering many bodies in one request only loads people once, not once per body', function () {
+    Person::factory()->create(['first_name' => 'Jane', 'last_name' => 'Drexler']);
+
+    DB::enableQueryLog();
+    for ($i = 0; $i < 20; $i++) {
+        StoryBodyParser::render('<p>[[Jane Drexler]] said hello.</p>');
+    }
+    $queryCount = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    expect($queryCount)->toBe(1);
 });
