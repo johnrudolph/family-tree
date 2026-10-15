@@ -42,8 +42,6 @@ Route::middleware(['auth', 'verified', 'two-factor.enabled'])->group(function ()
 
     Route::livewire('map', 'pages::map.index')->name('map.index');
 
-    Route::livewire('changelog', 'pages::changelog.index')->name('changelog.index');
-
     Route::livewire('photos', 'pages::photos.index')->name('photos.index');
     Route::livewire('photos/{photo}', 'pages::photos.show')->name('photos.show');
 

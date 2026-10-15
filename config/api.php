@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\AudioRecording;
-use App\Models\ChangeLogEntry;
 use App\Models\Invite;
 use App\Models\Location;
 use App\Models\PageEditor;
@@ -91,10 +90,6 @@ return [
         'suggestions' => [
             'model' => Suggestion::class,
             'relations' => ['suggestable', 'user', 'reviewer'],
-        ],
-        'change-log-entries' => [
-            'model' => ChangeLogEntry::class,
-            'relations' => [],
         ],
     ],
 
