@@ -3,6 +3,7 @@
 namespace App\Concerns;
 
 use App\Models\Photo;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -62,6 +63,27 @@ trait EditsPhotoDetails
             'location_id' => $validated['location_id'],
         ]);
 
-        $photo->people()->sync($validated['person_ids']);
+        $this->syncPeopleSafely($photo, $validated['person_ids']);
+    }
+
+    /**
+     * The lightbox autosaves on every change — selecting a tag, then
+     * immediately clicking "next" before that request finishes, fires a
+     * second overlapping save for the same photo. sync() reads the pivot
+     * table and then writes based on that read; two near-simultaneous
+     * requests can both read "not yet attached" and both try to insert the
+     * same row, and the second one hits the unique constraint. Retrying
+     * once is enough — the retry re-reads the now-current pivot state and
+     * no longer tries to insert what the other request already committed.
+     *
+     * @param  array<int, int>  $personIds
+     */
+    private function syncPeopleSafely(Photo $photo, array $personIds): void
+    {
+        try {
+            $photo->people()->sync($personIds);
+        } catch (UniqueConstraintViolationException) {
+            $photo->people()->sync($personIds);
+        }
     }
 }
