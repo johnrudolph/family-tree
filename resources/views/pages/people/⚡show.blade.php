@@ -746,7 +746,7 @@ new class extends Component {
             </div>
         @endplaceholder
 
-        @if (count($this->galleryPhotos) > 1)
+        @if (count($this->galleryPhotos) > 0)
             <x-photo-gallery :photos="$this->galleryPhotos" class="mt-4" />
         @endif
     @endisland

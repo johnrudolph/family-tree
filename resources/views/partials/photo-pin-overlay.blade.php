@@ -32,7 +32,7 @@
         x-ref="pinImage"
         src="{{ $imageUrl }}"
         class="{{ $imageClass }}"
-        x-bind:class="placing ? 'cursor-crosshair' : ''"
+        x-bind:class="placing ? 'ring-4 ring-amber-400 cursor-crosshair' : ''"
         x-on:load="resizeTick++"
         x-on:click="
             if (! placing) return;
@@ -41,6 +41,16 @@
         "
         alt=""
     >
+
+    <div
+        x-show="placing"
+        x-cloak
+        class="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-2"
+    >
+        <span class="rounded-full bg-amber-500 px-3 py-1 text-xs font-medium text-white shadow">
+            {{ __('Click on the photo to place a pin for :name.', ['name' => $photo->people->firstWhere('id', $placingPinId)?->fullName()]) }}
+        </span>
+    </div>
 
     @foreach ($photo->people as $person)
         @if ($person->pivot->x !== null)
@@ -63,9 +73,3 @@
         @endif
     @endforeach
 </div>
-
-@if ($canEdit && $placingPinId)
-    <flux:text class="mt-2 text-xs text-amber-500">
-        {{ __('Click on the photo to place a pin for :name.', ['name' => $photo->people->firstWhere('id', $placingPinId)?->fullName()]) }}
-    </flux:text>
-@endif
