@@ -170,6 +170,20 @@ test('a related story with a featured photo renders its thumbnail on the person 
         ->assertSee('A Story With A Photo');
 });
 
+test('a photo someone is tagged in shows on their page even if they are living and have not consented', function () {
+    Storage::fake('public');
+
+    $viewer = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create(['is_living' => true, 'consented_at' => null]);
+    $photo = Photo::create();
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->people()->attach($person->id);
+
+    $component = Livewire::actingAs($viewer)->test('pages::people.show', ['person' => $person]);
+
+    expect($component->instance()->galleryPhotos())->toHaveCount(1);
+});
+
 test('an admin can set birth and death locations and they show on the person page', function () {
     $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
     $person = Person::factory()->create(['is_living' => false]);

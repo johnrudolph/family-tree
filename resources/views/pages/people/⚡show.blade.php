@@ -142,15 +142,15 @@ new class extends Component {
     }
 
     /**
+     * Being tagged/featured in a photo is visible regardless of consent,
+     * same as being tagged in a story — consent only gates self-reported
+     * contact info (see Person::canShowEnrichment).
+     *
      * @return array<int, array{id: int, thumb: string}>
      */
     #[Computed]
     public function galleryPhotos(): array
     {
-        if (! $this->person->canShowEnrichment()) {
-            return [];
-        }
-
         return $this->person->photos
             ->filter(fn (Photo $photo) => $photo->fileMedia())
             ->map(fn (Photo $photo) => [
@@ -167,7 +167,7 @@ new class extends Component {
     #[Computed]
     public function heroPhoto(): ?array
     {
-        $featured = $this->person->canShowEnrichment() ? $this->person->featuredPhoto() : null;
+        $featured = $this->person->featuredPhoto();
         $media = $featured?->fileMedia();
 
         if (! $featured || ! $media) {

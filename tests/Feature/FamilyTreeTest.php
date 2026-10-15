@@ -87,12 +87,18 @@ test('widestRootPersonId returns null when there are no people at all', function
     expect(FamilyTreeSerializer::widestRootPersonId())->toBeNull();
 });
 
-test('a living person without consent has no avatar in the tree data', function () {
-    $person = Person::factory()->create();
+test('a living person without consent but with a tagged photo still shows an avatar in the tree data', function () {
+    Storage::fake('public');
+
+    $person = Person::factory()->create(['consented_at' => null]);
+    $photo = Photo::create();
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->people()->attach($person->id);
+    $person->update(['avatar_photo_id' => $photo->id]);
 
     $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
 
-    expect($data[(string) $person->id]['data']['avatar'])->toBeNull();
+    expect($data[(string) $person->id]['data']['avatar'])->not->toBeNull();
 });
 
 test('a deceased person\'s memorial photo shows on the tree without consent', function () {

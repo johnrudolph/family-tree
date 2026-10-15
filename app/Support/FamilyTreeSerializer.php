@@ -80,7 +80,10 @@ class FamilyTreeSerializer
                     : ($person->last_name ?? ''),
                 'birthday' => self::lifespanLabel($person),
                 'dob_sort' => $person->dob?->format('Y-m-d'),
-                'avatar' => $person->canShowEnrichment() ? $person->photoUrl() : null,
+                // Being tagged/featured in a photo is visible regardless of
+                // consent, same as being tagged in a story — consent only
+                // gates self-reported contact info (see Person::canShowEnrichment).
+                'avatar' => $person->photoUrl(),
                 'has_account' => $person->hasAccount(),
                 'url' => $person->wikiShowUrl(),
                 'living' => $person->is_living,
