@@ -5,6 +5,10 @@
     shared scope so hovering a pin here and hovering a name in the list
     below highlight each other.
 
+    Pins are hidden until the photo is hovered (or a pin's name is hovered
+    in the list below, or a pin is actively being placed) — a photo full of
+    permanently-visible dots gets noisy fast.
+
     Expects: $photo (with `people` loaded, pivot x/y included), $imageUrl,
     $imageClass (any sizing that keeps the image inside its box — object-
     contain, a max-height, etc), $containerClass (sizing/layout for THIS
@@ -24,8 +28,10 @@
 <div
     @if (! empty($wireKey)) wire:key="{{ $wireKey }}" @endif
     class="relative {{ $containerClass }}"
-    x-data="{ resizeTick: 0 }"
+    x-data="{ resizeTick: 0, hoveringPhoto: false }"
     x-on:resize.window="resizeTick++"
+    x-on:mouseenter="hoveringPhoto = true"
+    x-on:mouseleave="hoveringPhoto = false"
     x-init="$nextTick(() => { if ($refs.pinImage?.complete) resizeTick++ })"
 >
     <img
@@ -61,8 +67,10 @@
                 x-on:mouseleave="hovered = null"
                 @if ($canEdit) wire:click.stop="togglePlacingPin({{ $person->id }})" @endif
                 x-bind:style="resizeTick >= 0 ? photoPinStyle($refs.pinImage, {{ $person->pivot->x }}, {{ $person->pivot->y }}) : ''"
-                x-bind:class="hovered === {{ $person->id }} ? 'scale-150 bg-blue-500 border-white' : 'bg-white/90 border-blue-500'"
-                class="absolute z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow transition-transform"
+                x-bind:class="(hoveringPhoto || placing || hovered === {{ $person->id }})
+                    ? (hovered === {{ $person->id }} ? 'opacity-100 scale-150 bg-blue-500 border-white' : 'opacity-100 bg-white/90 border-blue-500')
+                    : 'opacity-0 pointer-events-none bg-white/90 border-blue-500'"
+                class="absolute z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow transition-all"
             >
                 <span
                     x-show="hovered === {{ $person->id }}"
