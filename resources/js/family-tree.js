@@ -24,6 +24,52 @@ function applyDivorcedLineStyling(container) {
 }
 
 /**
+ * family-chart lays a person's spouses out in a single straight row next to
+ * them — spouse 0 closest, spouse 1 past that, and so on — and draws every
+ * spouse link as a straight line starting at the person. For anyone with 2+
+ * spouses, the line to spouse 1 is collinear with (and runs straight
+ * through) spouse 0's card, so the uncovered tail of it reads as a line
+ * connecting spouse 0 to spouse 1 instead of the person to spouse 1 — most
+ * noticeably when one of them is dashed as divorced, making an ex read as
+ * married to the current spouse. Bow those later links into a curve that
+ * clears the row instead, so they visibly originate at the person.
+ *
+ * Runs after family-chart's own transition finishes (setTransitionTime
+ * below) — setting `d` mid-transition would just get overwritten by it.
+ */
+function fixMultiSpouseLinkOverlap(container) {
+    if (!container) return;
+
+    container.querySelectorAll('.links_view path.link').forEach((el) => {
+        const d = el.__data__;
+        if (!d?.spouse) return;
+
+        const spouses = d.source?.data?.rels?.spouses ?? [];
+        const index = spouses.indexOf(d.target?.data?.id);
+
+        // The nearest spouse (index 0) has a clear, uncovered straight line —
+        // only later ones need bowing to clear the cards in front of them.
+        if (index <= 0) return;
+
+        const x1 = d.source.x;
+        const y1 = d.source.y;
+        const x2 = d.target.x;
+        const y2 = d.target.y;
+        const bow = 32 * index;
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2 - bow;
+
+        el.setAttribute('d', `M${x1},${y1} Q${midX},${midY} ${x2},${y2}`);
+    });
+}
+
+/** Re-applied after every tree update — see the two functions above. */
+function refreshLinkStyling(container) {
+    applyDivorcedLineStyling(container);
+    setTimeout(() => fixMultiSpouseLinkOverlap(container), 350);
+}
+
+/**
  * Mount an interactive family tree into `container`. Clicking a card
  * recenters the tree on that person and notifies the page's right-hand
  * panel (via a window CustomEvent) so it can show that person's details
@@ -84,7 +130,7 @@ export function initFamilyTree(container, data, { mainId } = {}) {
     });
 
     chart.updateTree({ initial: true });
-    applyDivorcedLineStyling(container);
+    refreshLinkStyling(container);
 
     setupTrackpadPanning(container);
     clampZoomExtent(container);
@@ -128,7 +174,7 @@ export function initPersonFamilyWidget(container, data, mainId) {
     });
 
     widget.updateTree({ initial: true });
-    applyDivorcedLineStyling(container);
+    refreshLinkStyling(container);
 
     setupTrackpadPanning(container);
     clampZoomExtent(container);
@@ -147,7 +193,7 @@ export function updatePersonFamilyWidget(container, data) {
 
     widget.updateData(data);
     widget.updateTree();
-    applyDivorcedLineStyling(container);
+    refreshLinkStyling(container);
 }
 
 /**
@@ -225,7 +271,7 @@ export function familyTreeCenterOn(id) {
     if (!chart) return;
     chart.updateMainId(String(id));
     chart.updateTree({ tree_position: 'main_to_middle' });
-    applyDivorcedLineStyling(chartContainer);
+    refreshLinkStyling(chartContainer);
 }
 
 /**
@@ -238,7 +284,7 @@ export function familyTreeCenterOn(id) {
 export function familyTreeFitToView() {
     if (!chart) return;
     chart.updateTree({ tree_position: 'fit' });
-    applyDivorcedLineStyling(chartContainer);
+    refreshLinkStyling(chartContainer);
 }
 
 /** Refresh the tree's underlying data, e.g. after adding a relationship from the panel. */
@@ -246,7 +292,7 @@ export function familyTreeUpdateData(data) {
     if (!chart) return;
     chart.updateData(data);
     chart.updateTree();
-    applyDivorcedLineStyling(chartContainer);
+    refreshLinkStyling(chartContainer);
 }
 
 window.initFamilyTree = initFamilyTree;
