@@ -220,12 +220,13 @@ new class extends Component {
                 </button>
             @endif
 
-            <div class="flex min-h-0 flex-1 items-center justify-center p-4 pb-2" wire:key="lightbox-image-{{ $photoId }}">
+            <div class="min-h-0 flex-1" wire:key="lightbox-image-{{ $photoId }}">
                 @if ($this->photo->fileMedia())
                     @include('partials.photo-pin-overlay', [
                         'photo' => $this->photo,
                         'imageUrl' => MediaUrl::of($this->photo->fileMedia()),
                         'imageClass' => 'max-h-full max-w-full rounded object-contain',
+                        'containerClass' => 'flex h-full w-full items-center justify-center p-4 pb-2',
                         'canEdit' => $this->canEdit,
                         'placingPinId' => $placingPinId,
                     ])

@@ -6,19 +6,38 @@
     below highlight each other.
 
     Expects: $photo (with `people` loaded, pivot x/y included), $imageUrl,
-    $imageClass — must let the <img> shrink-wrap to its rendered size (e.g.
-    "max-h-full max-w-full object-contain"), never a forced w-full/h-full,
-    or the pin percentages below won't line up with the visible picture.
+    $imageClass (any sizing that keeps the image inside its box — object-
+    contain, a max-height, etc), $containerClass (sizing/layout for THIS
+    partial's own root element — e.g. a flex-centering box on the lightbox,
+    just a block div elsewhere). $wireKey is optional, for callers that key
+    this block on the photo id.
+
+    $containerClass has to give this root element a size derived from ITS
+    OWN parent (height/width percentages, flex-grow, a normal block fill),
+    never from its content — an auto/shrink-sized wrapper around a child
+    with a percentage max-width famously resolves that percentage against
+    the image's own intrinsic pixel size instead, rendering it at full
+    native resolution. Pin positions are computed in JS from the <img>'s
+    own rendered box either way (see resources/js/photo-pins.js), so this
+    element's exact size relative to the image doesn't otherwise matter.
 --}}
-<div class="relative inline-block">
+<div
+    @if (! empty($wireKey)) wire:key="{{ $wireKey }}" @endif
+    class="relative {{ $containerClass }}"
+    x-data="{ resizeTick: 0 }"
+    x-on:resize.window="resizeTick++"
+    x-init="$nextTick(() => { if ($refs.pinImage?.complete) resizeTick++ })"
+>
     <img
+        x-ref="pinImage"
         src="{{ $imageUrl }}"
-        class="block {{ $imageClass }}"
+        class="{{ $imageClass }}"
         x-bind:class="placing ? 'cursor-crosshair' : ''"
+        x-on:load="resizeTick++"
         x-on:click="
             if (! placing) return;
-            const rect = $event.target.getBoundingClientRect();
-            $wire.placePin((($event.clientX - rect.left) / rect.width) * 100, (($event.clientY - rect.top) / rect.height) * 100);
+            const { x, y } = photoPinCoordinatesFromClick($event);
+            $wire.placePin(x, y);
         "
         alt=""
     >
@@ -31,9 +50,9 @@
                 x-on:mouseenter="hovered = {{ $person->id }}"
                 x-on:mouseleave="hovered = null"
                 @if ($canEdit) wire:click.stop="togglePlacingPin({{ $person->id }})" @endif
+                x-bind:style="resizeTick >= 0 ? photoPinStyle($refs.pinImage, {{ $person->pivot->x }}, {{ $person->pivot->y }}) : ''"
                 x-bind:class="hovered === {{ $person->id }} ? 'scale-150 bg-blue-500 border-white' : 'bg-white/90 border-blue-500'"
                 class="absolute z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow transition-transform"
-                style="left: {{ $person->pivot->x }}%; top: {{ $person->pivot->y }}%;"
             >
                 <span
                     x-show="hovered === {{ $person->id }}"

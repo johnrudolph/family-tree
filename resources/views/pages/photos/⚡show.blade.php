@@ -102,15 +102,14 @@ new class extends Component {
 
     <div x-data="{ hovered: null, placing: $wire.entangle('placingPinId') }">
         @if ($photo->fileMedia())
-            <div class="mt-4">
-                @include('partials.photo-pin-overlay', [
-                    'photo' => $photo,
-                    'imageUrl' => MediaUrl::of($photo->fileMedia()),
-                    'imageClass' => 'max-h-[32rem] max-w-full rounded-lg object-contain',
-                    'canEdit' => $this->canEdit,
-                    'placingPinId' => $placingPinId,
-                ])
-            </div>
+            @include('partials.photo-pin-overlay', [
+                'photo' => $photo,
+                'imageUrl' => MediaUrl::of($photo->fileMedia()),
+                'imageClass' => 'max-h-[32rem] w-full rounded-lg object-contain bg-zinc-100 dark:bg-zinc-800',
+                'containerClass' => 'mt-4',
+                'canEdit' => $this->canEdit,
+                'placingPinId' => $placingPinId,
+            ])
         @endif
 
         <div class="mt-3">
