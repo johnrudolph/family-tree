@@ -612,9 +612,19 @@ new class extends Component {
         </div>
     </div>
 
-    @if (count($this->photoUrls) > 1)
-        <x-photo-gallery :urls="$this->photoUrls" :full-urls="$this->photoFullUrls" class="mt-4" />
-    @endif
+    @island(lazy: true)
+        @placeholder
+            <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                @for ($i = 0; $i < 4; $i++)
+                    <div class="aspect-square animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800"></div>
+                @endfor
+            </div>
+        @endplaceholder
+
+        @if (count($this->photoUrls) > 1)
+            <x-photo-gallery :urls="$this->photoUrls" :full-urls="$this->photoFullUrls" class="mt-4" />
+        @endif
+    @endisland
 
     @if ($this->isSelf && ! $person->hasConsented())
         <div class="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
@@ -699,13 +709,21 @@ new class extends Component {
                 </flux:button>
             </div>
 
-            <div
-                wire:ignore
-                class="mt-2 h-96 w-full rounded-lg border border-zinc-200 dark:border-zinc-700"
-                x-init="initPersonFamilyWidget($refs.familyWidget, @js($this->familyTreeData), @js($person->id))"
-            >
-                <div x-ref="familyWidget" class="h-full w-full"></div>
-            </div>
+            @island(lazy: true)
+                @placeholder
+                    <div class="mt-2 flex h-96 w-full animate-pulse items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
+                        <flux:icon.share class="size-8 text-zinc-300 dark:text-zinc-600" />
+                    </div>
+                @endplaceholder
+
+                <div
+                    wire:ignore
+                    class="mt-2 h-96 w-full rounded-lg border border-zinc-200 dark:border-zinc-700"
+                    x-init="initPersonFamilyWidget($refs.familyWidget, @js($this->familyTreeData), @js($person->id))"
+                >
+                    <div x-ref="familyWidget" class="h-full w-full"></div>
+                </div>
+            @endisland
 
             @if ($this->canEdit)
                 <flux:modal.trigger name="add-relationship">
