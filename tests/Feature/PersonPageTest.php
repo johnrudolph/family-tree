@@ -2,11 +2,13 @@
 
 use App\Models\Location;
 use App\Models\Person;
+use App\Models\Photo;
 use App\Models\Relationship;
 use App\Models\Story;
 use App\Models\User;
 use App\Services\PageEditorService;
 use App\Services\RevisionService;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 test('a member can view a person page', function () {
@@ -147,6 +149,25 @@ test('a person page shows stories they are tagged in via [[Name]], not just the 
     Livewire::actingAs($viewer)
         ->test('pages::people.show', ['person' => $person])
         ->assertSee('Tagged Only Story');
+});
+
+test('a related story with a featured photo renders its thumbnail on the person page', function () {
+    Storage::fake('public');
+
+    $viewer = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $story = Story::factory()->create(['title' => 'A Story With A Photo']);
+    $story->people()->attach($person->id);
+
+    $photo = Photo::create();
+    $photo->addMediaFromString('fake-image-bytes')->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $story->photos()->attach($photo->id);
+    $story->update(['featured_photo_id' => $photo->id]);
+
+    Livewire::actingAs($viewer)
+        ->test('pages::people.show', ['person' => $person])
+        ->assertOk()
+        ->assertSee('A Story With A Photo');
 });
 
 test('an admin can set birth and death locations and they show on the person page', function () {

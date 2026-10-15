@@ -640,7 +640,7 @@ new class extends Component {
                 <flux:heading level="2">{{ __('Stories') }}</flux:heading>
                 <div class="mt-2 space-y-2">
                     @foreach ($this->relatedStories as $story)
-                        @php($featured = $story->featuredImage())
+                        @php($featured = $story->featuredImage()?->fileMedia())
                         <a href="{{ route('stories.show', $story) }}" wire:navigate class="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600">
                             @if ($featured)
                                 <img src="{{ MediaUrl::of($featured) }}" class="size-12 shrink-0 rounded object-cover" alt="">
