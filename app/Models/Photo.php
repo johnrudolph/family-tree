@@ -96,7 +96,10 @@ class Photo extends Model implements HasMedia
      */
     public function people(): BelongsToMany
     {
-        return $this->belongsToMany(Person::class, 'photo_person');
+        // x/y: where this person is pinned on the photo, as a percentage
+        // (0-100) of its width/height — optional, set via the lightbox or
+        // the photo page, never required just to tag someone.
+        return $this->belongsToMany(Person::class, 'photo_person')->withPivot(['x', 'y']);
     }
 
     /**

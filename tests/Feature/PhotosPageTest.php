@@ -92,6 +92,28 @@ test('the uploader can edit their photo\'s description, date, and tagged people'
     expect($photo->people()->pluck('people.id')->all())->toBe([$alice->id]);
 });
 
+test('the uploader can place and remove a pin for a tagged person', function () {
+    $uploader = User::factory()->withTwoFactor()->create();
+    $photo = Photo::factory()->create(['uploaded_by' => $uploader->id]);
+    $alice = Person::factory()->create();
+    $photo->people()->attach($alice->id);
+
+    Livewire::actingAs($uploader)
+        ->test('pages::photos.show', ['photo' => $photo])
+        ->call('togglePlacingPin', $alice->id)
+        ->call('placePin', 33.3, 66.6);
+
+    $pivot = $photo->people()->find($alice->id)->pivot;
+    expect((float) $pivot->x)->toBe(33.3);
+    expect((float) $pivot->y)->toBe(66.6);
+
+    Livewire::actingAs($uploader)
+        ->test('pages::photos.show', ['photo' => $photo])
+        ->call('clearPersonPin', $alice->id);
+
+    expect($photo->people()->find($alice->id)->pivot->x)->toBeNull();
+});
+
 test('a stranger cannot edit someone else\'s photo', function () {
     $uploader = User::factory()->create();
     $stranger = User::factory()->withTwoFactor()->create();

@@ -101,6 +101,89 @@ test('an invalid date field does not block tagging a person, or vice versa', fun
     expect($photo->fresh()->people()->pluck('people.id')->all())->toBe([$person->id]);
 });
 
+test('an admin can place a pin for a tagged person by percentage coordinates', function () {
+    $photo = Photo::factory()->create();
+    $person = Person::factory()->create();
+    $photo->people()->attach($person->id);
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test('photo-lightbox')
+        ->call('open', $photo->id, [$photo->id])
+        ->call('togglePlacingPin', $person->id)
+        ->assertSet('placingPinId', $person->id)
+        ->call('placePin', 12.5, 87.25)
+        ->assertSet('placingPinId', null);
+
+    $pivot = $photo->people()->find($person->id)->pivot;
+    expect((float) $pivot->x)->toBe(12.5);
+    expect((float) $pivot->y)->toBe(87.25);
+});
+
+test('placing a pin clamps out-of-range coordinates to 0-100', function () {
+    $photo = Photo::factory()->create();
+    $person = Person::factory()->create();
+    $photo->people()->attach($person->id);
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test('photo-lightbox')
+        ->call('open', $photo->id, [$photo->id])
+        ->call('togglePlacingPin', $person->id)
+        ->call('placePin', -5, 150);
+
+    $pivot = $photo->people()->find($person->id)->pivot;
+    expect((float) $pivot->x)->toBe(0.0);
+    expect((float) $pivot->y)->toBe(100.0);
+});
+
+test('toggling the same person\'s pin placement twice cancels it', function () {
+    $photo = Photo::factory()->create();
+    $person = Person::factory()->create();
+    $photo->people()->attach($person->id);
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test('photo-lightbox')
+        ->call('open', $photo->id, [$photo->id])
+        ->call('togglePlacingPin', $person->id)
+        ->assertSet('placingPinId', $person->id)
+        ->call('togglePlacingPin', $person->id)
+        ->assertSet('placingPinId', null);
+});
+
+test('a pin can be removed', function () {
+    $photo = Photo::factory()->create();
+    $person = Person::factory()->create();
+    $photo->people()->attach($person->id, ['x' => 50, 'y' => 50]);
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test('photo-lightbox')
+        ->call('open', $photo->id, [$photo->id])
+        ->call('clearPersonPin', $person->id);
+
+    $pivot = $photo->people()->find($person->id)->pivot;
+    expect($pivot->x)->toBeNull();
+    expect($pivot->y)->toBeNull();
+});
+
+test('a non-admin, non-uploader cannot place a pin', function () {
+    $photo = Photo::factory()->create();
+    $person = Person::factory()->create();
+    $photo->people()->attach($person->id);
+    $stranger = User::factory()->withTwoFactor()->create(['is_admin' => false]);
+
+    Livewire::actingAs($stranger)
+        ->test('photo-lightbox')
+        ->call('open', $photo->id, [$photo->id])
+        ->set('placingPinId', $person->id)
+        ->call('placePin', 10, 10);
+
+    $pivot = $photo->people()->find($person->id)->pivot;
+    expect($pivot->x)->toBeNull();
+});
+
 test('a non-owner, non-admin cannot edit and their changes are not saved', function () {
     $photo = Photo::factory()->create(['description' => 'Original']);
     $stranger = User::factory()->withTwoFactor()->create(['is_admin' => false]);

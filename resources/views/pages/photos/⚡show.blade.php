@@ -54,6 +54,25 @@ new class extends Component {
         Flux::toast(variant: 'success', text: __('Saved.'));
     }
 
+    public function placePin(float $x, float $y): void
+    {
+        if (! $this->placingPinId || ! $this->canEdit) {
+            return;
+        }
+
+        $this->setPersonPin($this->photo, $this->placingPinId, $x, $y);
+        $this->placingPinId = null;
+    }
+
+    public function clearPersonPin(int $personId): void
+    {
+        if (! $this->canEdit) {
+            return;
+        }
+
+        $this->removePersonPin($this->photo, $personId);
+    }
+
     public function deletePhoto(): void
     {
         Gate::authorize('delete', $this->photo);
@@ -81,9 +100,23 @@ new class extends Component {
         @endif
     </div>
 
-    @if ($photo->fileMedia())
-        <img src="{{ MediaUrl::of($photo->fileMedia()) }}" class="mt-4 max-h-[32rem] w-full rounded-lg object-contain bg-zinc-100 dark:bg-zinc-800" alt="">
-    @endif
+    <div x-data="{ hovered: null, placing: $wire.entangle('placingPinId') }">
+        @if ($photo->fileMedia())
+            <div class="mt-4">
+                @include('partials.photo-pin-overlay', [
+                    'photo' => $photo,
+                    'imageUrl' => MediaUrl::of($photo->fileMedia()),
+                    'imageClass' => 'max-h-[32rem] max-w-full rounded-lg object-contain',
+                    'canEdit' => $this->canEdit,
+                    'placingPinId' => $placingPinId,
+                ])
+            </div>
+        @endif
+
+        <div class="mt-3">
+            @include('partials.photo-tag-list', ['photo' => $photo, 'canEdit' => $this->canEdit, 'nameClass' => 'border-transparent bg-zinc-100 dark:bg-zinc-800'])
+        </div>
+    </div>
 
     <form wire:submit="save" class="mt-6 flex flex-col gap-6">
         <flux:textarea wire:model="description" :label="__('Description')" :disabled="! $this->canEdit" rows="3" />

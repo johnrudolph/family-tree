@@ -28,6 +28,13 @@ trait EditsPhotoDetails
     /** @var array<int, int> */
     public array $person_ids = [];
 
+    /**
+     * The person id currently waiting for a click on the photo to pin their
+     * location — set by the "place pin" button, cleared once that click
+     * lands (or by clicking the button again to cancel).
+     */
+    public ?int $placingPinId = null;
+
     public function fillPhotoForm(Photo $photo): void
     {
         $this->description = $photo->description ?? '';
@@ -89,6 +96,32 @@ trait EditsPhotoDetails
         ]);
 
         $this->syncPeopleSafely($photo, $validated['person_ids']);
+    }
+
+    public function togglePlacingPin(int $personId): void
+    {
+        $this->placingPinId = $this->placingPinId === $personId ? null : $personId;
+    }
+
+    /**
+     * @param  float  $x  percentage (0-100) across the photo's width
+     * @param  float  $y  percentage (0-100) down the photo's height
+     */
+    public function setPersonPin(Photo $photo, int $personId, float $x, float $y): void
+    {
+        Gate::authorize('update', $photo);
+
+        $photo->people()->updateExistingPivot($personId, [
+            'x' => max(0, min(100, round($x, 2))),
+            'y' => max(0, min(100, round($y, 2))),
+        ]);
+    }
+
+    public function removePersonPin(Photo $photo, int $personId): void
+    {
+        Gate::authorize('update', $photo);
+
+        $photo->people()->updateExistingPivot($personId, ['x' => null, 'y' => null]);
     }
 
     /**

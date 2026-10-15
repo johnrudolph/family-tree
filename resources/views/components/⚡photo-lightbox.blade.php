@@ -172,13 +172,34 @@ new class extends Component {
 
         Flux::toast(variant: 'success', text: __('Saved.'), duration: 1500);
     }
+
+    public function placePin(float $x, float $y): void
+    {
+        if (! $this->photo || ! $this->placingPinId || ! $this->canEdit) {
+            return;
+        }
+
+        $this->setPersonPin($this->photo, $this->placingPinId, $x, $y);
+        $this->placingPinId = null;
+        unset($this->photo);
+    }
+
+    public function clearPersonPin(int $personId): void
+    {
+        if (! $this->photo || ! $this->canEdit) {
+            return;
+        }
+
+        $this->removePersonPin($this->photo, $personId);
+        unset($this->photo);
+    }
 }; ?>
 
 <div>
     @if ($photoId && $this->photo)
         <div
             class="fixed inset-0 z-[80] flex flex-col bg-black/95"
-            x-data
+            x-data="{ hovered: null, placing: $wire.entangle('placingPinId') }"
             x-on:keydown.window="
                 if (['INPUT', 'TEXTAREA'].includes($event.target.tagName)) return;
                 if ($event.key === 'ArrowLeft') $wire.previous();
@@ -201,7 +222,13 @@ new class extends Component {
 
             <div class="flex min-h-0 flex-1 items-center justify-center p-4 pb-2" wire:key="lightbox-image-{{ $photoId }}">
                 @if ($this->photo->fileMedia())
-                    <img src="{{ MediaUrl::of($this->photo->fileMedia()) }}" class="max-h-full max-w-full rounded object-contain" alt="">
+                    @include('partials.photo-pin-overlay', [
+                        'photo' => $this->photo,
+                        'imageUrl' => MediaUrl::of($this->photo->fileMedia()),
+                        'imageClass' => 'max-h-full max-w-full rounded object-contain',
+                        'canEdit' => $this->canEdit,
+                        'placingPinId' => $placingPinId,
+                    ])
                 @endif
             </div>
 
@@ -239,15 +266,16 @@ new class extends Component {
                         </div>
 
                         <livewire:location-picker field="lightbox-photo" :location-id="$location_id" :label="__('Where was this taken?')" wire:key="lightbox-location-picker-{{ $photoId }}" />
+
+                        @include('partials.photo-tag-list', ['photo' => $this->photo, 'canEdit' => true, 'nameClass' => 'border-transparent text-white bg-white/10'])
                     </div>
                 @else
-                    <div class="flex flex-col gap-1 text-sm text-white/80">
+                    <div class="flex flex-col gap-2 text-sm text-white/80">
                         @if ($this->photo->description)
                             <p>{{ $this->photo->description }}</p>
                         @endif
-                        @if ($this->photo->people->isNotEmpty())
-                            <p class="text-white/50">{{ $this->photo->people->map->fullName()->join(', ') }}</p>
-                        @endif
+
+                        @include('partials.photo-tag-list', ['photo' => $this->photo, 'canEdit' => false, 'nameClass' => 'border-transparent text-white/80 bg-white/10'])
                     </div>
                 @endif
 
