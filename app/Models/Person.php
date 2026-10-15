@@ -124,13 +124,15 @@ class Person extends Model
 
     /**
      * The photo chosen to represent this person everywhere but their own
-     * page (avatars, the family tree, link previews) — any photo they're
-     * tagged in is eligible, explicitly picked via `avatar_photo_id`, or the
-     * earliest-tagged one as a fallback until someone picks.
+     * page (avatars, the family tree, link previews) — explicitly picked
+     * via `avatar_photo_id` only. Being tagged in a photo (e.g. someone
+     * else's wedding album) makes it eligible to be picked, but never
+     * silently becomes the avatar on its own — no photo means initials
+     * until the person (if living) or an editor (if deceased) picks one.
      */
     public function featuredPhoto(): ?Photo
     {
-        return $this->avatarPhoto ?? $this->photos->first();
+        return $this->avatarPhoto;
     }
 
     /**

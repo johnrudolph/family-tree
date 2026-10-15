@@ -1,6 +1,17 @@
 <div>
     <flux:input wire:model.live.debounce.300ms="photoSearch" :placeholder="__('Search photo descriptions…')" size="sm" class="mb-2" />
 
+    @if ($photoPriorityPersonIds !== [])
+        <div class="mb-2 flex items-center justify-between">
+            <flux:text class="text-xs text-zinc-500">
+                {{ $showAllPhotos ? __('Showing all photos.') : __('Showing photos these two are already tagged in.') }}
+            </flux:text>
+            <flux:button wire:click="$set('showAllPhotos', {{ $showAllPhotos ? 'false' : 'true' }})" size="sm" variant="ghost">
+                {{ $showAllPhotos ? __('Just them') : __('Show all photos') }}
+            </flux:button>
+        </div>
+    @endif
+
     <div class="grid max-h-80 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
         @forelse ($this->availablePhotos as $photo)
             <button
@@ -19,7 +30,14 @@
                 @endif
             </button>
         @empty
-            <flux:text class="col-span-full text-sm text-zinc-500">{{ __('No photos yet.') }}</flux:text>
+            @if ($photoPriorityPersonIds !== [] && ! $showAllPhotos)
+                <flux:text class="col-span-full text-sm text-zinc-500">
+                    {{ __('No photos of just the two of them yet.') }}
+                    <flux:link wire:click="$set('showAllPhotos', true)" class="cursor-pointer text-sm">{{ __('Show all photos') }}</flux:link>
+                </flux:text>
+            @else
+                <flux:text class="col-span-full text-sm text-zinc-500">{{ __('No photos yet.') }}</flux:text>
+            @endif
         @endforelse
     </div>
 </div>

@@ -39,7 +39,24 @@ trait EditsPhotoDetails
         $this->person_ids = $photo->people->pluck('id')->all();
     }
 
+    /**
+     * Saves everything at once — used by the dedicated photo page's single
+     * explicit "Save" button, where one combined validation pass (and one
+     * combined set of inline errors) is the expected behavior.
+     */
     public function savePhotoDetails(Photo $photo): void
+    {
+        $this->saveDescriptionDateAndLocation($photo);
+        $this->saveTaggedPeople($photo);
+    }
+
+    /**
+     * Description/date/location, isolated from tagged-people so the
+     * lightbox's per-field autosave (see photo-lightbox) never lets a stale
+     * or invalid date field silently block saving a tag, or vice versa —
+     * each field cluster validates and persists independently.
+     */
+    public function saveDescriptionDateAndLocation(Photo $photo): void
     {
         Gate::authorize('update', $photo);
 
@@ -52,8 +69,6 @@ trait EditsPhotoDetails
             'date' => ['required_if:date_precision,exact', 'nullable', 'date'],
             'year' => ['required_if:date_precision,year', 'nullable', 'integer', 'min:1000', 'max:'.$currentYear],
             'location_id' => ['nullable', 'integer', 'exists:locations,id'],
-            'person_ids' => ['array'],
-            'person_ids.*' => ['exists:people,id'],
         ]);
 
         $photo->update([
@@ -61,6 +76,16 @@ trait EditsPhotoDetails
             'date' => $validated['hasDate'] ? ($validated['date_precision'] === 'year' ? "{$validated['year']}-01-01" : $validated['date']) : null,
             'date_precision' => $validated['hasDate'] ? $validated['date_precision'] : null,
             'location_id' => $validated['location_id'],
+        ]);
+    }
+
+    public function saveTaggedPeople(Photo $photo): void
+    {
+        Gate::authorize('update', $photo);
+
+        $validated = $this->validate([
+            'person_ids' => ['array'],
+            'person_ids.*' => ['exists:people,id'],
         ]);
 
         $this->syncPeopleSafely($photo, $validated['person_ids']);

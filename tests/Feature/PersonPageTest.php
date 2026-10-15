@@ -410,6 +410,35 @@ test('an editor can edit an existing marriage\'s dates, location, and photos', f
     expect($relationship->photos->pluck('id')->all())->toBe([$photo->id]);
 });
 
+test('opening the marriage editor defaults the photo picker to photos of just the couple', function () {
+    Storage::fake('public');
+
+    $editor = User::factory()->withTwoFactor()->create();
+    $person = Person::factory()->create();
+    $spouse = Person::factory()->create();
+    $relationship = Relationship::factory()->create(['person_a_id' => $person->id, 'person_b_id' => $spouse->id]);
+
+    $both = Photo::create();
+    $both->addMediaFromString(fakeImageBytes())->usingFileName('both.jpg')->preservingOriginal()->toMediaCollection('file');
+    $both->people()->attach([$person->id, $spouse->id]);
+
+    $onlyOne = Photo::create();
+    $onlyOne->addMediaFromString(fakeImageBytes())->usingFileName('one.jpg')->preservingOriginal()->toMediaCollection('file');
+    $onlyOne->people()->attach([$person->id]);
+
+    app(PageEditorService::class)->grantOwner($person, $editor);
+
+    $component = Livewire::actingAs($editor)
+        ->test('pages::people.show', ['person' => $person])
+        ->call('openEditRelationship', $relationship->id);
+
+    expect($component->get('availablePhotos')->pluck('id')->all())->toBe([$both->id]);
+
+    $component->set('showAllPhotos', true);
+
+    expect($component->get('availablePhotos')->pluck('id')->all())->toContain($onlyOne->id);
+});
+
 test('a non-editor cannot edit a marriage\'s details', function () {
     $viewer = User::factory()->withTwoFactor()->create();
     $person = Person::factory()->create();

@@ -83,6 +83,24 @@ test('an admin tagging a person in the lightbox autosaves the tag', function () 
     expect($photo->fresh()->people()->pluck('people.id')->all())->toBe([$person->id]);
 });
 
+test('an invalid date field does not block tagging a person, or vice versa', function () {
+    $photo = Photo::factory()->create();
+    $person = Person::factory()->create();
+    $admin = User::factory()->withTwoFactor()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test('photo-lightbox')
+        ->call('open', $photo->id, [$photo->id])
+        // "Year only" picked but no year typed yet — invalid/incomplete on
+        // its own, and previously validated as part of every autosave,
+        // including this unrelated tagging change.
+        ->set('hasDate', true)
+        ->set('date_precision', 'year')
+        ->set('person_ids', [$person->id]);
+
+    expect($photo->fresh()->people()->pluck('people.id')->all())->toBe([$person->id]);
+});
+
 test('a non-owner, non-admin cannot edit and their changes are not saved', function () {
     $photo = Photo::factory()->create(['description' => 'Original']);
     $stranger = User::factory()->withTwoFactor()->create(['is_admin' => false]);

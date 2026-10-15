@@ -136,9 +136,9 @@ new #[Title('Photo & details')] class extends Component {
             {{ __('This information is optional, self-managed, and only ever writable by you — no one else can add or suggest it for you.') }}
         </flux:subheading>
     @else
-        <flux:heading level="1">{{ __('Memorial photo & details for') }} {{ $person->fullName() }}</flux:heading>
+        <flux:heading level="1">{{ __('Photos & details for') }} {{ $person->fullName() }}</flux:heading>
         <flux:subheading>
-            {{ __('Since this person has passed, any editor of their page can add a photo and memorial details on their behalf.') }}
+            {{ __('Since this person has passed, any editor of their page can add photos and details on their behalf.') }}
         </flux:subheading>
     @endif
 

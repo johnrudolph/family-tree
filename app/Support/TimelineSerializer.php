@@ -40,7 +40,7 @@ class TimelineSerializer
     {
         return Person::query()
             ->whereNotNull('dob')
-            ->with(['birthLocation', 'avatarPhoto.media', 'photos.media'])
+            ->with(['birthLocation', 'avatarPhoto.media'])
             ->when($personIds, fn ($query, $ids) => $query->whereIn('id', $ids))
             ->get()
             ->map(fn (Person $person): array => [
@@ -69,7 +69,7 @@ class TimelineSerializer
     {
         return Person::query()
             ->whereNotNull('dod')
-            ->with(['deathLocation', 'avatarPhoto.media', 'photos.media'])
+            ->with(['deathLocation', 'avatarPhoto.media'])
             ->when($personIds, fn ($query, $ids) => $query->whereIn('id', $ids))
             ->get()
             ->map(fn (Person $person): array => [

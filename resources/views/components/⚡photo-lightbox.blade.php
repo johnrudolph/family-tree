@@ -4,6 +4,7 @@ use App\Concerns\EditsPhotoDetails;
 use App\Models\Person;
 use App\Models\Photo;
 use App\Support\MediaUrl;
+use Flux\Flux;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -16,7 +17,11 @@ use Livewire\Component;
  * photos index's current filtered results, ...). Edits save immediately as
  * fields change rather than needing an explicit "Save" — the whole point is
  * being able to rifle through a batch of untagged photos and tag each one
- * without breaking stride.
+ * without breaking stride — with a brief toast confirming each save, since
+ * there's no button press to otherwise signal it happened. Tagged-people
+ * saves are isolated from description/date/location saves (see
+ * EditsPhotoDetails) so a stale or incomplete date field can never silently
+ * block a tag from persisting.
  */
 new class extends Component {
     use EditsPhotoDetails;
@@ -106,47 +111,66 @@ new class extends Component {
         }
 
         $this->location_id = $locationId;
-        $this->autosave();
+        $this->autosaveDetails();
     }
 
     public function updatedDescription(): void
     {
-        $this->autosave();
+        $this->autosaveDetails();
     }
 
     public function updatedHasDate(): void
     {
-        $this->autosave();
+        $this->autosaveDetails();
     }
 
     public function updatedDatePrecision(): void
     {
-        $this->autosave();
+        $this->autosaveDetails();
     }
 
     public function updatedDate(): void
     {
-        $this->autosave();
+        $this->autosaveDetails();
     }
 
     public function updatedYear(): void
     {
-        $this->autosave();
+        $this->autosaveDetails();
     }
 
     public function updatedPersonIds(): void
     {
-        $this->autosave();
+        $this->autosaveTaggedPeople();
     }
 
-    private function autosave(): void
+    /**
+     * Isolated from autosaveTaggedPeople() below — a stale or incomplete
+     * date field (e.g. "year only" picked but no year typed yet) must
+     * never block saving a tag, or vice versa.
+     */
+    private function autosaveDetails(): void
     {
         if (! $this->photo || ! $this->canEdit) {
             return;
         }
 
-        $this->savePhotoDetails($this->photo);
+        $this->saveDescriptionDateAndLocation($this->photo);
         unset($this->photo);
+
+        Flux::toast(variant: 'success', text: __('Saved.'), duration: 1500);
+    }
+
+    private function autosaveTaggedPeople(): void
+    {
+        if (! $this->photo || ! $this->canEdit) {
+            return;
+        }
+
+        $this->saveTaggedPeople($this->photo);
+        unset($this->photo);
+
+        Flux::toast(variant: 'success', text: __('Saved.'), duration: 1500);
     }
 }; ?>
 

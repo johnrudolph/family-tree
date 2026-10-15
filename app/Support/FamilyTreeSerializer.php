@@ -47,7 +47,7 @@ class FamilyTreeSerializer
     {
         // Eager-load all of these — hasAccount()/photoUrl() are called once
         // per person below, and without this each one is a fresh N+1 query.
-        $people = Person::query()->with(['user', 'avatarPhoto.media', 'photos.media'])->get()->keyBy('id');
+        $people = Person::query()->with(['user', 'avatarPhoto.media'])->get()->keyBy('id');
 
         $parentsOf = [];
         $childrenOf = [];

@@ -115,6 +115,20 @@ test('a deceased person\'s memorial photo shows on the tree without consent', fu
     expect($data[(string) $person->id]['data']['avatar'])->not->toBeNull();
 });
 
+test('being tagged in a photo does not make it someone\'s avatar — only an explicit avatar_photo_id does', function () {
+    Storage::fake('public');
+
+    $person = Person::factory()->create(['avatar_photo_id' => null]);
+    $photo = Photo::create();
+    $photo->addMediaFromString(fakeImageBytes())->usingFileName('a.jpg')->preservingOriginal()->toMediaCollection('file');
+    $photo->people()->attach($person->id);
+
+    $data = collect(FamilyTreeSerializer::toChartData())->keyBy('id');
+
+    expect($data[(string) $person->id]['data']['avatar'])->toBeNull();
+    expect($person->featuredPhoto())->toBeNull();
+});
+
 test('serializing the tree does not N+1 query per person for accounts or photos', function () {
     User::factory()->withTwoFactor()->create();
     Person::factory()->consented()->count(10)->create();

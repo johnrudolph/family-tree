@@ -546,6 +546,8 @@ new class extends Component {
         $this->editRelEndedAtYear = $relationship->ended_at_precision === 'year' ? $relationship->ended_at?->format('Y') : null;
         $this->editRelLocationId = $relationship->location_id;
         $this->selectedPhotoIds = $relationship->photos->pluck('id')->all();
+        $this->photoPriorityPersonIds = [$relationship->person_a_id, $relationship->person_b_id];
+        $this->showAllPhotos = false;
         $this->editRelFormKey++;
         $this->resetValidation();
 
@@ -713,7 +715,7 @@ new class extends Component {
                 </flux:button>
             @elseif ($this->canManageEnrichment)
                 <flux:button :href="route('people.enrich', $person)" wire:navigate size="sm">
-                    {{ __('Memorial photo & details') }}
+                    {{ __('Add photos & details') }}
                 </flux:button>
             @endif
 
